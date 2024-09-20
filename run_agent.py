@@ -29,7 +29,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    output_result_file = os.path.join(args.result_dir, "result.csv")
+    output_result_file = os.path.join(args.result_dir, "results.csv")
     output_prompt_file = os.path.join(args.result_dir, "prompt.txt")
     output_code_file = os.path.join(args.result_dir, "generated_code.py")
 

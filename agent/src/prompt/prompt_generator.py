@@ -45,7 +45,7 @@ def generate_prompt(folder_path, tutorial_folder_path, output_path):
 
     # Generate the prompt
     prompt = f"""
-As an AutoML LLM Agent, your task is to generate Python code using Autogluon Tabular to solve the problem in the following folder:
+Based on following information of data in a folder, please generate the Python code using Autogluon Tabular to train a predictor and save the predicted result of test data to {output_path}, with time limit = 3600 seconds and use best_quality preset. Ensure that your code follows best practices and is well-commented for clarity.
 Absolute path to the folder: {abs_folder_path}
 Files in the folder:
 {', '.join(files)}
@@ -59,9 +59,6 @@ First three lines of each file:
     for tutorial_file, content in tutorials_content.items():
         prompt += f"{tutorial_file}:\n{content}\n{'-' * 10}\n"
 
-    prompt += f"""
-Based on this information, please generate the Python code using Autogluon Tabular to solve the problem presented in the given folder, and output to {output_path}, with time limit = 3600 seconds and use best_quality preset. Ensure that your code follows best practices and is well-commented for clarity.
-"""
     return prompt
 
 
