@@ -1,3 +1,8 @@
+# saved runs
+runs/
+temp_run/
+AutogluonModels/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

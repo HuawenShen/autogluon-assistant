@@ -48,7 +48,7 @@ model_id="$6"
 
 # Generate prompt
 echo "Generating prompt..."
-python ./agent/src/prompt_generator.py \
+python /media/deephome/AutoMLAgent/agent/src/prompt_generator.py \
     -i "$input_data_folder" \
     -t "$tutorial_path" \
     -o "$output_result_file" \
@@ -61,7 +61,7 @@ fi
 
 # Generate code with AWS Bedrock
 echo "Generating code with AWS Bedrock..."
-python ./agent/src/bedrock_code_generator.py \
+python /media/deephome/AutoMLAgent/agent/src/bedrock_code_generator.py \
     -p "$output_prompt_file" \
     -c "$output_code_file" \
     -m "$model_id"
