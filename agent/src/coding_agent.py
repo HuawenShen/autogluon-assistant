@@ -1,17 +1,18 @@
 import argparse
 
-from .prompt import generate_prompt
+from .prompt import generate_prompt, write_prompt_to_file
 from .script import use_bedrock_to_generate, write_code_script
 
 
 def generate_code_script(
-    input_data_folder, tutorial_path, output_result_file, model_id, output_code_file
+    input_data_folder, tutorial_path, output_result_file, output_prompt_file, model_id, output_code_file
 ):
     prompt = generate_prompt(
-        args.input_data_folder, args.tutorial_path, args.output_result_file
+        input_data_folder, tutorial_path, output_result_file
     )
-    script = use_bedrock_to_generate(prompt, args.model_id)
-    write_code_script(script, args.output_code_file)
+    write_prompt_to_file(prompt, output_prompt_file)
+    script = use_bedrock_to_generate(prompt, model_id)
+    write_code_script(script, output_code_file)
 
 
 if __name__ == "__main__":
@@ -35,6 +36,12 @@ if __name__ == "__main__":
         "-c", "--output_code_file", required=True, help="Path to the output code file"
     )
     parser.add_argument(
+        "-p",
+        "--output_prompt_file",
+        required=True,
+        help="Path for the generated prompt file",
+    )
+    parser.add_argument(
         "-m",
         "--model_id",
         required=False,
@@ -47,6 +54,7 @@ if __name__ == "__main__":
         input_data_folder=args.input_data_folder,
         tutorial_path=args.tutorial_path,
         output_result_file=args.output_result_file,
+        output_prompt_file=args.output_prompt_file,
         model_id=args.model_id,
         output_code_file=args.output_code_file,
     )
