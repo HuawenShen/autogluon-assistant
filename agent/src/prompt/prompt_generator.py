@@ -45,7 +45,7 @@ def generate_prompt(folder_path, tutorial_folder_path, output_path):
 
     # Generate the prompt
     prompt = f"""
-Based on following information of data in a folder, please generate the Python code using Autogluon Tabular to train a predictor and save the predicted result of test data to {output_path}, with time limit = 3600 seconds and use best_quality preset. Ensure that your code follows best practices and is well-commented for clarity.
+Based on following information of data in a folder, please generate the Python code using Autogluon Tabular to train a predictor and save the predicted result of test data to {output_path}, output columns refering to the sample submission file, with time limit = 600 seconds and use medium_quality preset. Notice that you will need to remove the training data without valid labels. Ensure that your code follows best practices and is well-commented for clarity.
 Absolute path to the folder: {abs_folder_path}
 Files in the folder:
 {', '.join(files)}
