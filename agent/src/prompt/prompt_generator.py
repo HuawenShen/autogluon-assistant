@@ -45,7 +45,28 @@ def generate_prompt(folder_path, tutorial_folder_path, output_path):
 
     # Generate the prompt
     prompt = f"""
-Based on following information of data in a folder, please generate the Python code using Autogluon Tabular to train a predictor and save the predicted result of test data to {output_path}, output columns refering to the sample submission file, with time limit = 600 seconds and use medium_quality preset. Notice that you will need to remove the training data without valid labels. Ensure that your code follows best practices and is well-commented for clarity.
+As an AutoML Agent, you will be given a folder containing data and description files. Please generate Python code using Autogluon Tabular to train a predictor and make predictions on test data. Follow these specifications:
+
+1. Data preprocessing:
+   - Remove training data samples without valid labels
+
+2. Model training:
+   - Use Autogluon Tabular with the following parameters:
+     - time_limit: 3600 seconds
+     - presets: 'best_quality'
+
+3. Prediction:
+   - Make predictions on the test data
+   - Save the predicted results to {output_path}
+   - Ensure the output columns match those in the sample submission file
+   - No need to save the model
+
+4. Documentation:
+   - Add a brief docstring at the beginning of the script explaining its purpose and usage
+   - Include comments explaining any complex operations or design decisions
+
+Please provide the complete Python script that accomplishes these tasks, ensuring it's ready to run given the appropriate data inputs.
+
 Absolute path to the folder: {abs_folder_path}
 Files in the folder:
 {', '.join(files)}
