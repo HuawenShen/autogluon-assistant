@@ -52,8 +52,8 @@ As an AutoML Agent, you will be given a folder containing data and description f
 
 2. Model training:
    - Use Autogluon Tabular with the following parameters:
-     - time_limit: 3600 seconds
-     - presets: 'best_quality'
+     - time_limit: 600 seconds
+     - presets: 'medium_quality'
 
 3. Prediction:
    - Make predictions on the test data

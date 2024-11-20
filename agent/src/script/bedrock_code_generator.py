@@ -27,13 +27,45 @@ def save_script(script, output_file):
 
 
 def call_claude_bedrock(access_key, secret_access_key, prompt, model_id):
+    '''
+    # Create a session using your default credentials
+    session = boto3.Session()
+
+    # Create an STS client
+    sts_client = session.client('sts')
+
+    # Assume the IAM role
+    assumed_role_object = sts_client.assume_role(
+        RoleArn="arn:aws:iam::097403188315:role/Bedrock_Access",
+        RoleSessionName="AssumeRoleSession"
+    )
+
+    # Get the temporary credentials
+    credentials = assumed_role_object['Credentials']
+
+    # Use these credentials to create a Bedrock client
+    bedrock = boto3.client(
+        'bedrock',
+        aws_access_key_id=credentials['AccessKeyId'],
+        aws_secret_access_key=credentials['SecretAccessKey'],
+        aws_session_token=credentials['SessionToken']
+    )
+    '''
+
     # Create a Bedrock client
+    # The SDK will automatically use the instance profile credentials
     bedrock = boto3.client(
         service_name="bedrock-runtime",
-        aws_access_key_id=access_key,
-        aws_secret_access_key=secret_access_key,
-        region_name="us-east-1",  # Adjust the region as needed
+        region_name="us-west-2",
     )
+
+    # Create a Bedrock client
+    #bedrock = boto3.client(
+    #    service_name="bedrock-runtime",
+    #    aws_access_key_id=access_key,
+    #    aws_secret_access_key=secret_access_key,
+    #    region_name="us-east-1",  # Adjust the region as needed
+    #)
 
     # Prepare the request body for the Messages API
     body = json.dumps(
@@ -57,7 +89,7 @@ def call_claude_bedrock(access_key, secret_access_key, prompt, model_id):
     # Parse and return the response
     response_body = json.loads(response["body"].read())
     return response_body["content"][0]["text"]
-
+[]
 
 def use_bedrock_to_generate(prompt, model_id):
     # Get AWS credentials from environment variables
