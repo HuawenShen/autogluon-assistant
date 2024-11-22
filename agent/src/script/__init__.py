@@ -1,1 +1,10 @@
-from .bedrock_code_generator import use_bedrock_to_generate, write_code_script
+from .agrag_code_generator import use_agrag_to_generate
+from .bedrock_code_generator import use_bedrock_to_generate
+from .utils import write_code_script
+
+
+def generate_code(prompt, model_id, backend="bedrock", tutorial_link=None):
+    if backend == "bedrock":
+        return use_bedrock_to_generate(prompt, model_id)
+    elif backend == "agrag":
+        return use_agrag_to_generate(prompt, model_id, tutorial_link)

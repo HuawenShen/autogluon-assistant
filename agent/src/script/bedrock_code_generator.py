@@ -1,29 +1,9 @@
 import boto3
 import json
-import re
 import os
 import argparse
 
-
-def read_prompt(file_path):
-    with open(file_path, "r") as file:
-        return file.read().strip()
-
-
-def extract_python_script(response):
-    # Look for Python code blocks in the response
-    pattern = r"```python\n(.*?)```"
-    matches = re.findall(pattern, response, re.DOTALL)
-
-    if matches:
-        return matches[0].strip()
-    else:
-        return None
-
-
-def save_script(script, output_file):
-    with open(output_file, "w") as file:
-        file.write(script)
+from .utils import read_prompt, extract_python_script, write_code_script, save_script
 
 
 def call_claude_bedrock(access_key, secret_access_key, prompt, model_id):
@@ -81,7 +61,7 @@ def call_claude_bedrock(access_key, secret_access_key, prompt, model_id):
     # Call the Bedrock API
     response = bedrock.invoke_model(
         body=body,
-        modelId="anthropic.claude-3-haiku-20240307-v1:0",  # Use the appropriate model ID
+        modelId=model_id,  # Use the appropriate model ID
         accept="application/json",
         contentType="application/json",
     )
@@ -109,15 +89,6 @@ def use_bedrock_to_generate(prompt, model_id):
     script = extract_python_script(response)
 
     return script
-
-
-def write_code_script(script, output_code_file):
-    if script:
-        # Save the extracted script to the output file
-        save_script(script, output_code_file)
-        print(f"Python script extracted and saved to {output_code_file}")
-    else:
-        print("No Python script found in the response.")
 
 
 def main():

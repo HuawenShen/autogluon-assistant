@@ -32,16 +32,16 @@ def generate_prompt(folder_path, tutorial_folder_path, output_path):
         for file in files
     }
 
-    # Read Autogluon Tabular Tutorials
-    abs_tutorial_folder_path = os.path.abspath(tutorial_folder_path)
-    tutorial_files = [
-        f for f in os.listdir(abs_tutorial_folder_path) if f.endswith(".md")
-    ]
     tutorials_content = {}
-
-    for tutorial_file in tutorial_files:
-        tutorial_path = os.path.join(abs_tutorial_folder_path, tutorial_file)
-        tutorials_content[tutorial_file] = read_tutorial_content(tutorial_path)
+    if tutorial_folder_path:
+    # Read Autogluon Tabular Tutorials
+        abs_tutorial_folder_path = os.path.abspath(tutorial_folder_path)
+        tutorial_files = [
+            f for f in os.listdir(abs_tutorial_folder_path) if f.endswith(".md")
+        ]
+        for tutorial_file in tutorial_files:
+            tutorial_path = os.path.join(abs_tutorial_folder_path, tutorial_file)
+            tutorials_content[tutorial_file] = read_tutorial_content(tutorial_path)
 
     # Generate the prompt
     prompt = f"""
@@ -76,9 +76,12 @@ First three lines of each file:
     for file, content in file_contents.items():
         prompt += f"{file}:\n{content}\n{'-' * 10}\n"
 
-    prompt += "Autogluon Tabular Tutorials:\n"
-    for tutorial_file, content in tutorials_content.items():
-        prompt += f"{tutorial_file}:\n{content}\n{'-' * 10}\n"
+    if tutorials_content:
+        prompt += "Autogluon Tabular Tutorials:\n"
+        for tutorial_file, content in tutorials_content.items():
+            prompt += f"{tutorial_file}:\n{content}\n{'-' * 10}\n"
+    else:
+        Warning(f"Tutorial is not provided. Please provide a tutorial or use agrag as backend to retrieve the tutorial from web.")
 
     return prompt
 

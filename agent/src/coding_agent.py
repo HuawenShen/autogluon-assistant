@@ -1,17 +1,17 @@
 import argparse
 
 from .prompt import generate_prompt, write_prompt_to_file
-from .script import use_bedrock_to_generate, write_code_script
+from .script import generate_code, write_code_script
 
 
 def generate_code_script(
-    input_data_folder, tutorial_path, output_result_file, output_prompt_file, model_id, output_code_file
+    input_data_folder, tutorial_path, tutorial_link, output_result_file, output_prompt_file, model_id, output_code_file, backend
 ):
     prompt = generate_prompt(
         input_data_folder, tutorial_path, output_result_file
     )
     write_prompt_to_file(prompt, output_prompt_file)
-    script = use_bedrock_to_generate(prompt, model_id)
+    script = generate_code(prompt, model_id, backend, tutorial_link)
     write_code_script(script, output_code_file)
 
 

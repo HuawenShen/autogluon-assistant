@@ -12,10 +12,21 @@ if __name__ == "__main__":
         "-i", "--input_data_folder", required=True, help="Path to the input folder"
     )
     parser.add_argument(
+        "-b", "--backend", default="bedrock", help="Path to the input folder"
+    )
+    parser.add_argument(
         "-t",
         "--tutorial_path",
-        required=True,
+        required=False,
+        default=None,
         help="Path to the Autogluon Tabular tutorial file",
+    )
+    parser.add_argument(
+        "-l",
+        "--tutorial_link",
+        required=False,
+        default=None,
+        help="URL link to the Autogluon Tabular tutorials",
     )
     parser.add_argument(
         "-w", "--result_dir", required=True, help="Path for the output folder"
@@ -36,8 +47,10 @@ if __name__ == "__main__":
     generate_code_script(
         input_data_folder=args.input_data_folder,
         tutorial_path=args.tutorial_path,
+        tutorial_link=args.tutorial_link,
         output_result_file=output_result_file,
         output_prompt_file=output_prompt_file,
         model_id=args.model_id,
         output_code_file=output_code_file,
+        backend=args.backend,
     )
