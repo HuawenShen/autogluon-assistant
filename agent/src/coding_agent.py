@@ -1,18 +1,24 @@
 import argparse
+import os
 
-from .prompt import generate_prompt, write_prompt_to_file
-from .script import generate_code, write_code_script
+from .prompt import generate_data_prompt, write_prompt_to_file
+from .coding import generate_code, write_code_script, write_retrieved_context
 
 
 def generate_code_script(
-    input_data_folder, tutorial_path, tutorial_link, output_result_file, output_prompt_file, model_id, output_code_file, backend
+    input_data_folder, tutorial_path, tutorial_link, output_folder, output_prompt_file, model_id, output_code_file, backend
 ):
-    prompt = generate_prompt(
-        input_data_folder, tutorial_path, output_result_file
+    prompt = generate_data_prompt(
+        input_data_folder, tutorial_path, output_folder
     )
     write_prompt_to_file(prompt, output_prompt_file)
-    script = generate_code(prompt, model_id, backend, tutorial_link)
-    write_code_script(script, output_code_file)
+    generated_content = generate_code(prompt, model_id, backend, tutorial_link)
+    write_code_script(generated_content["code_script"], output_code_file)
+    
+    if "retrieved_context" in generated_content:
+        # Create the path for retrieved_context.txt in the same directory
+        output_context_path = os.path.join(os.path.dirname(output_code_file), "retrieved_context.txt")
+        write_retrieved_context(generated_content["retrieved_context"], output_context_path)
 
 
 if __name__ == "__main__":
@@ -30,7 +36,7 @@ if __name__ == "__main__":
         help="Path to the Autogluon Tabular tutorial file",
     )
     parser.add_argument(
-        "-o", "--output_result_file", required=True, help="Path for the output file"
+        "-o", "--output_folder", required=True, help="Path for the output file"
     )
     parser.add_argument(
         "-c", "--output_code_file", required=True, help="Path to the output code file"
@@ -53,7 +59,7 @@ if __name__ == "__main__":
     generate_code_script(
         input_data_folder=args.input_data_folder,
         tutorial_path=args.tutorial_path,
-        output_result_file=args.output_result_file,
+        output_folder=args.output_folder,
         output_prompt_file=args.output_prompt_file,
         model_id=args.model_id,
         output_code_file=args.output_code_file,

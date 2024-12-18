@@ -1,1 +1,1 @@
-from .prompt_generator import generate_prompt, write_prompt_to_file
+from .data_prompt_generator import generate_data_prompt, write_prompt_to_file

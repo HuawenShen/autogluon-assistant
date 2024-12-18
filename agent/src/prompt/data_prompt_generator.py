@@ -1,7 +1,6 @@
 import argparse
 import os
 import sys
-import re
 from collections import defaultdict
 import pandas as pd
 from autogluon.core.utils.loaders import load_pd
@@ -138,7 +137,26 @@ def get_all_files(folder_path):
     return all_files
 
 
-def generate_prompt(folder_path, tutorial_folder_path, output_path, max_length=100):
+def read_full_tutorial(tutorial_path, max_length=None):
+    """
+    Read the complete content of a markdown tutorial file.
+    
+    Args:
+        tutorial_path (str): Path to the tutorial markdown file
+        max_length (int, optional): Maximum number of characters to read
+        
+    Returns:
+        str: The complete content of the tutorial file
+    """
+    with open(tutorial_path, 'r', encoding='utf-8') as file:
+        if max_length:
+            content = file.read(max_length)
+        else:
+            content = file.read()
+    return content
+
+
+def generate_data_prompt(folder_path, tutorial_folder_path, output_folder, max_length=100):
     # Get absolute path of the folder
     abs_folder_path = os.path.abspath(folder_path)
 
@@ -184,9 +202,7 @@ def generate_prompt(folder_path, tutorial_folder_path, output_path, max_length=1
         ]
         for tutorial_file in tutorial_files:
             tutorial_path = os.path.join(abs_tutorial_folder_path, tutorial_file)
-            tutorials_content[tutorial_file] = read_first_three_lines(
-                tutorial_path, max_length
-            )
+            tutorials_content[tutorial_file] = read_full_tutorial(tutorial_path, max_length=None)
 
     # Generate the prompt
     prompt = f"""
@@ -194,21 +210,26 @@ As an AutoML Agent, you will be given a folder containing data and description f
 
 1. Data preprocessing:
    - Remove training data samples without valid labels
+   - Remove the unneccesary index column (if applicable)
 
 2. Model training:
    - Use Autogluon Multimodal with the following parameters:
-     - time_limit: 600 seconds
-     - presets: 'medium_quality'
+     - time_limit: 3600 seconds
+     - presets: 'best_quality'
+     - tuning_data: only use validation if there is a validation dataset
 
 3. Prediction:
    - Make predictions on the test data
-   - Save the predicted results to {output_path}
-   - Ensure the output columns match those in the sample submission file (if any)
-   - Save the model only if asked
+   - Save the predicted results to {output_folder}, result file name should be "results", the extension should be same as the test data file
+   - Save the model in a folder under {output_folder}
+   - Ensure the output columns match what in the training file, or those in the sample submission file (if any). Do not change any column names.
 
 4. Documentation:
    - Add a brief docstring at the beginning of the script explaining its purpose and usage
    - Include comments explaining any complex operations or design decisions
+
+5. Others:
+   - To avoid DDP errors, wrap the code in: if __name__ == "__main__":
 
 Please provide the complete Python script that accomplishes these tasks, ensuring it's ready to run given the appropriate data inputs.
 
@@ -252,7 +273,7 @@ if __name__ == "__main__":
         help="Path to the Autogluon Tabular tutorial file",
     )
     parser.add_argument(
-        "-o", "--output_result_file", required=True, help="Path for the output file"
+        "-o", "--output_folder", required=True, help="Path for the output file"
     )
     parser.add_argument(
         "-p",
@@ -269,10 +290,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    prompt = generate_prompt(
+    prompt = generate_data_prompt(
         args.input_data_folder,
         args.tutorial_path,
-        args.output_result_file,
+        args.output_folder,
         args.max_length,
     )
     write_prompt_to_file(prompt, args.output_prompt_file)

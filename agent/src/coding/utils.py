@@ -10,6 +10,21 @@ def write_code_script(script, output_code_file):
         print("No Python script found in the response.")
 
 
+def write_retrieved_context(retrieved_context, output_context_path):
+    if retrieved_context:
+        # Save the extracted script to the output file
+        save_retrieved_context(retrieved_context, output_context_path)
+        print(f"Context retrieved and saved to {output_context_path}")
+    else:
+        print("No retrieved context.")
+
+
+def save_retrieved_context(retrieved_context, output_file):
+    with open(output_file, "w") as file:
+        for context in retrieved_context:
+            file.write(context)
+
+
 def save_script(script, output_file):
     with open(output_file, "w") as file:
         file.write(script)

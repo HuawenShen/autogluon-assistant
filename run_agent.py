@@ -40,7 +40,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    output_result_file = os.path.join(args.result_dir, "results.csv")
     output_prompt_file = os.path.join(args.result_dir, "prompt.txt")
     output_code_file = os.path.join(args.result_dir, "generated_code.py")
 
@@ -48,7 +47,7 @@ if __name__ == "__main__":
         input_data_folder=args.input_data_folder,
         tutorial_path=args.tutorial_path,
         tutorial_link=args.tutorial_link,
-        output_result_file=output_result_file,
+        output_folder=args.result_dir,
         output_prompt_file=output_prompt_file,
         model_id=args.model_id,
         output_code_file=output_code_file,
