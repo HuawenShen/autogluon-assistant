@@ -13,7 +13,7 @@ def call_claude_bedrock(prompt, model_id):
         service_name="bedrock-runtime",
         region_name="us-west-2",
     )
-    
+
     # Prepare the request body for the Messages API
     body = json.dumps(
         {
@@ -36,7 +36,10 @@ def call_claude_bedrock(prompt, model_id):
     # Parse and return the response
     response_body = json.loads(response["body"].read())
     return response_body["content"][0]["text"]
+
+
 []
+
 
 def use_bedrock_to_generate(prompt, model_id):
     # Call Claude in Bedrock

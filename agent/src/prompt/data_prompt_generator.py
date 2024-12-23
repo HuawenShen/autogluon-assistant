@@ -140,15 +140,15 @@ def get_all_files(folder_path):
 def read_full_tutorial(tutorial_path, max_length=None):
     """
     Read the complete content of a markdown tutorial file.
-    
+
     Args:
         tutorial_path (str): Path to the tutorial markdown file
         max_length (int, optional): Maximum number of characters to read
-        
+
     Returns:
         str: The complete content of the tutorial file
     """
-    with open(tutorial_path, 'r', encoding='utf-8') as file:
+    with open(tutorial_path, "r", encoding="utf-8") as file:
         if max_length:
             content = file.read(max_length)
         else:
@@ -156,7 +156,9 @@ def read_full_tutorial(tutorial_path, max_length=None):
     return content
 
 
-def generate_data_prompt(folder_path, tutorial_folder_path, output_folder, max_length=100):
+def generate_data_prompt(
+    folder_path, tutorial_folder_path, output_folder, max_length=100
+):
     # Get absolute path of the folder
     abs_folder_path = os.path.abspath(folder_path)
 
@@ -202,7 +204,9 @@ def generate_data_prompt(folder_path, tutorial_folder_path, output_folder, max_l
         ]
         for tutorial_file in tutorial_files:
             tutorial_path = os.path.join(abs_tutorial_folder_path, tutorial_file)
-            tutorials_content[tutorial_file] = read_full_tutorial(tutorial_path, max_length=None)
+            tutorials_content[tutorial_file] = read_full_tutorial(
+                tutorial_path, max_length=None
+            )
 
     # Generate the prompt
     prompt = f"""

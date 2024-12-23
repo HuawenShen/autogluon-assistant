@@ -17,11 +17,11 @@ def generate_query(prompt):
 def use_agrag_to_generate(prompt, model_id, tutorial_link):
     base_url = "/".join(tutorial_link.split("/")[:-1]) + "/"
     agrag = AutoGluonRAG(
-        config_file="/media/deephome/AutoMLAgent/agent/src/configs/agrag_semantic_segmentation.yaml", # or path to config file
+        config_file="/media/deephome/AutoMLAgent/agent/src/configs/agrag_semantic_segmentation.yaml",  # or path to config file
         web_urls=[tutorial_link],  # Use the provided tutorial_link
-        base_urls=[base_url],      # Use the derived base_url
+        base_urls=[base_url],  # Use the derived base_url
         parse_urls_recursive=True,
-        #data_dir="s3://autogluon-rag-github-dev/autogluon_docs/"
+        # data_dir="s3://autogluon-rag-github-dev/autogluon_docs/"
     )
     agrag.initialize_rag_pipeline()
 
@@ -37,7 +37,9 @@ def use_agrag_to_generate(prompt, model_id, tutorial_link):
     if prompt_prefix:
         query = f"{prompt_prefix}\n{query}"
     formatted_prompt = format_query(
-        model_name=agrag.generator_module.model_name, query=prompt, context=retrieved_context
+        model_name=agrag.generator_module.model_name,
+        query=prompt,
+        context=retrieved_context,
     )
 
     response = agrag.generator_module.generate_response(formatted_prompt)

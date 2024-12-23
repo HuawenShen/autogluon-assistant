@@ -1,10 +1,10 @@
 import logger
 
-from .data_prompt_generator import generate_data_prompt
-from .task_prompt_generator import generate_task_prompt
-from .tutorial_prompt_generator import generate_tutorial_prompt
-from .user_prompt_generator import generate_user_prompt
-from .error_prompt_generator import generate_error_prompt
+from .data_prompt import generate_data_prompt
+from .error_prompt import generate_error_prompt
+from .task_prompt import generate_task_prompt
+from .tutorial_prompt import generate_tutorial_prompt
+from .user_prompt import generate_user_prompt
 
 
 class PromptGenerator:
@@ -94,7 +94,7 @@ class PromptGenerator:
             user_inputs=user_inputs,
             max_user_inputs_length=max_user_inputs_length,
         )
-        error_prompt = generate_user_prompt(
+        error_prompt = generate_error_prompt(
             error_message=error_message,
             max_error_message_length=max_error_message_length,
         )

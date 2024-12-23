@@ -6,19 +6,28 @@ from .coding import generate_code, write_code_script, write_retrieved_context
 
 
 def generate_code_script(
-    input_data_folder, tutorial_path, tutorial_link, output_folder, output_prompt_file, model_id, output_code_file, backend
+    input_data_folder,
+    tutorial_path,
+    tutorial_link,
+    output_folder,
+    output_prompt_file,
+    model_id,
+    output_code_file,
+    backend,
 ):
-    prompt = generate_data_prompt(
-        input_data_folder, tutorial_path, output_folder
-    )
+    prompt = generate_data_prompt(input_data_folder, tutorial_path, output_folder)
     write_prompt_to_file(prompt, output_prompt_file)
     generated_content = generate_code(prompt, model_id, backend, tutorial_link)
     write_code_script(generated_content["code_script"], output_code_file)
-    
+
     if "retrieved_context" in generated_content:
         # Create the path for retrieved_context.txt in the same directory
-        output_context_path = os.path.join(os.path.dirname(output_code_file), "retrieved_context.txt")
-        write_retrieved_context(generated_content["retrieved_context"], output_context_path)
+        output_context_path = os.path.join(
+            os.path.dirname(output_code_file), "retrieved_context.txt"
+        )
+        write_retrieved_context(
+            generated_content["retrieved_context"], output_context_path
+        )
 
 
 if __name__ == "__main__":
