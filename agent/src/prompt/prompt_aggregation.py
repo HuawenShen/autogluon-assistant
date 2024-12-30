@@ -1,14 +1,16 @@
+from dataclasses import dataclass
+from pathlib import Path
+from typing import List, Optional
+
 import logger
 from omegaconf import OmegaConf
-from dataclasses import dataclass
-from typing import Optional, List
-from pathlib import Path
 
 from .data_prompt import generate_data_prompt
 from .error_prompt import generate_error_prompt
 from .task_prompt import generate_task_prompt
 from .tutorial_prompt import generate_tutorial_prompt
 from .user_prompt import generate_user_prompt
+
 
 @dataclass
 class LLMConfig:
@@ -19,25 +21,27 @@ class LLMConfig:
     temperature: float = 0
     verbose: bool = True
 
+
 @dataclass
 class PromptGeneratorConfig:
     max_chars_per_file: int = 100
     max_num_tutorials: int = 3
     max_user_inputs_length: int = 9999
-    max_error_message_length: int = 9999 
+    max_error_message_length: int = 9999
     max_tutorial_length: int = 9999
     llm: LLMConfig = LLMConfig()
 
+
 class PromptGenerator:
     def __init__(
-        self, 
+        self,
         input_data_folder: str,
         tutorials_folder: str,
         output_folder: str,
-        config_path: str
+        config_path: str,
     ):
         """Initialize PromptGenerator with required paths and config from YAML file.
-        
+
         Args:
             input_data_folder: Path to input data directory
             tutorials_folder: Path to tutorials directory
@@ -50,8 +54,10 @@ class PromptGenerator:
         self.output_folder = output_folder
 
         # Validate paths
-        for path, name in [(input_data_folder, "input_data_folder"), 
-                          (tutorials_folder, "tutorials_folder")]:
+        for path, name in [
+            (input_data_folder, "input_data_folder"),
+            (tutorials_folder, "tutorials_folder"),
+        ]:
             if not Path(path).exists():
                 raise FileNotFoundError(f"{name} not found: {path}")
 
@@ -87,7 +93,7 @@ class PromptGenerator:
             output_folder=self.output_folder,
             llm_config=OmegaConf.to_container(self.config.llm, resolve=True),
         )
-        
+
         # TODO: use LLM to select a task prompt from tabular/automm/timeseries
 
         return {
@@ -127,7 +133,7 @@ class PromptGenerator:
 
     def step(self, user_inputs=None, error_message=None):
         """Step the prompt generator forward.
-        
+
         Args:
             user_inputs: Optional user inputs to generate user prompt
             error_message: Optional error message to generate error prompt
@@ -160,16 +166,16 @@ class PromptGenerator:
 
     def get_iterative_prompt(self) -> str:
         """Get the complete iterative prompt.
-        
+
         Returns:
             str: The complete prompt combining task, data, user, error and tutorial prompts
         """
         assert (
             self.time_step >= 0
         ), "run PromptGenerator.step(user_inputs, error_message) before get the prompt"
-        
+
         prompt_parts = []
-        
+
         if self.time_step == 0:
             prompt_parts.extend([self.task_prompt, self.data_prompt])
 

@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Union
 
 import boto3
 import botocore
+from autogluon.assistant.constants import WHITE_LIST_LLM
 from langchain.schema import AIMessage, BaseMessage
 from langchain_aws import ChatBedrock
 from langchain_openai import ChatOpenAI
@@ -12,8 +13,6 @@ from omegaconf import DictConfig
 from openai import OpenAI
 from pydantic import BaseModel, Field
 from tenacity import retry, stop_after_attempt, wait_exponential
-
-from autogluon.assistant.constants import WHITE_LIST_LLM
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +35,9 @@ class AssistantChatOpenAI(ChatOpenAI, BaseModel):
             "completion_tokens": self.output_,
         }
 
-    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=10))
+    @retry(
+        stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=10)
+    )
     def invoke(self, *args, **kwargs):
         input_: List[BaseMessage] = args[0]
         response = super().invoke(*args, **kwargs)
@@ -74,7 +75,9 @@ class AssistantChatBedrock(ChatBedrock, BaseModel):
             "completion_tokens": self.output_,
         }
 
-    @retry(stop=stop_after_attempt(50), wait=wait_exponential(multiplier=1, min=4, max=10))
+    @retry(
+        stop=stop_after_attempt(50), wait=wait_exponential(multiplier=1, min=4, max=10)
+    )
     def invoke(self, *args, **kwargs):
         input_: List[BaseMessage] = args[0]
         try:
@@ -107,7 +110,11 @@ class LLMFactory:
         try:
             client = OpenAI()
             models = client.models.list()
-            return [model.id for model in models if model.id.startswith(("gpt-3.5", "gpt-4"))]
+            return [
+                model.id
+                for model in models
+                if model.id.startswith(("gpt-3.5", "gpt-4"))
+            ]
         except Exception as e:
             print(f"Error fetching OpenAI models: {e}")
             return []
@@ -145,7 +152,9 @@ class LLMFactory:
         else:
             raise Exception("OpenAI API env variable OPENAI_API_KEY not set")
 
-        logger.info(f"AGA is using model {config.model} from OpenAI to assist you with the task.")
+        logger.info(
+            f"AGA is using model {config.model} from OpenAI to assist you with the task."
+        )
 
         return AssistantChatOpenAI(
             model_name=config.model,
@@ -158,7 +167,9 @@ class LLMFactory:
 
     @staticmethod
     def _get_bedrock_chat_model(config: DictConfig) -> AssistantChatBedrock:
-        logger.info(f"AGA is using model {config.model} from Bedrock to assist you with the task.")
+        logger.info(
+            f"AGA is using model {config.model} from Bedrock to assist you with the task."
+        )
 
         return AssistantChatBedrock(
             model_id=config.model,
@@ -172,9 +183,13 @@ class LLMFactory:
         )
 
     @classmethod
-    def get_chat_model(cls, config: DictConfig) -> Union[AssistantChatOpenAI, AssistantChatBedrock]:
+    def get_chat_model(
+        cls, config: DictConfig
+    ) -> Union[AssistantChatOpenAI, AssistantChatBedrock]:
         valid_providers = cls.get_valid_providers()
-        assert config.provider in valid_providers, f"{config.provider} is not a valid provider in: {valid_providers}"
+        assert (
+            config.provider in valid_providers
+        ), f"{config.provider} is not a valid provider in: {valid_providers}"
 
         valid_models = cls.get_valid_models(config.provider)
         assert (
@@ -182,7 +197,9 @@ class LLMFactory:
         ), f"{config.model} is not a valid model in: {valid_models} for provider {config.provider}"
 
         if config.model not in WHITE_LIST_LLM:
-            logger.warning(f"{config.model} is not on the white list. Our white list models include {WHITE_LIST_LLM}")
+            logger.warning(
+                f"{config.model} is not on the white list. Our white list models include {WHITE_LIST_LLM}"
+            )
 
         if config.provider == "openai":
             return LLMFactory._get_openai_chat_model(config)

@@ -1,8 +1,8 @@
 import argparse
 import os
 
-from .prompt import generate_data_prompt, write_prompt_to_file
 from .coding import generate_code, write_code_script, write_retrieved_context
+from .prompt import generate_data_prompt, write_prompt_to_file
 
 
 def generate_code_script(

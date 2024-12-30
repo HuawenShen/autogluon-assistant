@@ -1,6 +1,4 @@
-
-
-def generate_error_prompt(error_message,max_error_message_length):
+def generate_error_prompt(error_message, max_error_message_length):
     if not error_message:
         return ""
 

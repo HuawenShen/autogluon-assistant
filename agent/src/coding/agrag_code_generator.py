@@ -1,12 +1,9 @@
-import boto3
-import json
-import os
 import argparse
 
 from agrag.agrag import AutoGluonRAG
 from agrag.modules.generator.utils import format_query
 
-from .utils import read_prompt, extract_python_script, write_code_script, save_script
+from .utils import extract_python_script, read_prompt, write_code_script
 
 
 # TODO: Implement Query Generator

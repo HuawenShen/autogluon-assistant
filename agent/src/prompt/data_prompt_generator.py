@@ -1,10 +1,9 @@
 import argparse
 import os
-import sys
 from collections import defaultdict
-import pandas as pd
-from autogluon.core.utils.loaders import load_pd
 from pathlib import Path
+
+from autogluon.core.utils.loaders import load_pd
 
 
 def group_similar_files(files):

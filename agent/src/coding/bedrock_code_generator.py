@@ -1,9 +1,9 @@
-import boto3
-import json
-import os
 import argparse
+import json
 
-from .utils import read_prompt, extract_python_script, write_code_script, save_script
+import boto3
+
+from .utils import extract_python_script, read_prompt, write_code_script
 
 
 def call_claude_bedrock(prompt, model_id):
