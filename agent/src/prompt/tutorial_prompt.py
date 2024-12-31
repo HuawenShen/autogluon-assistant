@@ -6,6 +6,7 @@ from typing import List, Optional, Tuple
 from omegaconf import DictConfig
 
 from ..llm import LLMFactory
+from .utils import generate_chat_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -44,25 +45,24 @@ def select_relevant_tutorials(
     data_prompt: str,
     user_prompt: str,
     error_prompt: str,
-    llm_config: DictConfig,
+    llm_config,
     max_num_tutorials: int,
 ) -> List[Tuple[Path, str, float]]:
-    """Select most relevant tutorials using LLM scoring based only on titles."""
 
+    """Select most relevant tutorials using LLM scoring based only on titles."""
+    
     # Create LLM instance
     llm = LLMFactory.get_chat_model(llm_config)
-
+    
     # Construct context for relevance scoring
     context = f"""Task: {task_prompt}
     Data: {data_prompt}
     User Question: {user_prompt}
     Error: {error_prompt}"""
-
+    
     # Create a single prompt for all titles to minimize API calls
-    titles_list = "\n".join(
-        [f"{i+1}. {title}" for i, (_, title) in enumerate(tutorials)]
-    )
-
+    titles_list = "\n".join([f"{i+1}. {title}" for i, (_, title) in enumerate(tutorials)])
+    
     prompt = f"""Given the following context and list of tutorial titles, select the {max_num_tutorials} most relevant tutorials for helping with this task. Consider how well each tutorial title matches the task, data, user question, and any errors.
 
     Context:
@@ -71,27 +71,46 @@ def select_relevant_tutorials(
     Tutorial Titles:
     {titles_list}
     
-    Return only the numbers of the most relevant tutorials (up to {max_num_tutorials}), separated by commas."""
-
+    IMPORTANT: Respond ONLY with the numbers of the selected tutorials (up to {max_num_tutorials}) separated by commas. 
+    For example: "1,3,4" or "2,5" or just "1" if only one is relevant.
+    DO NOT include any other text, explanation, or formatting in your response."""
+            
     try:
-        response = llm.invoke([{"role": "user", "content": prompt}])
-        # Parse the response to get selected indices
-        selected_indices = [int(idx.strip()) - 1 for idx in response.content.split(",")]
-
+        response = llm.invoke(generate_chat_prompt(prompt=prompt).format_messages())
+        # Clean and parse the response
+        content = response.content.strip()
+        
+        # Extract first line in case of multi-line response
+        content = content.split('\n')[0]
+        
+        # Remove any non-numeric characters except commas
+        content = ''.join(char for char in content if char.isdigit() or char == ',')
+        
+        if not content:
+            logger.warning("No valid indices found in LLM response")
+            return [(path, title) for path, title in tutorials[:max_num_tutorials]]
+            
+        # Parse the cleaned response to get selected indices
+        try:
+            selected_indices = [int(idx.strip()) - 1 for idx in content.split(",") if idx.strip()]
+        except ValueError as e:
+            logger.warning(f"Error parsing indices from LLM response: {e}")
+            return [(path, title) for path, title in tutorials[:max_num_tutorials]]
+        
         # Get the selected tutorials
         selected_tutorials = []
         for idx in selected_indices:
             if 0 <= idx < len(tutorials):
                 file_path, title = tutorials[idx]
-                selected_tutorials.append((file_path, title))
-
-        return selected_tutorials[:max_num_tutorials]
-
+                selected_tutorials.append((file_path, title))  # Using 1.0 as score since these were selected
+        
+        if len(selected_tutorials) > max_num_tutorials:
+            selected_tutorials = selected_tutorials[:max_num_tutorials]
+        return selected_tutorials
+        
     except Exception as e:
         logger.warning(f"Error selecting tutorials: {e}")
         raise e
-        # Fallback: return first max_num_tutorials if LLM selection fails
-        # return [(path, title, 0.5) for path, title in tutorials[:max_num_tutorials]]
 
 
 def format_tutorial_content(file_path: Path, title: str, max_length: int) -> str:
@@ -161,7 +180,7 @@ def generate_tutorial_prompt(
     user_prompt: str,
     error_prompt: str,
     tutorial_folder: str,
-    llm_config: Optional[DictConfig],
+    llm_config,
     output_folder: Optional[str],
     max_num_tutorials: int = 3,
     max_tutorial_length: int = 9999,

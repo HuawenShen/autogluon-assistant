@@ -38,6 +38,9 @@ if __name__ == "__main__":
         default="anthropic.claude-3-haiku-20240307-v1:0",
         help="Claude model ID to use",
     )
+    parser.add_argument(
+        "-f", "--config_path", required=True, help="Path to the config file"
+    )
     args = parser.parse_args()
 
     output_prompt_file = os.path.join(args.result_dir, "prompt.txt")
@@ -52,4 +55,5 @@ if __name__ == "__main__":
         model_id=args.model_id,
         output_code_file=output_code_file,
         backend=args.backend,
+        config_path=args.config_path,
     )

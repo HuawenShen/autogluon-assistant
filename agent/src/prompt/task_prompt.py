@@ -6,6 +6,7 @@ from typing import List, Optional, Tuple
 from omegaconf import DictConfig
 
 from ..llm import LLMFactory
+from .utils import generate_chat_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -22,45 +23,41 @@ def find_description_files(data_prompt: str, llm) -> Tuple[List[str], str]:
     Returns:
         Tuple[List[str], str]: (List of identified description filenames, Analysis explanation)
     """
-    try:
-        find_descriptions_prompt = f"""
-        Given this data prompt:
+    find_descriptions_prompt = f"""
+    Given this data prompt:
 
-        {data_prompt}
+    {data_prompt}
 
-        Please identify any files that appear to contain project descriptions, requirements, or task definitions.
-        Look for files like README, documentation files, or task description files.
-        
-        Format your response as follows:
-        Description Files: [list ONLY the filenames, one per line]
-        Explanation: [explain why these files were identified as description files]
-        """
+    Please identify any files that appear to contain project descriptions, requirements, or task definitions.
+    Look for files like README, documentation files, or task description files.
+    
+    Format your response as follows:
+    Description Files: [list ONLY the filenames, one per line]
+    Explanation: [explain why these files were identified as description files]
+    """
 
-        response = llm.invoke([{"role": "user", "content": find_descriptions_prompt}])
-        analysis = response.content if hasattr(response, "content") else str(response)
+    response = llm.invoke(generate_chat_prompt(prompt=find_descriptions_prompt).format_messages())
+    analysis = response.content if hasattr(response, "content") else str(response)
 
-        # Extract filenames from the response
-        description_files = []
-        lines = analysis.split("\n")
-        in_files_section = False
+    # Extract filenames from the response
+    description_files = []
+    lines = analysis.split("\n")
+    in_files_section = False
 
-        for line in lines:
-            line = line.strip()
-            if line.lower().startswith("description files:"):
-                in_files_section = True
-                continue
-            elif line.lower().startswith("explanation:"):
-                break
-            elif in_files_section and line:
-                filename = line.strip("- []").strip()
-                if filename:
-                    description_files.append(filename)
+    for line in lines:
+        line = line.strip()
+        if line.lower().startswith("description files:"):
+            in_files_section = True
+            continue
+        elif line.lower().startswith("explanation:"):
+            break
+        elif in_files_section and line:
+            filename = line.strip("- []").strip()
+            if filename:
+                description_files.append(filename)
 
-        return description_files, analysis
+    return description_files, analysis
 
-    except Exception as e:
-        logger.error(f"Error in finding description files: {e}")
-        return [], str(e)
 
 
 def generate_task_description(
@@ -108,15 +105,12 @@ def generate_task_description(
         Description File Contents:
         {description_context}
 
-        Please write a comprehensive description of the data science task, including:
-        1. Task objective
-        2. Input data description
-        3. Required analysis or processing steps
-        4. Expected outputs
-        5. Any specific requirements or constraints
+        Please write a short description of the data science task, including Task objective and Expected outputs.
+
+        Your reponse should include ONLY the description.
         """
 
-        response = llm.invoke([{"role": "user", "content": task_prompt}])
+        response = llm.invoke(generate_chat_prompt(prompt=task_prompt).format_messages())
         return response.content if hasattr(response, "content") else str(response)
 
     except Exception as e:
@@ -127,7 +121,7 @@ def generate_task_description(
 def generate_task_prompt(
     data_prompt: str,
     output_folder: str,
-    llm_config: Optional[DictConfig] = None,
+    llm_config,
 ) -> str:
     """
     Main function to generate task prompt following two-step process.
@@ -142,13 +136,6 @@ def generate_task_prompt(
     """
     # Ensure output folder exists
     Path(output_folder).mkdir(parents=True, exist_ok=True)
-
-    # Initialize LLM
-    if not llm_config:
-        logger.warning(
-            "No LLM config provided. Cannot generate task prompt without LLM."
-        )
-        return data_prompt
 
     llm = LLMFactory.get_chat_model(llm_config)
 

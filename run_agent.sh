@@ -8,6 +8,7 @@ tutorial_path="$2"
 output_dir="$3"
 model_id="$4"
 backend="$5"
+config_path="$5"
 
 python3 /media/deephome/AutoMLAgent/run_agent.py \
     -i $input_data_folder \
@@ -15,6 +16,7 @@ python3 /media/deephome/AutoMLAgent/run_agent.py \
     -w $output_dir \
     -m $model_id \
     -b $backend \
+    -f $config_path\
     2>&1 | tee "${output_dir}/log.txt"
 
 # Run the generated code

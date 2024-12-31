@@ -2,7 +2,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
-import logger
+import logging
+
+# Basic configuration
+logging.basicConfig(level=logging.INFO)
+
+# Create a logger
+logger = logging.getLogger(__name__)
 from omegaconf import OmegaConf
 
 from .data_prompt import generate_data_prompt
@@ -88,10 +94,11 @@ class PromptGenerator:
             input_data_folder=self.input_data_folder,
             max_chars_per_file=self.config.max_chars_per_file,
         )
+
         task_prompt = generate_task_prompt(
             data_prompt=data_prompt,
             output_folder=self.output_folder,
-            llm_config=OmegaConf.to_container(self.config.llm, resolve=True),
+            llm_config=self.config.llm,
         )
 
         # TODO: use LLM to select a task prompt from tabular/automm/timeseries
@@ -152,7 +159,7 @@ class PromptGenerator:
             user_prompt=user_prompt,
             error_prompt=error_prompt,
             tutorial_folder=self.tutorials_folder,
-            llm_config=OmegaConf.to_container(self.config.llm, resolve=True),
+            llm_config=self.config.llm,
             output_folder=self.output_folder,
             max_num_tutorials=self.config.max_num_tutorials,
             max_tutorial_length=self.config.max_tutorial_length,

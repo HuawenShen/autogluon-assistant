@@ -76,7 +76,7 @@ class AssistantChatBedrock(ChatBedrock, BaseModel):
         }
 
     @retry(
-        stop=stop_after_attempt(50), wait=wait_exponential(multiplier=1, min=4, max=10)
+        stop=stop_after_attempt(1), wait=wait_exponential(multiplier=1, min=4, max=10)
     )
     def invoke(self, *args, **kwargs):
         input_: List[BaseMessage] = args[0]

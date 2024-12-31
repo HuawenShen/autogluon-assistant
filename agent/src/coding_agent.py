@@ -2,7 +2,7 @@ import argparse
 import os
 
 from .coding import generate_code, write_code_script, write_retrieved_context
-from .prompt import generate_data_prompt, write_prompt_to_file
+from .prompt import PromptGenerator, write_prompt_to_file
 
 
 def generate_code_script(
@@ -14,9 +14,18 @@ def generate_code_script(
     model_id,
     output_code_file,
     backend,
+    config_path,
 ):
-    prompt = generate_data_prompt(input_data_folder, tutorial_path, output_folder)
+    prompt_generator = PromptGenerator(
+        input_data_folder=input_data_folder,
+        tutorials_folder=tutorial_path,
+        output_folder=output_folder,
+        config_path=config_path)
+    prompt_generator.step(user_inputs="", error_message="")
+    prompt = prompt_generator.get_iterative_prompt()
+
     write_prompt_to_file(prompt, output_prompt_file)
+
     generated_content = generate_code(prompt, model_id, backend, tutorial_link)
     write_code_script(generated_content["code_script"], output_code_file)
 
@@ -51,6 +60,9 @@ if __name__ == "__main__":
         "-c", "--output_code_file", required=True, help="Path to the output code file"
     )
     parser.add_argument(
+        "-f", "--config_path", required=True, help="Path to the config file"
+    )
+    parser.add_argument(
         "-p",
         "--output_prompt_file",
         required=True,
@@ -72,4 +84,5 @@ if __name__ == "__main__":
         output_prompt_file=args.output_prompt_file,
         model_id=args.model_id,
         output_code_file=args.output_code_file,
+        config_path=args.config_path,
     )

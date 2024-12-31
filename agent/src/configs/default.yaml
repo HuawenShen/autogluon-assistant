@@ -1,0 +1,20 @@
+# Tutorial Prompt Generator Configuration
+
+max_chars_per_file: 100
+max_num_tutorials: 3
+max_user_inputs_length: 9999
+max_error_message_length: 9999
+max_tutorial_length: 9999
+
+# LLM Configuration
+llm:
+  # Note: bedrock is only supported in limited AWS regions
+  #       and requires AWS credentials
+  provider: bedrock
+  model: "anthropic.claude-3-5-sonnet-20241022-v2:0"
+  # provider: openai
+  # model: gpt-4o-2024-08-06
+  max_tokens: 512
+  proxy_url: null
+  temperature: 0
+  verbose: True
