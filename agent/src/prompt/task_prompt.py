@@ -32,7 +32,7 @@ def find_description_files(data_prompt: str, llm) -> Tuple[List[str], str]:
     Look for files like README, documentation files, or task description files.
     
     Format your response as follows:
-    Description Files: [list ONLY the filenames, one per line]
+    Description Files: [list ONLY the absolute path, one per line]
     Explanation: [explain why these files were identified as description files]
     """
 
@@ -105,7 +105,7 @@ def generate_task_description(
         Description File Contents:
         {description_context}
 
-        Please write a short description of the data science task, including Task objective and Expected outputs.
+        Please write a short description of the objective of the data science task.
 
         Your reponse should include ONLY the description.
         """
@@ -116,6 +116,40 @@ def generate_task_description(
     except Exception as e:
         logger.error(f"Error in generating task description: {e}")
         return f"Error generating task description: {str(e)}"
+
+
+# TODO: This is for AutoGluon Only. Nake it more general or customizable.
+def wrap_task_description(task_description, output_folder):
+        return f"""
+As an AutoML Agent, you will be given a folder containing data and description files. Please generate Python code using Autogluon Multimodal to train a predictor and make predictions on test data. Follow these specifications:
+
+1. Data preprocessing:
+   - Remove training data samples without valid labels
+   - Remove the unneccesary index column (if applicable)
+
+2. Model training:
+   - Use Autogluon Multimodal with the following parameters:
+     - time_limit: 600 seconds
+     - presets: 'medium_quality'
+     - tuning_data: only use validation if there is a validation dataset
+
+3. Prediction:
+   - Make predictions on the test data
+   - Save the predicted results to {output_folder}, result file name should be "results", the extension should be same as the test data file
+   - Save the model in a folder under {output_folder}
+   - Ensure the output columns match what in the training file, or those in the sample submission file (if any). Do not change any column names.
+
+4. Documentation:
+   - Add a brief docstring at the beginning of the script explaining its purpose and usage
+   - Include comments explaining any complex operations or design decisions
+
+5. Others:
+   - To avoid DDP errors, wrap the code in: if __name__ == "__main__":
+
+Please provide the complete Python script that accomplishes these tasks, ensuring it's ready to run given the appropriate data inputs.
+
+Task Description: {task_description}
+"""
 
 
 def generate_task_prompt(
@@ -149,6 +183,8 @@ def generate_task_prompt(
     task_description = generate_task_description(
         data_prompt, description_files, description_analysis, llm
     )
+
+    task_description = wrap_task_description(task_description=task_description, output_folder=output_folder)
 
     # Save results in separate files
     # Save description file names

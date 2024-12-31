@@ -150,7 +150,7 @@ def save_selection_results(
                 "path": str(path),
                 "title": title,
             }
-            for path, title, score in selected_tutorials
+            for path, title in selected_tutorials
         ]
 
         with open(
