@@ -1,69 +1,89 @@
-# AutoML Code Generation Agent
+# AutoML Agent
 
-This repository contains a code generation agent that uses Claude AI to automatically generate AutoGluon-based machine learning code based on input data and tutorials.
+This repository contains an automated machine learning agent that generates and executes code based on input data and tutorials of third party tools.
 
 ## Prerequisites
 
-- Python 3.x
+- Python 3.8+
 - Conda package manager
-- AutoGluon environment (ag20241211)
-- Required Python packages (specified in requirements.txt)
+- AutoGluon dependencies
+- Access to Bedrock/OpenAI API
 
-## Installation
+## Setup
 
-1. Clone this repository
-2. Create and activate the conda environment:
+1. Clone the repository:
 ```bash
-conda create -n ag20241211
-conda activate ag20241211
+git clone <repository-url>
+cd AutoMLAgent
 ```
 
-3. Install required dependencies (ensure you have the necessary requirements.txt file)
+2. Create and activate the Conda environment:
+TBA
 
-## File Structure
+3. Configure your environment variables:
+Similar to Autogluon Assistant
 
-- `run_agent.py`: Main Python script for code generation
-- `run_agent.sh`: Bash script wrapper for executing the agent
-- `agent/src/coding_agent.py`: Contains the core code generation logic
 
 ## Usage
 
-### Using the Python Script
+### Using the Shell Script
+
+The easiest way to run the agent is using the provided shell script:
 
 ```bash
-python run_agent.py [-h] -i INPUT_DATA_FOLDER [-b BACKEND] [-t TUTORIAL_PATH] 
-                    [-l TUTORIAL_LINK] -w RESULT_DIR [-m MODEL_ID]
+./run_agent.sh \
+  <input_data_folder> \
+  <tutorial_path> \
+  <output_dir> \
+  <model_id> \
+  <backend> \
+  <config_path>
 ```
 
 Arguments:
-- `-i, --input_data_folder`: (Required) Path to the input data folder
-- `-b, --backend`: (Optional) Backend to use (default: "bedrock")
-- `-t, --tutorial_path`: (Optional) Path to the AutoGluon Tabular tutorial file
-- `-l, --tutorial_link`: (Optional) URL link to the AutoGluon Tabular tutorials
-- `-w, --result_dir`: (Required) Path for the output folder
-- `-m, --model_id`: (Optional) Claude model ID (default: "anthropic.claude-3-haiku-20240307-v1:0")
+- `input_data_folder`: Path to the folder containing input data
+- `tutorial_path`: Path to the folder of (AutoGluon) tutorial files
+- `output_dir`: Directory for output files
+- `model_id`: LLM model ID
+- `backend`: LLM Backend (bedrock or openai)
+- `config_path`: Path to configuration file
 
-### Using the Shell Script
+### Using Python Script Directly
+
+You can also run the Python script directly:
 
 ```bash
-./run_agent.sh <input_data_folder> <tutorial_path> <output_dir> <model_id> <backend>
-```
-
-Example:
-```bash
-./run_agent.sh /path/to/data /path/to/tutorial /path/to/output anthropic.claude-3-haiku-20240307-v1:0 bedrock
+python run_agent.py \
+  -i <input_data_folder> \
+  -t <tutorial_path> \
+  -o <output_folder> \
+  -c <output_code_file> \
+  -f <config_path> \
+  -p <output_prompt_file> \
+  -m <model_id>
 ```
 
 ## Output Files
 
-The agent generates several files in the specified output directory:
-- `prompt.txt`: Contains the generated prompt used for code generation
-- `generated_code.py`: The generated AutoGluon code
+The agent generates several output files:
+- `generated_code.py`: The generated Python script
 - `log.txt`: Execution log of the agent
 - `generated_code_log.txt`: Execution log of the generated code
+- `retrieved_context.txt`: Retrieved context information (if available)
+- ... (TBA)
 
-## Notes
+## Example
 
-- Ensure you have appropriate permissions for executing the shell script (`chmod +x run_agent.sh`)
-- The backend parameter defaults to "bedrock" if not specified, can also be "agrag"
-- All output files are automatically saved in the specified result directory
+```bash
+./run_agent.sh \
+  ./data/input \
+  ./tutorials/tabular_prediction.md \
+  ./output \
+  anthropic.claude-3-haiku-20240307-v1:0 \
+  default \
+  ./configs/default.yaml
+```
+
+
+## Configuration
+TBA
