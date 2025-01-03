@@ -247,12 +247,12 @@ class PromptGenerator:
 
     def update_python_code(self, python_code: str):
         """Update the current Python code."""
-        assert len(self.user_inputs) == self.time_step
+        assert len(self.python_codes) == self.time_step
         self.python_codes.append(python_code)
         
     def update_bash_script(self, bash_script: str):
         """Update the current bash code."""
-        assert len(self.user_inputs) == self.time_step
+        assert len(self.bash_scripts) == self.time_step
         self.bash_scripts.append(bash_script)
         
     def update_error_message(self, error_message: str):
