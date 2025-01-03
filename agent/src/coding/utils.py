@@ -41,6 +41,25 @@ def extract_python_script(response):
         return None
 
 
+def extract_bash_script(response):
+    # Look for Bash code blocks in the response
+    pattern = r"```bash\n(.*?)```"
+    matches = re.findall(pattern, response, re.DOTALL)
+    if matches:
+        return matches[0].strip()
+    else:
+        return None
+
+
+def extract_script(response, mode):
+    if mode == "python":
+        return extract_python_script(response)
+    elif mode == "bash":
+        return extract_bash_script(response)
+    else:
+        raise ValueError(f"Unsupported mode: {mode}")
+
+
 def read_prompt(file_path):
     with open(file_path, "r") as file:
         return file.read().strip()

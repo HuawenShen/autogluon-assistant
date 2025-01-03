@@ -3,7 +3,7 @@ import json
 
 import boto3
 
-from .utils import extract_python_script, read_prompt, write_code_script
+from .utils import extract_script, read_prompt, write_code_script
 
 
 def call_claude_bedrock(prompt, model_id):
@@ -38,27 +38,23 @@ def call_claude_bedrock(prompt, model_id):
     return response_body["content"][0]["text"]
 
 
-[]
-
-
-def use_bedrock_to_generate(prompt, model_id):
+def use_bedrock_to_generate(prompt, model_id, mode="python"):
     # Call Claude in Bedrock
     response = call_claude_bedrock(prompt, model_id)
 
-    # Extract the Python script from the response
-    code_script = extract_python_script(response)
+    # Extract the script from the response based on mode
+    code_script = extract_script(response, mode)
 
     ret = {
         "code_script": code_script,
     }
-
     return ret
 
 
 def main():
     # Set up argument parser
     parser = argparse.ArgumentParser(
-        description="Extract Python script from Claude response"
+        description="Extract Python or Bash script from Claude response"
     )
     parser.add_argument(
         "-p", "--prompt_file", required=True, help="Path to the prompt file"
@@ -73,13 +69,23 @@ def main():
         default="anthropic.claude-3-haiku-20240307-v1:0",
         help="Claude model ID to use",
     )
+    parser.add_argument(
+        "--mode",
+        required=False,
+        default="python",
+        choices=["python", "bash"],
+        help="Script type to extract (python or bash)",
+    )
+
     args = parser.parse_args()
 
     # Read the prompt from the file
     prompt = read_prompt(args.prompt_file)
 
-    script = use_bedrock_to_generate(prompt, args.model_id)
+    # Generate and extract the script
+    script = use_bedrock_to_generate(prompt, args.model_id, args.mode)
 
+    # Write the script to the output file
     write_code_script(script, args.output_code_file)
 
 

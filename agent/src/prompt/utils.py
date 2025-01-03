@@ -1,6 +1,7 @@
 from langchain.prompts.chat import ChatPromptTemplate
 from langchain_core.messages import HumanMessage, SystemMessage
 
+
 def write_prompt_to_file(prompt, output_file):
     try:
         with open(output_file, "w") as file:

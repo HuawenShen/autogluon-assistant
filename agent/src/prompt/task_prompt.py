@@ -1,9 +1,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import List, Optional, Tuple
-
-from omegaconf import DictConfig
+from typing import List, Tuple
 
 from ..llm import LLMFactory
 from .utils import generate_chat_prompt
@@ -36,7 +34,9 @@ def find_description_files(data_prompt: str, llm) -> Tuple[List[str], str]:
     Explanation: [explain why these files were identified as description files]
     """
 
-    response = llm.invoke(generate_chat_prompt(prompt=find_descriptions_prompt).format_messages())
+    response = llm.invoke(
+        generate_chat_prompt(prompt=find_descriptions_prompt).format_messages()
+    )
     analysis = response.content if hasattr(response, "content") else str(response)
 
     # Extract filenames from the response
@@ -57,7 +57,6 @@ def find_description_files(data_prompt: str, llm) -> Tuple[List[str], str]:
                 description_files.append(filename)
 
     return description_files, analysis
-
 
 
 def generate_task_description(
@@ -110,7 +109,9 @@ def generate_task_description(
         Your reponse should include ONLY the description.
         """
 
-        response = llm.invoke(generate_chat_prompt(prompt=task_prompt).format_messages())
+        response = llm.invoke(
+            generate_chat_prompt(prompt=task_prompt).format_messages()
+        )
         return response.content if hasattr(response, "content") else str(response)
 
     except Exception as e:
@@ -120,7 +121,7 @@ def generate_task_description(
 
 # TODO: This is for AutoGluon Only. Nake it more general or customizable.
 def wrap_task_description(task_description, output_folder):
-        return f"""
+    return f"""
 As an AutoML Agent, you will be given a folder containing data and description files. Please generate Python code using Autogluon Multimodal to train a predictor and make predictions on test data. Follow these specifications:
 
 1. Data preprocessing:
@@ -184,7 +185,9 @@ def generate_task_prompt(
         data_prompt, description_files, description_analysis, llm
     )
 
-    task_description = wrap_task_description(task_description=task_description, output_folder=output_folder)
+    task_description = wrap_task_description(
+        task_description=task_description, output_folder=output_folder
+    )
 
     # Save results in separate files
     # Save description file names

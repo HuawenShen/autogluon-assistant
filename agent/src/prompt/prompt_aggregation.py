@@ -1,8 +1,14 @@
+import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 
-import logging
+from .data_prompt import generate_data_prompt
+from .error_prompt import generate_error_prompt
+from .execution_prompt import generate_execution_prompt
+from .task_prompt import generate_task_prompt
+from .tutorial_prompt import generate_tutorial_prompt
+from .user_prompt import generate_user_prompt
 
 # Basic configuration
 logging.basicConfig(level=logging.INFO)
@@ -10,14 +16,6 @@ logging.basicConfig(level=logging.INFO)
 # Create a logger
 logger = logging.getLogger(__name__)
 from omegaconf import OmegaConf
-
-from .data_prompt import generate_data_prompt
-from .error_prompt import generate_error_prompt
-from .code_history_prompt import generate_code_history_prompt
-from .task_prompt import generate_task_prompt
-from .execution_prompt import generate_execution_prompt
-from .tutorial_prompt import generate_tutorial_prompt
-from .user_prompt import generate_user_prompt
 
 
 @dataclass
@@ -115,16 +113,24 @@ class PromptGenerator:
 
     @property
     def user_input(self) -> str:
-        assert self.time_step >= 0, "No user input because the prompt generator is not stepped yet."
-        assert len(self.user_inputs) == self.time_step + 1, "user input is not updated yet"
+        assert (
+            self.time_step >= 0
+        ), "No user input because the prompt generator is not stepped yet."
+        assert (
+            len(self.user_inputs) == self.time_step + 1
+        ), "user input is not updated yet"
         return self.user_inputs[self.time_step]
 
     @property
     def python_code(self) -> str:
-        assert self.time_step >= 0, "No python code because the prompt generator is not stepped yet."
-        assert len(self.python_codes) == self.time_step + 1, "python code is not updated yet"
+        assert (
+            self.time_step >= 0
+        ), "No python code because the prompt generator is not stepped yet."
+        assert (
+            len(self.python_codes) == self.time_step + 1
+        ), "python code is not updated yet"
         return self.python_codes[self.time_step]
-    
+
     @property
     def previous_python_code(self) -> str:
         if self.time_step >= 1:
@@ -134,10 +140,14 @@ class PromptGenerator:
 
     @property
     def bash_script(self) -> str:
-        assert self.time_step >= 0, "No bash script because the prompt generator is not stepped yet."
-        assert len(self.bash_scripts) == self.time_step + 1, "bash script is not updated yet"
+        assert (
+            self.time_step >= 0
+        ), "No bash script because the prompt generator is not stepped yet."
+        assert (
+            len(self.bash_scripts) == self.time_step + 1
+        ), "bash script is not updated yet"
         return self.bash_scripts[self.time_step]
-    
+
     @property
     def previous_bash_script(self) -> str:
         if self.time_step >= 1:
@@ -147,8 +157,12 @@ class PromptGenerator:
 
     @property
     def error_message(self) -> str:
-        assert self.time_step >= 0, "No error message because the prompt generator is not stepped yet."
-        assert len(self.error_messages) == self.time_step + 1, "error message is not updated yet"
+        assert (
+            self.time_step >= 0
+        ), "No error message because the prompt generator is not stepped yet."
+        assert (
+            len(self.error_messages) == self.time_step + 1
+        ), "error message is not updated yet"
         return self.error_messages[self.time_step]
 
     @property
@@ -160,8 +174,12 @@ class PromptGenerator:
 
     @property
     def tutorial_prompt(self) -> str:
-        assert self.time_step >= 0, "No tutorial prompt because the prompt generator is not stepped yet."
-        assert len(self.tutorial_prompts) == self.time_step + 1, "tutorial prompt is not updated yet"
+        assert (
+            self.time_step >= 0
+        ), "No tutorial prompt because the prompt generator is not stepped yet."
+        assert (
+            len(self.tutorial_prompts) == self.time_step + 1
+        ), "tutorial prompt is not updated yet"
         return self.tutorial_prompts[self.time_step]
 
     def step(self, user_input=None):
@@ -249,12 +267,12 @@ class PromptGenerator:
         """Update the current Python code."""
         assert len(self.python_codes) == self.time_step
         self.python_codes.append(python_code)
-        
+
     def update_bash_script(self, bash_script: str):
         """Update the current bash code."""
         assert len(self.bash_scripts) == self.time_step
         self.bash_scripts.append(bash_script)
-        
+
     def update_error_message(self, error_message: str):
         """Update the current error message."""
         assert len(self.error_messages) == self.time_step
