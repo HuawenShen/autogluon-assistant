@@ -30,9 +30,9 @@ def generate_execution_prompt(
     # Base requirements based on whether to create venv or not
     if create_venv:
         execution_prompt = f"""Please create a bash script that will:
-1. Create a Python virtual environment in the folder: {output_folder}
+1. Create a conda environment in the folder: {output_folder}
 2. Activate the virtual environment
-3. Install all necessary Python packages
+3. Conda or pip install all necessary Python packages
 4. Execute the Python script located at: {python_file_path}"""
     else:
         execution_prompt = f"""Please create a bash script that will:

@@ -1,32 +1,58 @@
 import os
 import subprocess
+import sys
 
 from .coding import (generate_code, generate_script, write_code_script,
                      write_retrieved_context)
 from .prompt import PromptGenerator, write_prompt_to_file
 
 
-def execute_bash_script(bash_script):
+def execute_bash_script(bash_script, stream_output=True):
     """
-    Execute the generated bash code and return success status, stdout, and stderr.
-
-    Args:
-        bash_code (str): Bash code to execute
-
-    Returns:
-        tuple: (success: bool, stdout: str, stderr: str)
+    Execute bash script with real-time output streaming.
     """
     try:
-        # Execute the bash code
-        process = subprocess.run(
-            bash_script, shell=True, capture_output=True, text=True
+        process = subprocess.Popen(
+            ["bash", "-c", bash_script],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
         )
+        stdout_chunks = []
+        stderr_chunks = []
 
-        if process.returncode == 0:
-            return True, process.stdout, ""
-        else:
-            return False, process.stdout, process.stderr
+        import select
 
+        # Set up tracking of both output streams
+        streams = [process.stdout, process.stderr]
+
+        while streams:
+            # Wait for output on either stream
+            readable, _, _ = select.select(streams, [], [])
+
+            for stream in readable:
+                line = stream.readline()
+                if not line:  # EOF
+                    streams.remove(stream)
+                    continue
+
+                # Handle stdout
+                if stream == process.stdout:
+                    stdout_chunks.append(line)
+                    if stream_output:
+                        sys.stdout.write(line)
+                        sys.stdout.flush()
+                # Handle stderr
+                else:
+                    stderr_chunks.append(line)
+                    if stream_output:
+                        sys.stderr.write(line)
+                        sys.stderr.flush()
+
+        process.wait()
+        success = process.returncode == 0
+        return success, "".join(stdout_chunks), "".join(stderr_chunks)
     except Exception as e:
         return False, "", str(e)
 
