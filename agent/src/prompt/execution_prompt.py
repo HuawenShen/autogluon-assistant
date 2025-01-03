@@ -37,7 +37,11 @@ def generate_execution_prompt(
 4. Install pytorch:
    - python -m uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 5. Install other packages:
-   - python -m uv pip install xxx
+   - Use uv for pip installation: python -m uv pip install xxx
+   - If other installation instruction is given, follow instruction.
+   - If mmcv will be used
+     - Downgrade the torch version to 2.1 and numpy to <2 AFTER autogluon's installation
+     - python -m uv pip install tomli
 6. Execute the Python script located at: {python_file_path}"""
     else:
         execution_prompt = f"""Please create a bash script that will:

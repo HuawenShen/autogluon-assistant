@@ -165,7 +165,7 @@ def generate_data_prompt(input_data_folder, max_chars_per_file):
             # For large groups, only show one example
             example_file = group_files[0]
             file_path = path_mapping[example_file]
-            group_info = f"Group pattern: {pattern} (total {len(group_files)} files)\nExample file: {example_file}"
+            group_info = f"Group pattern: {os.path.join(abs_folder_path, pattern)} (total {len(group_files)} files)\nExample file: {example_file}"
 
             file_contents[group_info] = get_file_content(
                 file_path=file_path, max_chars_per_file=max_chars_per_file

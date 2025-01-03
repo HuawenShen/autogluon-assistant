@@ -142,6 +142,7 @@ As an AutoML Agent, you will be given a folder containing data and description f
 
 4. Documentation:
    - Add a brief docstring at the beginning of the script explaining its purpose and usage
+   - Also include additional installation steps with comments at the beginning of the script
    - Include comments explaining any complex operations or design decisions
 
 5. Others:
