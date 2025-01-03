@@ -47,7 +47,7 @@ Current Python code to be executed:
 {current_python}
 ```
 
-Please analyze this code to determine required packages and environment setup."""
+Please use current environment unless specified."""
 
     # Add error context if provided
     if error_message:
