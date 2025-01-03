@@ -32,8 +32,13 @@ def generate_execution_prompt(
         execution_prompt = f"""Please create a bash script that will:
 1. Create a conda environment in the folder: {output_folder}
 2. Activate the virtual environment
-3. Conda or pip install all necessary Python packages
-4. Execute the Python script located at: {python_file_path}"""
+3. Install Python pip and uv:
+   - python -m pip install -q uv
+4. Install pytorch:
+   - python -m uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+5. Install other packages:
+   - python -m uv pip install xxx
+6. Execute the Python script located at: {python_file_path}"""
     else:
         execution_prompt = f"""Please create a bash script that will:
 1. Execute the Python script located at: {python_file_path}"""

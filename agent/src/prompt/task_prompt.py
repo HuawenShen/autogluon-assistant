@@ -137,7 +137,7 @@ As an AutoML Agent, you will be given a folder containing data and description f
 3. Prediction:
    - Make predictions on the test data
    - Save the predicted results to {output_folder}, result file name should be "results", the extension should be same as the test data file
-   - Save the model in a folder under {output_folder}
+   - Save the model under {output_folder} with random timestamp
    - Ensure the output columns match what in the training file, or those in the sample submission file (if any). Do not change any column names.
 
 4. Documentation:
