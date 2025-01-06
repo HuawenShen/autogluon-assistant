@@ -1,7 +1,7 @@
-from .llm import AssistantChatBedrock, AssistantChatOpenAI, LLMFactory
+from .llm import AssistantChatBedrock, AssistantChatOpenAI, ChatLLMFactory
 
 __all__ = [
     "AssistantChatOpenAI",
     "AssistantChatBedrock",
-    "LLMFactory",
+    "ChatLLMFactory",
 ]

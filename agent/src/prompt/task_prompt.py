@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from typing import List, Tuple
 
-from ..llm import LLMFactory
+from ..llm import ChatLLMFactory
 from .utils import generate_chat_prompt
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ def find_description_files(data_prompt: str, llm) -> Tuple[List[str], str]:
     Explanation: [explain why these files were identified as description files]
     """
 
-    response = llm.invoke(
+    response = llm(
         generate_chat_prompt(prompt=find_descriptions_prompt).format_messages()
     )
     analysis = response.content if hasattr(response, "content") else str(response)
@@ -109,9 +109,7 @@ def generate_task_description(
         Your reponse should include ONLY the description.
         """
 
-        response = llm.invoke(
-            generate_chat_prompt(prompt=task_prompt).format_messages()
-        )
+        response = llm(generate_chat_prompt(prompt=task_prompt).format_messages())
         return response.content if hasattr(response, "content") else str(response)
 
     except Exception as e:
@@ -130,7 +128,7 @@ As an AutoML Agent, you will be given a folder containing data and description f
 
 2. Model training:
    - Use Autogluon Multimodal with the following parameters:
-     - time_limit: 600 seconds
+     - time_limit: 3600 seconds
      - presets: 'medium_quality'
      - tuning_data: only use validation if there is a validation dataset
 
@@ -139,6 +137,7 @@ As an AutoML Agent, you will be given a folder containing data and description f
    - Save the predicted results to {output_folder}, result file name should be "results", the extension should be same as the test data file
    - Save the model under {output_folder} with random timestamp
    - Ensure the output columns match what in the training file, or those in the sample submission file (if any). Do not change any column names.
+   - For semantic segmentation, the output mask should be saved as image and the path to the mask should be provided in label column of the output file (similar to training data).
 
 4. Documentation:
    - Add a brief docstring at the beginning of the script explaining its purpose and usage
@@ -173,17 +172,24 @@ def generate_task_prompt(
     # Ensure output folder exists
     Path(output_folder).mkdir(parents=True, exist_ok=True)
 
-    llm = LLMFactory.get_chat_model(llm_config)
+    # TODO: use one conversation for both tasks?
+    llm_find_description_files = ChatLLMFactory.get_chat_model(llm_config)
+    llm_generate_task_description = ChatLLMFactory.get_chat_model(llm_config)
 
     # Step 1: Find description files (just identifies files, doesn't read content)
-    description_files, description_analysis = find_description_files(data_prompt, llm)
+    description_files, description_analysis = find_description_files(
+        data_prompt, llm_find_description_files
+    )
     logger.info(
         f"Found {len(description_files)} potential description files: {description_files}"
     )
 
     # Step 2: Generate task description (includes reading file contents)
     task_description = generate_task_description(
-        data_prompt, description_files, description_analysis, llm
+        data_prompt,
+        description_files,
+        description_analysis,
+        llm_generate_task_description,
     )
 
     task_description = wrap_task_description(

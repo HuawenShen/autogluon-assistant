@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from ..llm import LLMFactory
+from ..llm import ChatLLMFactory
 from .utils import generate_chat_prompt
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ def select_relevant_tutorials(
     """Select most relevant tutorials using LLM scoring based only on titles."""
 
     # Create LLM instance
-    llm = LLMFactory.get_chat_model(llm_config)
+    llm_select_tutorial = ChatLLMFactory.get_chat_model(llm_config)
 
     # Construct context for relevance scoring
     context = f"""Task: {task_prompt}
@@ -75,7 +75,9 @@ def select_relevant_tutorials(
     DO NOT include any other text, explanation, or formatting in your response."""
 
     try:
-        response = llm.invoke(generate_chat_prompt(prompt=prompt).format_messages())
+        response = llm_select_tutorial(
+            generate_chat_prompt(prompt=prompt).format_messages()
+        )
         # Clean and parse the response
         content = response.content.strip()
 
