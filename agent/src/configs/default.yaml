@@ -7,8 +7,9 @@ max_error_message_length: 9999
 max_tutorial_length: 9999
 create_venv: true
 
-# LLM Configuration
-llm:
+# Default LLM Configuration
+# For each agent (coder, etc.) you can use a different one
+llm: &default_llm
   # Note: bedrock is only supported in limited AWS regions
   #       and requires AWS credentials
   provider: bedrock
@@ -19,3 +20,11 @@ llm:
   proxy_url: null
   temperature: 0
   verbose: True
+  multi_turn: True
+
+coder:
+  <<: *default_llm  # Merge llm_config
+  temperature: 0.5
+  max_tokens: 2048
+  top_p: 1
+  multi_turn: True

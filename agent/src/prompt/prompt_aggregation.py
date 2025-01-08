@@ -15,28 +15,6 @@ logging.basicConfig(level=logging.INFO)
 
 # Create a logger
 logger = logging.getLogger(__name__)
-from omegaconf import OmegaConf
-
-
-@dataclass
-class LLMConfig:
-    provider: str = "bedrock"
-    model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
-    max_tokens: int = 512
-    proxy_url: Optional[str] = None
-    temperature: float = 0
-    verbose: bool = True
-
-
-@dataclass
-class PromptGeneratorConfig:
-    max_chars_per_file: int = 100
-    max_num_tutorials: int = 3
-    max_user_input_length: int = 9999
-    max_error_message_length: int = 9999
-    max_tutorial_length: int = 9999
-    llm: LLMConfig = LLMConfig()
-    create_venv: bool = False
 
 
 class PromptGenerator:
@@ -45,7 +23,7 @@ class PromptGenerator:
         input_data_folder: str,
         tutorials_folder: str,
         output_folder: str,
-        config_path: str,
+        config: str,
     ):
         """Initialize PromptGenerator with required paths and config from YAML file.
 
@@ -71,13 +49,7 @@ class PromptGenerator:
         # Create output folder if it doesn't exist
         Path(output_folder).mkdir(parents=True, exist_ok=True)
 
-        # Load config from YAML and merge with default
-        if not Path(config_path).exists():
-            raise FileNotFoundError(f"Config file not found: {config_path}")
-
-        default_config = OmegaConf.structured(PromptGeneratorConfig)
-        yaml_config = OmegaConf.load(config_path)
-        self.config = OmegaConf.merge(default_config, yaml_config)
+        self.config = config
 
         # Initialize prompts
         initial_prompts = self.generate_initial_prompts()

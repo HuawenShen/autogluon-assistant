@@ -75,11 +75,7 @@ def select_relevant_tutorials(
     DO NOT include any other text, explanation, or formatting in your response."""
 
     try:
-        response = llm_select_tutorial(
-            generate_chat_prompt(prompt=prompt).format_messages()
-        )
-        # Clean and parse the response
-        content = response.content.strip()
+        content = llm_select_tutorial.assistant_chat(prompt)
 
         # Extract first line in case of multi-line response
         content = content.split("\n")[0]

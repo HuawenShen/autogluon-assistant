@@ -34,10 +34,7 @@ def find_description_files(data_prompt: str, llm) -> Tuple[List[str], str]:
     Explanation: [explain why these files were identified as description files]
     """
 
-    response = llm(
-        generate_chat_prompt(prompt=find_descriptions_prompt).format_messages()
-    )
-    analysis = response.content if hasattr(response, "content") else str(response)
+    analysis = llm.assistant_chat(find_descriptions_prompt)
 
     # Extract filenames from the response
     description_files = []
@@ -109,8 +106,8 @@ def generate_task_description(
         Your reponse should include ONLY the description.
         """
 
-        response = llm(generate_chat_prompt(prompt=task_prompt).format_messages())
-        return response.content if hasattr(response, "content") else str(response)
+        response = llm.assistant_chat(task_prompt)
+        return response
 
     except Exception as e:
         logger.error(f"Error in generating task description: {e}")
@@ -128,7 +125,7 @@ As an AutoML Agent, you will be given a folder containing data and description f
 
 2. Model training:
    - Use Autogluon Multimodal with the following parameters:
-     - time_limit: 3600 seconds
+     - time_limit: 360 seconds
      - presets: 'medium_quality'
      - tuning_data: only use validation if there is a validation dataset
 

@@ -38,7 +38,7 @@ def extract_python_script(response):
     if matches:
         return matches[0].strip()
     else:
-        return None
+        raise ValueError(f"No python script found in reponse: {response}")
 
 
 def extract_bash_script(response):
@@ -48,16 +48,16 @@ def extract_bash_script(response):
     if matches:
         return matches[0].strip()
     else:
-        return None
+        raise ValueError(f"No bash script found in reponse: {response}")
 
 
-def extract_script(response, mode):
-    if mode == "python":
+def extract_script(response, language):
+    if language == "python":
         return extract_python_script(response)
-    elif mode == "bash":
+    elif language == "bash":
         return extract_bash_script(response)
     else:
-        raise ValueError(f"Unsupported mode: {mode}")
+        raise ValueError(f"Unsupported mode: {language}")
 
 
 def read_prompt(file_path):

@@ -1,8 +1,10 @@
 import os
 import subprocess
 import sys
+from omegaconf import OmegaConf
+from pathlib import Path
 
-from .coding import (generate_code, generate_script, write_code_script,
+from .coder import (generate_coder, write_code_script,
                      write_retrieved_context)
 from .prompt import PromptGenerator, write_prompt_to_file
 
@@ -101,12 +103,19 @@ def generate_code_script(
     max_iterations=5,
     need_user_input=False,
 ):
+    # Load config from YAML and merge with default
+    if not Path(config_path).exists():
+        raise FileNotFoundError(f"Config file not found: {config_path}")
+    config = OmegaConf.load(config_path)
+
     prompt_generator = PromptGenerator(
         input_data_folder=input_data_folder,
         tutorials_folder=tutorial_path,
         output_folder=output_folder,
-        config_path=config_path,
+        config=config,
     )
+    python_coder = generate_coder(llm_config=config.coder, tutorial_link_for_rag=tutorial_link)
+    bash_coder = generate_coder(llm_config=config.coder, tutorial_link_for_rag=tutorial_link)
 
     iteration = 0
     while iteration < max_iterations:
@@ -133,8 +142,8 @@ def generate_code_script(
         write_prompt_to_file(coding_prompt, coding_prompt_path)
 
         # Generate code
-        generated_content = generate_code(
-            coding_prompt, model_id, backend, tutorial_link
+        generated_content = python_coder(
+            prompt=coding_prompt, language="python"
         )
         generated_python_code = generated_content["code_script"]
 
@@ -161,8 +170,8 @@ def generate_code_script(
         write_prompt_to_file(execution_prompt, execution_prompt_path)
 
         # Generate bash code
-        generated_bash_script = generate_script(
-            execution_prompt, model_id, backend, None
+        generated_bash_script = bash_coder(
+            prompt=execution_prompt, language="bash"
         )["code_script"]
 
         # Save the bash code
