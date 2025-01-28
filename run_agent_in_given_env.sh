@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default environment name
-DEFAULT_ENV="ag20241211"
+DEFAULT_ENV="ag20250103"
 
 # Parse command line arguments
 if [ $# -lt 6 ]; then
@@ -32,7 +32,7 @@ python3 /media/deephome/AutoMLAgent/run_agent.py \
     -m "$model_id" \
     -b "$backend" \
     -c "$config_path" \
-    -n 5 \
+    -n 3 \
     2>&1 | tee "${output_dir}/log.txt"
 
 # Check if the agent run was successful
