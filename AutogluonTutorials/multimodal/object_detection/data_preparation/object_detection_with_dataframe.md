@@ -171,8 +171,13 @@ Make sure `mmcv` and `mmdet` are installed:
 
 
 ```python
-!mim install mmcv
-!pip install "mmdet==3.1.0"
+# Note: To use object detection, downgrade the torch version if it's >=2.2 (after autogluon's installation)
+!pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 
+# Note: Use mim instead of pip to install mmcv and mmdet
+!mim install "mmcv==2.1.0" 
+# But for Google Colab, use the line below instead to install mmcv
+# !pip install "mmcv==2.1.0" -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.1.0/index.html
+!mim install "mmdet==3.2.0"
 ```
 
 Again, we follow the model setup as in [AutoMM Detection - Quick Start on a Tiny COCO Format Dataset](../quick_start/quick_start_coco.ipynb).
