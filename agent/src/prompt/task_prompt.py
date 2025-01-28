@@ -125,16 +125,16 @@ As an AutoML Agent, you will be given a folder containing data and description f
 
 2. Model training:
    - Use Autogluon Multimodal with the following parameters:
-     - time_limit: 360 seconds
-     - presets: 'medium_quality'
+     - time_limit: 14400 seconds
+     - presets: 'best_quality'
      - tuning_data: only use validation if there is a validation dataset
 
 3. Prediction:
    - Make predictions on the test data
-   - Save the predicted results to {output_folder}, result file name should be "results", the extension should be same as the test data file
+   - Save the predicted results to {output_folder}, result file name should be "results", the format and extension should be same as the test data file
    - Save the model under {output_folder} with random timestamp
-   - Ensure the output columns match what in the training file, or those in the sample submission file (if any). Do not change any column names.
-   - For semantic segmentation, the output mask should be saved as image and the path to the mask should be provided in label column of the output file (similar to training data).
+   - ENSURE the output columns match what in the training file, or those in the sample submission file (if any). DO NOT create any new column names.
+   - For segmentation, save the mask as greyscale JPG image (squeeze then cv2.imwrite) in "predicted_mask" folder under {output_folder} and save its absolute path in label column.
 
 4. Documentation:
    - Add a brief docstring at the beginning of the script explaining its purpose and usage
