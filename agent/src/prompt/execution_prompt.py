@@ -32,19 +32,8 @@ def generate_execution_prompt(
         execution_prompt = f"""Please create a bash script that will:
 1. Create a conda environment in the folder with python=3.11: {output_folder}
 2. Activate the virtual environment
-3. Install Python pip and uv:
-   - python -m pip install -q uv
-4. Install pytorch:
-   - python -m uv pip install torch torchvision torchaudio
-5. Install other packages:
-   - Use uv for pip installation: python -m uv pip install xxx
-   - If other installation instruction is given, follow instruction.
-6. ONLY when using object detection:
-   - uv pip install autogluon
-   - pip install "git+https://github.com/open-mmlab/mmengine.git@2e0ab7a92220d2f0c725798047773495d589c548"
-   - mim install "mmcv==2.1.0"
-   - pip install "mmdet==3.2.0"
-7. Execute the Python script located at: {python_file_path}"""
+3. Install necessary packages
+4. Execute the Python script located at: {python_file_path}"""
     else:
         execution_prompt = f"""Please create a bash script that will:
 1. Execute the Python script located at: {python_file_path}"""

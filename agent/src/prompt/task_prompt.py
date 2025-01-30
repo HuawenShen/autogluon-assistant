@@ -1,9 +1,10 @@
 import logging
 import os
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from ..llm import ChatLLMFactory
+from ..tools_registry import registry
 from .utils import generate_chat_prompt
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,95 @@ def find_description_files(data_prompt: str, llm) -> Tuple[List[str], str]:
                 description_files.append(filename)
 
     return description_files, analysis
+
+
+def select_tool(data_prompt: str, description: str, llm) -> Tuple[str, str]:
+    """
+    Use LLM to select the most appropriate tool based on the data description and available tools.
+    
+    Args:
+        data_prompt: Text string containing data prompt
+        description: Description of the task/data from previous analysis
+        llm: Initialized LLM model
+        
+    Returns:
+        Tuple[str, str]: (Selected tool name, Explanation for the selection)
+    """
+    # Get all available tools and their information
+    tools_info = registry.tools
+    
+    # Construct prompt for tool selection
+    tool_selection_prompt = f"""
+Given the following data science task:
+
+Data Description:
+{data_prompt}
+
+Task Analysis:
+{description}
+
+Available tools and their capabilities:
+
+{_format_tools_info(tools_info)}
+
+Please select the most appropriate tool for this task. Consider:
+1. The nature of the data (tabular, time series, multimodal, etc.)
+2. The specific requirements of the task
+3. Any limitations or special features of each tool
+
+Format your response as follows:
+Selected Tool: [tool name]
+Explanation: [detailed explanation of why this tool is the best choice, including specific features that match the task requirements]
+"""
+
+    # Get LLM's tool selection and reasoning
+    response = llm.assistant_chat(tool_selection_prompt)
+    
+    # Parse the response
+    selected_tool = ""
+    explanation = ""
+    
+    lines = response.split("\n")
+    in_explanation = False
+    
+    for line in lines:
+        line = line.strip()
+        if line.lower().startswith("selected tool:"):
+            selected_tool = line.split(":", 1)[1].strip()
+        elif line.lower().startswith("explanation:"):
+            in_explanation = True
+            explanation = line.split(":", 1)[1].strip()
+        elif in_explanation:
+            explanation += " " + line
+    
+    # Validate selected tool exists in registry
+    if not registry.get_tool(selected_tool):
+        logger.warning(f"Selected tool '{selected_tool}' not found in registry")
+        raise ValueError(f"Selected tool '{selected_tool}' is not available in the tools registry")
+        
+    return selected_tool, explanation
+
+
+def _format_tools_info(tools_info: Dict) -> str:
+    """
+    Format tools information for the prompt.
+    
+    Args:
+        tools_info: Dictionary containing tool information
+        
+    Returns:
+        str: Formatted string of tool information
+    """
+    formatted_info = ""
+    for tool_name, info in tools_info.items():
+        formatted_info += f"\n{tool_name} (v{info['version']}):\n"
+        formatted_info += f"Description: {info['description']}\n"
+        if info['features']:
+            formatted_info += "Special features/limitations:\n"
+            for feature in info['features']:
+                formatted_info += f"- {feature}\n"
+        formatted_info += "\n"
+    return formatted_info
 
 
 def generate_task_description(
@@ -114,27 +204,44 @@ def generate_task_description(
         return f"Error generating task description: {str(e)}"
 
 
-# TODO: This is for AutoGluon Only. Nake it more general or customizable.
-def wrap_task_description(task_description, output_folder):
+def wrap_task_description(task_description: str, output_folder: str, tool_name: str, registry) -> str:
+    """
+    Wraps the task description with standard instructions and tool-specific requirements.
+    
+    Args:
+        task_description: Generated description of the data science task
+        output_folder: Path where outputs should be saved
+        tool_name: Name of the selected tool
+        registry: Tool registry containing tool-specific information
+        
+    Returns:
+        str: Complete task prompt including general and tool-specific instructions
+    """
+    # Get tool-specific template and requirements if they exist
+    tool_info = registry.get_tool(tool_name)
+    if not tool_info:
+        raise ValueError(f"Tool {tool_name} not found in registry")
+
+    # Get tool-specific template or use default format
+    tool_prompt = tool_info.get('prompt_template', '')
+    if isinstance(tool_prompt, list):
+        tool_prompt = '\n'.join(tool_prompt)
+    
     return f"""
-As an AutoML Agent, you will be given a folder containing data and description files. Please generate Python code using Autogluon Multimodal to train a predictor and make predictions on test data. Follow these specifications:
+As an AutoML Agent, you will be given a folder containing data and description files. Please generate Python code using {tool_name} to train a predictor and make predictions on test data. Follow these specifications:
 
 1. Data preprocessing:
-   - Remove training data samples without valid labels
+   - Remove training data samples without valid labels (unless told not to do so).
    - Remove the unneccesary index column (if applicable)
 
 2. Model training:
-   - Use Autogluon Multimodal with the following parameters:
-     - time_limit: 14400 seconds
-     - presets: 'best_quality'
-     - tuning_data: only use validation if there is a validation dataset
+   - Use {tool_name} with appropriate parameters for the task
 
 3. Prediction:
    - Make predictions on the test data
    - Save the predicted results to {output_folder}, result file name should be "results", the format and extension should be same as the test data file
-   - Save the model under {output_folder} with random timestamp
+   - Save the model in a folder with random timestamp within {output_folder}
    - ENSURE the output columns match what in the training file, or those in the sample submission file (if any). DO NOT create any new column names.
-   - For segmentation, save the mask as greyscale JPG image (squeeze then cv2.imwrite) in "predicted_mask" folder under {output_folder} and save its absolute path in label column.
 
 4. Documentation:
    - Add a brief docstring at the beginning of the script explaining its purpose and usage
@@ -143,6 +250,8 @@ As an AutoML Agent, you will be given a folder containing data and description f
 
 5. Others:
    - To avoid DDP errors, wrap the code in: if __name__ == "__main__":
+
+{tool_prompt}
 
 Please provide the complete Python script that accomplishes these tasks, ensuring it's ready to run given the appropriate data inputs.
 
@@ -172,6 +281,7 @@ def generate_task_prompt(
     # TODO: use one conversation for both tasks?
     llm_find_description_files = ChatLLMFactory.get_chat_model(llm_config)
     llm_generate_task_description = ChatLLMFactory.get_chat_model(llm_config)
+    llm_tool_selection = ChatLLMFactory.get_chat_model(llm_config)
 
     # Step 1: Find description files (just identifies files, doesn't read content)
     description_files, description_analysis = find_description_files(
@@ -189,8 +299,14 @@ def generate_task_prompt(
         llm_generate_task_description,
     )
 
+    # Step 3: Select the ML tool to use 
+    selected_tool, explanation = select_tool(data_prompt=data_prompt, description=task_description, llm=llm_tool_selection)
+
     task_description = wrap_task_description(
-        task_description=task_description, output_folder=output_folder
+        task_description=task_description, 
+        output_folder=output_folder, 
+        tool_name=selected_tool,
+        registry=registry,
     )
 
     # Save results in separate files
@@ -213,4 +329,12 @@ def generate_task_prompt(
         f.write(task_description)
     logger.info(f"Generated task description saved to: {task_path}")
 
-    return task_description
+    # Save tool selection
+    tool_path = os.path.join(output_folder, "tool_selection.txt")
+    with open(tool_path, "w") as f:
+        f.write(selected_tool)
+        f.write("\n\n")
+        f.write(explanation)
+    logger.info(f"Tool selection log is saved to: {tool_path}")
+
+    return task_description, selected_tool

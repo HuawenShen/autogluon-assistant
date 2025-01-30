@@ -4,23 +4,24 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from ..llm import ChatLLMFactory
+from ..tools_registry import get_tool_tutorials_folder
 from .utils import generate_chat_prompt
 
 logger = logging.getLogger(__name__)
 
 
-def get_all_tutorials(tutorial_folder: str) -> List[Tuple[Path, str]]:
-    """Get all tutorial files from the folder (including nested directories).
+def get_all_tutorials(tool_name: str) -> List[Tuple[Path, str]]:
+    """Get all tutorial files of the tool.
 
     Args:
-        tutorial_folder: Path to the folder containing tutorial files
+        tool_name: Name of the ML tool to use in codes
 
     Returns:
         List of (file_path, title) tuples
     """
+    tutorial_dir = get_tool_tutorials_folder(tool_name)
+    
     tutorial_files = []
-    tutorial_dir = Path(tutorial_folder)
-
     for file_path in tutorial_dir.rglob(
         "*.md"
     ):  # Assuming tutorials are markdown files
@@ -180,7 +181,7 @@ def generate_tutorial_prompt(
     data_prompt: str,
     user_prompt: str,
     error_prompt: str,
-    tutorial_folder: str,
+    tool_name: str,
     llm_config,
     output_folder: Optional[str],
     max_num_tutorials: int = 3,
@@ -193,22 +194,18 @@ def generate_tutorial_prompt(
         data_prompt: Describe the data
         user_prompt: Instructions from the user
         error_prompt: Error from last run
-        tutorial_folder: Path to the folder containing tutorial files (could be nested structure)
+        tool_name: Name of the ML tool to use in codes
         max_num_tutorials: Maximum number of tutorials to include
         max_tutorial_length: Maximum length for each tutorial
 
     Returns:
         str: Formatted tutorial prompt containing selected tutorials
     """
-    # Safety check for tutorial folder
-    if not Path(tutorial_folder).exists():
-        logger.warning(f"Tutorial folder not found: {tutorial_folder}")
-        return ""
 
     # Get all available tutorials
-    tutorials = get_all_tutorials(tutorial_folder)
+    tutorials = get_all_tutorials(tool_name)
     if not tutorials:
-        logger.warning(f"No tutorials found in {tutorial_folder}")
+        logger.warning(f"No tutorials found for {tool_name}")
         return ""
 
     # Select relevant tutorials

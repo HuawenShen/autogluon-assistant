@@ -70,7 +70,7 @@ class PromptGenerator:
             max_chars_per_file=self.config.max_chars_per_file,
         )
 
-        task_prompt = generate_task_prompt(
+        task_prompt, self.selected_tool = generate_task_prompt(
             data_prompt=data_prompt,
             output_folder=self.output_folder,
             llm_config=self.config.llm,
@@ -176,7 +176,7 @@ class PromptGenerator:
             data_prompt=self.data_prompt,
             user_prompt=user_prompt,
             error_prompt=error_prompt,
-            tutorial_folder=self.tutorials_folder,
+            tool_name=self.selected_tool,
             llm_config=self.config.llm,
             output_folder=self.output_folder,
             max_num_tutorials=self.config.max_num_tutorials,
