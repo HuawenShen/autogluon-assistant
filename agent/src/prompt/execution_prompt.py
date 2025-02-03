@@ -36,7 +36,8 @@ def generate_execution_prompt(
 4. Execute the Python script located at: {python_file_path}"""
     else:
         execution_prompt = f"""Please create a bash script that will:
-1. Execute the Python script located at: {python_file_path}"""
+1. Execute the Python script located at: {python_file_path}
+2. The environment is already set up and no need for any package installations."""
 
     # Add current Python code for environment analysis
     if current_python:

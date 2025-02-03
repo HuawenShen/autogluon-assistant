@@ -29,19 +29,17 @@ class PromptGenerator:
 
         Args:
             input_data_folder: Path to input data directory
-            tutorials_folder: Path to tutorials directory
+            tutorials_folder: Path to tutorials directory (DEPRECATED)
             output_folder: Path to output directory
             config_path: Path to YAML configuration file
         """
         # Store required paths
         self.input_data_folder = input_data_folder
-        self.tutorials_folder = tutorials_folder
         self.output_folder = output_folder
 
         # Validate paths
         for path, name in [
             (input_data_folder, "input_data_folder"),
-            (tutorials_folder, "tutorials_folder"),
         ]:
             if not Path(path).exists():
                 raise FileNotFoundError(f"{name} not found: {path}")
@@ -50,6 +48,7 @@ class PromptGenerator:
         Path(output_folder).mkdir(parents=True, exist_ok=True)
 
         self.config = config
+        self.coder_multi_turn = config.coder.multi_turn
 
         # Initialize prompts
         initial_prompts = self.generate_initial_prompts()
@@ -58,6 +57,7 @@ class PromptGenerator:
 
         self.user_inputs: List[str] = []
         self.error_messages: List[str] = []
+        self.error_prompts: List[str] = []
         self.python_codes: List[str] = []
         self.bash_scripts: List[str] = []
         self.tutorial_prompts: List[str] = []
@@ -145,6 +145,23 @@ class PromptGenerator:
             return ""
 
     @property
+    def error_prompt(self) -> str:
+        assert (
+            self.time_step >= 0
+        ), "No error prompt because the prompt generator is not stepped yet."
+        assert (
+            len(self.error_prompts) == self.time_step + 1
+        ), "error prompt is not updated yet"
+        return self.error_prompts[self.time_step]
+
+    @property
+    def previous_error_prompt(self) -> str:
+        if self.time_step >= 1:
+            return self.error_prompts[self.time_step - 1]
+        else:
+            return ""
+
+    @property
     def tutorial_prompt(self) -> str:
         assert (
             self.time_step >= 0
@@ -153,6 +170,13 @@ class PromptGenerator:
             len(self.tutorial_prompts) == self.time_step + 1
         ), "tutorial prompt is not updated yet"
         return self.tutorial_prompts[self.time_step]
+
+    @property
+    def previous_tutorial_prompt(self) -> str:
+        if self.time_step >= 1:
+            return self.tutorial_prompts[self.time_step - 1]
+        else:
+            return ""
 
     def step(self, user_input=None):
         """Step the prompt generator forward.
@@ -167,15 +191,28 @@ class PromptGenerator:
             user_input=user_input,
             max_user_input_length=self.config.max_user_input_length,
         )
-        error_prompt = generate_error_prompt(
-            error_message=self.previous_error_message,
-            max_error_message_length=self.config.max_error_message_length,
-        )
+
+        if self.time_step > 0:
+            previous_error_prompt = generate_error_prompt(
+                task_prompt=self.task_prompt,
+                data_prompt=self.data_prompt,
+                user_prompt=user_prompt,
+                python_code=self.previous_python_code,
+                bash_script=self.previous_bash_script,
+                tutorial_prompt=self.previous_tutorial_prompt,
+                error_message=self.previous_error_message,
+                llm_config=self.config.llm,
+                output_folder=self.output_folder,
+                max_error_message_length=self.config.max_error_message_length,
+            )
+            assert len(self.error_prompts) == self.time_step - 1
+            self.error_prompts.append(previous_error_prompt)
+
         tutorial_prompt = generate_tutorial_prompt(
             task_prompt=self.task_prompt,
             data_prompt=self.data_prompt,
             user_prompt=user_prompt,
-            error_prompt=error_prompt,
+            error_prompt=self.previous_error_prompt,
             tool_name=self.selected_tool,
             llm_config=self.config.llm,
             output_folder=self.output_folder,
@@ -189,6 +226,7 @@ class PromptGenerator:
         assert len(self.tutorial_prompts) == self.time_step
         self.tutorial_prompts.append(tutorial_prompt)
 
+        
     def get_coding_prompt(self) -> str:
         """Get the complete iterative prompt.
 
@@ -201,7 +239,7 @@ class PromptGenerator:
 
         prompt_parts = []
 
-        if self.time_step == 0:
+        if self.time_step == 0 or self.coder_multi_turn:
             prompt_parts.extend([self.task_prompt, self.data_prompt])
 
         if self.user_input:
@@ -211,11 +249,7 @@ class PromptGenerator:
             )
             prompt_parts.append(user_prompt)
 
-        if self.previous_error_message:
-            error_prompt = generate_error_prompt(
-                error_message=self.previous_error_message,
-                max_error_message_length=self.config.max_error_message_length,
-            )
+        for error_prompt in self.error_prompts:
             prompt_parts.append(error_prompt)
 
         if self.tutorial_prompt:
