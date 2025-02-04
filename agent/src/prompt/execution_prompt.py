@@ -36,8 +36,6 @@ def generate_execution_prompt(
             "- Activate the environment",
             "- Install required packages"
         ])
-    #else:
-    #    instructions.append("Use conda environment \"ag20250103\"")
     
     instructions.append(f"Execute the Python script: {python_file_path}")
     
