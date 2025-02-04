@@ -1,5 +1,6 @@
 import json
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -17,7 +18,7 @@ def generate_error_prompt(
     error_message: str,
     llm_config,
     output_folder: Optional[str],
-    max_error_message_length: int = 1000,
+    max_error_message_length: int = 2000,
 ) -> str:
     """Generate an error prompt by analyzing the error message and providing guidance for code improvement.
     
@@ -66,12 +67,11 @@ Error Message:
         # Prompt for LLM to analyze error
         analysis_prompt = f"""Analyze the error message and context provided. Generate a clear, concise summary of the error and provide specific suggestions for fixing it. Focus on:
 1. The root cause of the error
-2. Which part of the code needs to be modified
-3. A specific suggestion for how to fix it
+2. A specific and concise suggestion for how to fix it, no code needed.
 
 Format your response in two parts:
 ERROR SUMMARY: (Brief description of the error)
-SUGGESTED FIX: (Specific code-level suggestion)
+SUGGESTED FIX: (Specific and concise suggestion, no code needed)
 
 Keep the response focused and technical. Do not include general advice or explanations."""
 

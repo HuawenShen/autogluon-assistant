@@ -1,5 +1,5 @@
 import os
-
+from textwrap import dedent
 
 def generate_execution_prompt(
     output_folder,
@@ -11,68 +11,75 @@ def generate_execution_prompt(
     current_python=None,
 ):
     """
-    Generate a prompt for an LLM to create a bash script for environment setup and code execution.
-
+    Generate a prompt for an LLM to create a simplified bash script for environment setup and code execution.
+    
     Args:
         output_folder (str): Path to the project folder
         python_file_path (str): Absolute path to the Python file that needs to be executed
         create_venv (bool): Whether to create a new virtual environment or use current environment
         previous_bash (str, optional): Previous bash script that caused errors
         previous_python (str, optional): Previous Python code in the bash script
-        error_messages (list, optional): Previous error message to help with debugging
-
+        error_message (str, optional): Previous error message to help with debugging
+        current_python (str, optional): Current Python code to be executed
+    
     Returns:
         str: Formatted prompt for the LLM
     """
-    # Ensure output folder exists
     os.makedirs(output_folder, exist_ok=True)
-
-    # Base requirements based on whether to create venv or not
+    
+    # Build the core instructions
+    instructions = []
     if create_venv:
-        execution_prompt = f"""Please create a bash script that will:
-1. Create a conda environment in the folder with python=3.11: {output_folder}
-2. Activate the virtual environment
-3. Install necessary packages
-4. Execute the Python script located at: {python_file_path}"""
-    else:
-        execution_prompt = f"""Please create a bash script that will:
-1. Execute the Python script located at: {python_file_path}
-2. The environment is already set up and no need for any package installations."""
-
-    # Add current Python code for environment analysis
+        instructions.extend([
+            f"Create and configure a conda environment in {output_folder}:",
+            "- Python version: 3.11",
+            "- Activate the environment",
+            "- Install required packages"
+        ])
+    #else:
+    #    instructions.append("Use conda environment \"ag20250103\"")
+    
+    instructions.append(f"Execute the Python script: {python_file_path}")
+    
+    # Build the prompt with optional context
+    prompt_parts = [
+        "Generate a minimal bash script that will:",
+        "\n".join(f"{i+1}. {instr}" for i, instr in enumerate(instructions)),
+    ]
+    
     if current_python:
-        execution_prompt += f"""
-
-Current Python code to be executed:
-```python
-{current_python}
-```
-
-Please use current environment unless specified."""
-
-    # Add error context if provided
+        prompt_parts.append(dedent(f"""
+            Current Python code:
+            ```python
+            {current_python}
+            ```
+        """).strip())
+    
     if error_message:
-        execution_prompt += "\n\nPrevious error encountered: \n\n{error_message}"
-
-        # Only include previous code if there are error messages
-        if previous_bash:
-            execution_prompt += f"""
-
-Previous bash script that failed:
-```bash
-{previous_bash}
-```"""
-
-        if previous_python:
-            execution_prompt += f"""
-
-Previous Python code in the bash script:
-```python
-{previous_python}
-```"""
-
-        execution_prompt += "\n\nIf any of these errors are related to environment setup, package installation, or Python version issues, please ensure the script handles them."
-
-    execution_prompt += "\n\nPlease format the response as a complete, executable bash script that can be run directly."
-
-    return execution_prompt
+        prompt_parts.append(f"Previous error:\n{error_message}")
+    
+    if previous_bash and error_message:
+        prompt_parts.append(dedent(f"""
+            Previous failed bash script:
+            ```bash
+            {previous_bash}
+            ```
+        """).strip())
+    
+    if previous_python and error_message:
+        prompt_parts.append(dedent(f"""
+            Previous Python code:
+            ```python
+            {previous_python}
+            ```
+        """).strip())
+    
+    # Add final instructions
+    prompt_parts.append(dedent("""
+        Notes:
+        - Generate a minimal, executable bash script
+        - Focus on essential commands only
+        - Handle common environment and package only if there were errors
+    """).strip())
+    
+    return "\n\n".join(prompt_parts)

@@ -218,6 +218,7 @@ class PromptGenerator:
             output_folder=self.output_folder,
             max_num_tutorials=self.config.max_num_tutorials,
             max_tutorial_length=self.config.max_tutorial_length,
+            condense_tutorials=self.config.condense_tutorials,
         )
 
         assert len(self.user_inputs) == self.time_step

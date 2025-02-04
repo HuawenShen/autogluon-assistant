@@ -4,8 +4,9 @@ max_chars_per_file: 100
 max_num_tutorials: 3
 max_user_input_length: 9999
 max_error_message_length: 9999
-max_tutorial_length: 9999
+max_tutorial_length: 99999
 create_venv: false
+condense_tutorials: false
 
 # Default LLM Configuration
 # For each agent (coder, etc.) you can use a different one

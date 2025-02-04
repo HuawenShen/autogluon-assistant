@@ -250,6 +250,7 @@ As an AutoML Agent, you will be given a folder containing data and description f
 
 5. Others:
    - To avoid DDP errors, wrap the code in: if __name__ == "__main__":
+   - Ensure errors are propagated up and not silently caught - do not use try/except blocks unless you explicitly re-raise the exception.
 
 {tool_prompt}
 

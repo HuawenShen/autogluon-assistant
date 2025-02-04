@@ -11,5 +11,7 @@
     "  - presets: \"medium_quality\"",
     "  - tuning_data: only use validation if there is a validation dataset.",
     "Note that the prediction is given in a column named \"mean\". You need to rename the column in the result.",
+    "`from_data_frame()` method of TimeSeriesDataFrame does not accept a 'target' parameter",
+    "'known_covariates_names' should be specified during TimeSeriesPredictor initialization if there are known covariates"
   ]
 }
