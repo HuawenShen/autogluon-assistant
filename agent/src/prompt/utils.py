@@ -13,9 +13,6 @@ def write_prompt_to_file(prompt, output_file):
 
 def generate_chat_prompt(prompt, system_prompt=""):
     chat_prompt = ChatPromptTemplate.from_messages(
-        [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=prompt),
-        ]
+        [SystemMessage(content=system_prompt), HumanMessage(content=prompt)]
     )
     return chat_prompt

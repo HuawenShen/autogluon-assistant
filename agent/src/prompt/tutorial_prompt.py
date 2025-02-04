@@ -5,7 +5,6 @@ from typing import List, Optional, Tuple
 
 from ..llm import ChatLLMFactory
 from ..tools_registry import get_tool_tutorials_folder
-from .utils import generate_chat_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +19,7 @@ def get_all_tutorials(tool_name: str) -> List[Tuple[Path, str]]:
         List of (file_path, title) tuples
     """
     tutorial_dir = get_tool_tutorials_folder(tool_name)
-    
+
     tutorial_files = []
     for file_path in tutorial_dir.rglob("*.md"):
         try:
@@ -102,12 +101,12 @@ def select_relevant_tutorials(
 
 
 def condense_tutorial_content(
-    content: str, 
+    content: str,
     task_prompt: str,
     data_prompt: str,
     user_prompt: str,
     error_prompt: str,
-    llm_config
+    llm_config,
 ) -> str:
     """Condense tutorial content by removing non-essential parts for coding.
     
@@ -123,12 +122,12 @@ def condense_tutorial_content(
         str: Condensed tutorial content
     """
     llm_condense = ChatLLMFactory.get_chat_model(llm_config)
-    
+
     context = f"""Task: {task_prompt}
     Data: {data_prompt}
     User Question: {user_prompt}
     Error: {error_prompt}"""
-    
+
     prompt = f"""Condense the following tutorial by keeping only the parts that are directly useful for coding. Focus on:
     1. Code snippets and their essential explanations
     2. Key implementation details and patterns
@@ -158,15 +157,15 @@ def condense_tutorial_content(
 
 
 def format_tutorial_content(
-    file_path: Path, 
-    title: str, 
+    file_path: Path,
+    title: str,
     max_length: int,
     should_condense: bool = False,
     task_prompt: str = "",
     data_prompt: str = "",
     user_prompt: str = "",
     error_prompt: str = "",
-    llm_config = None
+    llm_config=None,
 ) -> str:
     """Format a single tutorial's content with optional condensing and truncation."""
     try:
@@ -175,12 +174,7 @@ def format_tutorial_content(
 
         if should_condense and llm_config:
             content = condense_tutorial_content(
-                content,
-                task_prompt,
-                data_prompt,
-                user_prompt,
-                error_prompt,
-                llm_config
+                content, task_prompt, data_prompt, user_prompt, error_prompt, llm_config
             )
 
         # Truncate if needed
@@ -209,11 +203,7 @@ def save_selection_results(
         output_folder.mkdir(parents=True, exist_ok=True)
 
         selection_data = [
-            {
-                "path": str(path),
-                "title": title,
-            }
-            for path, title in selected_tutorials
+            {"path": str(path), "title": title} for path, title in selected_tutorials
         ]
 
         with open(
@@ -285,15 +275,15 @@ def generate_tutorial_prompt(
     formatted_tutorials = []
     for file_path, title in selected_tutorials:
         formatted = format_tutorial_content(
-            file_path, 
-            title, 
+            file_path,
+            title,
             max_tutorial_length,
             should_condense=condense_tutorials,
             task_prompt=task_prompt,
             data_prompt=data_prompt,
             user_prompt=user_prompt,
             error_prompt=error_prompt,
-            llm_config=llm_config if condense_tutorials else None
+            llm_config=llm_config if condense_tutorials else None,
         )
         if formatted:
             formatted_tutorials.append(formatted)
@@ -305,6 +295,8 @@ def generate_tutorial_prompt(
 
     if output_folder:
         output_path = Path(output_folder)
-        save_selection_results(output_path, selected_tutorials, formatted_tutorials, prompt)
+        save_selection_results(
+            output_path, selected_tutorials, formatted_tutorials, prompt
+        )
 
     return prompt

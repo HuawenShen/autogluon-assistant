@@ -3,6 +3,7 @@ import json
 import shutil
 from pathlib import Path
 
+
 class ToolRegistryManager:
     def __init__(self):
         self.common_dir = Path(__file__).parent
@@ -17,7 +18,7 @@ class ToolRegistryManager:
 
     def save_catalog(self, catalog_data):
         """Save the catalog to disk."""
-        with open(self.catalog_path, 'w') as f:
+        with open(self.catalog_path, "w") as f:
             json.dump(catalog_data, f, indent=2)
 
     def load_catalog(self):
@@ -33,7 +34,7 @@ class ToolRegistryManager:
     def add_tool_interactive(self):
         """Interactive prompt to add a new tool."""
         print("\n=== Adding New Tool to Registry ===\n")
-        
+
         tool_name = input("Tool name: ").strip()
         if not tool_name:
             print("Tool name cannot be empty.")
@@ -50,7 +51,7 @@ class ToolRegistryManager:
             "version": input("Version: ").strip(),
             "description": input("Description: ").strip(),
             "requirements": [],
-            "features": []
+            "features": [],
         }
 
         # Gather requirements
@@ -75,19 +76,21 @@ class ToolRegistryManager:
         (tool_dir / "examples").mkdir()
 
         # Save combined tool info
-        with open(tool_dir / "tool.json", 'w') as f:
+        with open(tool_dir / "tool.json", "w") as f:
             json.dump(tool_info, f, indent=2)
 
         # Create basic tutorial template
-        with open(tool_dir / "tutorials" / "quickstart.md", 'w') as f:
-            f.write(f"# {tool_name} Quickstart Guide\n\n## Installation\n\n## Basic Usage\n\n## Examples")
+        with open(tool_dir / "tutorials" / "quickstart.md", "w") as f:
+            f.write(
+                f"# {tool_name} Quickstart Guide\n\n## Installation\n\n## Basic Usage\n\n## Examples"
+            )
 
         # Update catalog
         catalog = self.load_catalog()
         catalog["tools"][tool_name] = {
             "path": str(tool_dir.relative_to(self.base_path)),
             "version": tool_info["version"],
-            "description": tool_info["description"]
+            "description": tool_info["description"],
         }
         self.save_catalog(catalog)
 
@@ -96,7 +99,7 @@ class ToolRegistryManager:
     def remove_tool_interactive(self):
         """Interactive prompt to remove a tool."""
         print("\n=== Removing Tool from Registry ===\n")
-        
+
         catalog = self.load_catalog()
         if not catalog["tools"]:
             print("No tools in registry to remove.")
@@ -114,13 +117,17 @@ class ToolRegistryManager:
             if choice < 1 or choice > len(catalog["tools"]):
                 print("Invalid choice!")
                 return
-            
+
             # Get tool name from choice
             tool_name = list(catalog["tools"].keys())[choice - 1]
-            
+
             # Confirm deletion
-            confirm = input(f"\nAre you sure you want to remove '{tool_name}'? (yes/no): ").strip().lower()
-            if confirm != 'yes':
+            confirm = (
+                input(f"\nAre you sure you want to remove '{tool_name}'? (yes/no): ")
+                .strip()
+                .lower()
+            )
+            if confirm != "yes":
                 print("Removal cancelled.")
                 return
 
@@ -139,6 +146,7 @@ class ToolRegistryManager:
             print("Invalid input!")
             return
 
+
 if __name__ == "__main__":
     manager = ToolRegistryManager()
     while True:
@@ -146,7 +154,7 @@ if __name__ == "__main__":
         print("2. Remove tool")
         print("3. Exit")
         choice = input("\nSelect an option: ").strip()
-        
+
         if choice == "1":
             manager.add_tool_interactive()
         elif choice == "2":

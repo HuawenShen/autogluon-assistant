@@ -1,6 +1,7 @@
 import os
 from textwrap import dedent
 
+
 def generate_execution_prompt(
     output_folder,
     python_file_path,
@@ -26,58 +27,76 @@ def generate_execution_prompt(
         str: Formatted prompt for the LLM
     """
     os.makedirs(output_folder, exist_ok=True)
-    
+
     # Build the core instructions
     instructions = []
     if create_venv:
-        instructions.extend([
-            f"Create and configure a conda environment in {output_folder}:",
-            "- Python version: 3.11",
-            "- Activate the environment",
-            "- Install required packages"
-        ])
-    
+        instructions.extend(
+            [
+                f"Create and configure a conda environment in {output_folder}:",
+                "- Python version: 3.11",
+                "- Activate the environment",
+                "- Install required packages",
+            ]
+        )
+
     instructions.append(f"Execute the Python script: {python_file_path}")
-    
+
     # Build the prompt with optional context
     prompt_parts = [
         "Generate a minimal bash script that will:",
         "\n".join(f"{i+1}. {instr}" for i, instr in enumerate(instructions)),
     ]
-    
+
     if current_python:
-        prompt_parts.append(dedent(f"""
+        prompt_parts.append(
+            dedent(
+                f"""
             Current Python code:
             ```python
             {current_python}
             ```
-        """).strip())
-    
+        """
+            ).strip()
+        )
+
     if error_message:
         prompt_parts.append(f"Previous error:\n{error_message}")
-    
+
     if previous_bash and error_message:
-        prompt_parts.append(dedent(f"""
+        prompt_parts.append(
+            dedent(
+                f"""
             Previous failed bash script:
             ```bash
             {previous_bash}
             ```
-        """).strip())
-    
+        """
+            ).strip()
+        )
+
     if previous_python and error_message:
-        prompt_parts.append(dedent(f"""
+        prompt_parts.append(
+            dedent(
+                f"""
             Previous Python code:
             ```python
             {previous_python}
             ```
-        """).strip())
-    
+        """
+            ).strip()
+        )
+
     # Add final instructions
-    prompt_parts.append(dedent("""
+    prompt_parts.append(
+        dedent(
+            """
         Notes:
         - Generate a minimal, executable bash script
         - Focus on essential commands only
         - Handle common environment and package only if there were errors
-    """).strip())
-    
+    """
+        ).strip()
+    )
+
     return "\n\n".join(prompt_parts)

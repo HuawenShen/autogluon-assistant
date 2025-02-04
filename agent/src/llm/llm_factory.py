@@ -1,27 +1,26 @@
 import logging
 import os
-from typing import Any, Dict, List, Sequence, Optional
+from typing import Any, Dict, List, Optional
 import uuid
 
 import boto3
 from autogluon.assistant.constants import WHITE_LIST_LLM
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, BaseMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.output_parsers import StrOutputParser
 from langchain_aws import ChatBedrock
 from langchain_openai import ChatOpenAI
 from omegaconf import DictConfig
 from openai import OpenAI
 from pydantic import BaseModel, Field, ConfigDict
-from typing_extensions import Annotated
 from langgraph.graph import START, MessagesState, StateGraph
 from langgraph.checkpoint.memory import MemorySaver
 
 logger = logging.getLogger(__name__)
 
+
 class BaseAssistantChat(BaseModel):
     """Base class for assistant chat models with LangGraph support."""
-    
+
     # Configure Pydantic to allow arbitrary types
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -39,10 +38,12 @@ class BaseAssistantChat(BaseModel):
     ) -> None:
         """Initialize conversation using LangGraph."""
         # Create prompt template with message history
-        prompt_template = ChatPromptTemplate.from_messages([
-            SystemMessage(content=system_prompt),
-            MessagesPlaceholder(variable_name="messages")
-        ])
+        prompt_template = ChatPromptTemplate.from_messages(
+            [
+                SystemMessage(content=system_prompt),
+                MessagesPlaceholder(variable_name="messages"),
+            ]
+        )
 
         # Define the graph
         graph = StateGraph(state_schema=MessagesState)
@@ -61,7 +62,7 @@ class BaseAssistantChat(BaseModel):
 
         # Initialize memory
         memory = MemorySaver()
-        
+
         # Compile the graph into a runnable application
         app = graph.compile(checkpointer=memory)
 
@@ -81,7 +82,9 @@ class BaseAssistantChat(BaseModel):
     def assistant_chat(self, message: str) -> str:
         """Send a message and get response using LangGraph."""
         if not self.app:
-            raise RuntimeError("Conversation not initialized. Call initialize_conversation first.")
+            raise RuntimeError(
+                "Conversation not initialized. Call initialize_conversation first."
+            )
 
         # Generate a thread ID for this conversation
         thread_id = str(uuid.uuid4())
@@ -91,10 +94,7 @@ class BaseAssistantChat(BaseModel):
         input_messages = [HumanMessage(content=message)]
 
         # Invoke the graph
-        response = self.app.invoke(
-            {"messages": input_messages},
-            config
-        )
+        response = self.app.invoke({"messages": input_messages}, config)
 
         # Update token counts if available
         ai_message = response["messages"][-1]
@@ -104,31 +104,34 @@ class BaseAssistantChat(BaseModel):
             self.output_tokens_ += usage.get("output_tokens", 0)
 
         # Record in history
-        self.history_.append({
-            "input": message,
-            "output": ai_message.content,
-            "prompt_tokens": self.input_tokens_,
-            "completion_tokens": self.output_tokens_
-        })
+        self.history_.append(
+            {
+                "input": message,
+                "output": ai_message.content,
+                "prompt_tokens": self.input_tokens_,
+                "completion_tokens": self.output_tokens_,
+            }
+        )
 
         return ai_message.content
 
     async def astream(self, message: str):
         """Stream responses using LangGraph."""
         if not self.app:
-            raise RuntimeError("Conversation not initialized. Call initialize_conversation first.")
+            raise RuntimeError(
+                "Conversation not initialized. Call initialize_conversation first."
+            )
 
         thread_id = str(uuid.uuid4())
         config = {"configurable": {"thread_id": thread_id}}
         input_messages = [HumanMessage(content=message)]
 
         async for chunk, metadata in self.app.stream(
-            {"messages": input_messages},
-            config,
-            stream_mode="messages"
+            {"messages": input_messages}, config, stream_mode="messages"
         ):
             if isinstance(chunk, AIMessage):
                 yield chunk.content
+
 
 class AssistantChatOpenAI(ChatOpenAI, BaseAssistantChat):
     """OpenAI chat model with LangGraph support."""
@@ -139,11 +142,8 @@ class AssistantChatOpenAI(ChatOpenAI, BaseAssistantChat):
 
     def describe(self) -> Dict[str, Any]:
         base_desc = super().describe()
-        return {
-            **base_desc,
-            "model": self.model_name,
-            "proxy": self.openai_proxy,
-        }
+        return {**base_desc, "model": self.model_name, "proxy": self.openai_proxy}
+
 
 class AssistantChatBedrock(ChatBedrock, BaseAssistantChat):
     """Bedrock chat model with LangGraph support."""
@@ -154,10 +154,8 @@ class AssistantChatBedrock(ChatBedrock, BaseAssistantChat):
 
     def describe(self) -> Dict[str, Any]:
         base_desc = super().describe()
-        return {
-            **base_desc,
-            "model": self.model_id,
-        }
+        return {**base_desc, "model": self.model_id}
+
 
 class ChatLLMFactory:
     """Factory class for creating chat models with LangGraph support."""
@@ -195,7 +193,9 @@ class ChatLLMFactory:
         # Validate provider
         valid_providers = ["openai", "bedrock"]
         if provider not in valid_providers:
-            raise ValueError(f"Invalid provider: {provider}. Must be one of {valid_providers}")
+            raise ValueError(
+                f"Invalid provider: {provider}. Must be one of {valid_providers}"
+            )
 
         # Validate model
         valid_models = (

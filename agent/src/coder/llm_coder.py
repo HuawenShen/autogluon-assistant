@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Optional
+from typing import Dict
 from omegaconf import DictConfig
 
 from .utils import extract_script
@@ -8,9 +8,10 @@ from ..llm import ChatLLMFactory
 
 logger = logging.getLogger(__name__)
 
+
 class LLMCoder:
     """Class to handle code generation using LLM models."""
-    
+
     def __init__(self, llm_config: DictConfig):
         """Initialize with LLM configuration.
         
@@ -21,12 +22,8 @@ class LLMCoder:
         self.multi_turn = llm_config.multi_turn
         if self.multi_turn:
             self.llm = ChatLLMFactory.get_chat_model(llm_config)
-        
-    def __call__(
-        self,
-        prompt: str,
-        language: str,
-    ) -> Dict[str, str]:
+
+    def __call__(self, prompt: str, language: str) -> Dict[str, str]:
         """Generate code using LLM based on prompt.
         
         Args:
@@ -45,10 +42,10 @@ class LLMCoder:
 
         # Get response from LLM
         response = self.llm.assistant_chat(prompt)
-        
+
         # Extract code from response
         code_script = extract_script(response, language.lower())
-        
+
         return {
             "response": response,
             "language": language.lower(),

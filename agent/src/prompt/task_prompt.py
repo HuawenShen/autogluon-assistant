@@ -5,7 +5,6 @@ from typing import Dict, List, Tuple
 
 from ..llm import ChatLLMFactory
 from ..tools_registry import registry
-from .utils import generate_chat_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +70,7 @@ def select_tool(data_prompt: str, description: str, llm) -> Tuple[str, str]:
     """
     # Get all available tools and their information
     tools_info = registry.tools
-    
+
     # Construct prompt for tool selection
     tool_selection_prompt = f"""
 Given the following data science task:
@@ -98,14 +97,14 @@ Explanation: [detailed explanation of why this tool is the best choice, includin
 
     # Get LLM's tool selection and reasoning
     response = llm.assistant_chat(tool_selection_prompt)
-    
+
     # Parse the response
     selected_tool = ""
     explanation = ""
-    
+
     lines = response.split("\n")
     in_explanation = False
-    
+
     for line in lines:
         line = line.strip()
         if line.lower().startswith("selected tool:"):
@@ -115,12 +114,14 @@ Explanation: [detailed explanation of why this tool is the best choice, includin
             explanation = line.split(":", 1)[1].strip()
         elif in_explanation:
             explanation += " " + line
-    
+
     # Validate selected tool exists in registry
     if not registry.get_tool(selected_tool):
         logger.warning(f"Selected tool '{selected_tool}' not found in registry")
-        raise ValueError(f"Selected tool '{selected_tool}' is not available in the tools registry")
-        
+        raise ValueError(
+            f"Selected tool '{selected_tool}' is not available in the tools registry"
+        )
+
     return selected_tool, explanation
 
 
@@ -138,9 +139,9 @@ def _format_tools_info(tools_info: Dict) -> str:
     for tool_name, info in tools_info.items():
         formatted_info += f"\n{tool_name} (v{info['version']}):\n"
         formatted_info += f"Description: {info['description']}\n"
-        if info['features']:
+        if info["features"]:
             formatted_info += "Special features/limitations:\n"
-            for feature in info['features']:
+            for feature in info["features"]:
                 formatted_info += f"- {feature}\n"
         formatted_info += "\n"
     return formatted_info
@@ -204,7 +205,9 @@ def generate_task_description(
         return f"Error generating task description: {str(e)}"
 
 
-def wrap_task_description(task_description: str, output_folder: str, tool_name: str, registry) -> str:
+def wrap_task_description(
+    task_description: str, output_folder: str, tool_name: str, registry
+) -> str:
     """
     Wraps the task description with standard instructions and tool-specific requirements.
     
@@ -223,10 +226,10 @@ def wrap_task_description(task_description: str, output_folder: str, tool_name: 
         raise ValueError(f"Tool {tool_name} not found in registry")
 
     # Get tool-specific template or use default format
-    tool_prompt = tool_info.get('prompt_template', '')
+    tool_prompt = tool_info.get("prompt_template", "")
     if isinstance(tool_prompt, list):
-        tool_prompt = '\n'.join(tool_prompt)
-    
+        tool_prompt = "\n".join(tool_prompt)
+
     return f"""
 As an AutoML Agent, you will be given a folder containing data and description files. Please generate Python code using {tool_name} to train a predictor and make predictions on test data. Follow these specifications:
 
@@ -260,11 +263,7 @@ Task Description: {task_description}
 """
 
 
-def generate_task_prompt(
-    data_prompt: str,
-    output_folder: str,
-    llm_config,
-) -> str:
+def generate_task_prompt(data_prompt: str, output_folder: str, llm_config) -> str:
     """
     Main function to generate task prompt following two-step process.
 
@@ -300,12 +299,14 @@ def generate_task_prompt(
         llm_generate_task_description,
     )
 
-    # Step 3: Select the ML tool to use 
-    selected_tool, explanation = select_tool(data_prompt=data_prompt, description=task_description, llm=llm_tool_selection)
+    # Step 3: Select the ML tool to use
+    selected_tool, explanation = select_tool(
+        data_prompt=data_prompt, description=task_description, llm=llm_tool_selection
+    )
 
     task_description = wrap_task_description(
-        task_description=task_description, 
-        output_folder=output_folder, 
+        task_description=task_description,
+        output_folder=output_folder,
         tool_name=selected_tool,
         registry=registry,
     )

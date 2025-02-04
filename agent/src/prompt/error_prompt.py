@@ -8,6 +8,7 @@ from ..llm import ChatLLMFactory
 
 logger = logging.getLogger(__name__)
 
+
 def generate_error_prompt(
     task_prompt: str,
     data_prompt: str,
@@ -39,11 +40,15 @@ def generate_error_prompt(
     try:
         # Truncate error message if needed
         if len(error_message) > max_error_message_length:
-            error_message = error_message[:max_error_message_length//2] + "\n...(truncated)\n" + error_message[-max_error_message_length//2:]
-        
+            error_message = (
+                error_message[: max_error_message_length // 2]
+                + "\n...(truncated)\n"
+                + error_message[-max_error_message_length // 2 :]
+            )
+
         # Create LLM instance
         llm = ChatLLMFactory.get_chat_model(llm_config)
-        
+
         # Construct context for error analysis
         context = f"""{task_prompt}
 {data_prompt}
@@ -65,7 +70,7 @@ Error Message:
 {error_message}"""
 
         # Prompt for LLM to analyze error
-        analysis_prompt = f"""Analyze the error message and context provided. Generate a clear, concise summary of the error and provide specific suggestions for fixing it. Focus on:
+        analysis_prompt = """Analyze the error message and context provided. Generate a clear, concise summary of the error and provide specific suggestions for fixing it. Focus on:
 1. The root cause of the error
 2. A specific and concise suggestion for how to fix it, no code needed.
 
@@ -77,16 +82,13 @@ Keep the response focused and technical. Do not include general advice or explan
 
         # Get error analysis from LLM
         error_analysis = llm.assistant_chat(context + "\n\n" + analysis_prompt)
-        
+
         # Save results if output folder is provided
         if output_folder:
             save_error_analysis(
-                Path(output_folder),
-                context,
-                error_analysis,
-                error_message
+                Path(output_folder), context, error_analysis, error_message
             )
-            
+
         return error_analysis
 
     except Exception as e:
@@ -94,25 +96,23 @@ Keep the response focused and technical. Do not include general advice or explan
         # Fallback to basic error message if LLM analysis fails
         return f"Error Summary: {str(error_message)[:max_error_message_length]}"
 
+
 def save_error_analysis(
-    output_folder: Path,
-    context: str,
-    error_analysis: str,
-    original_error: str
+    output_folder: Path, context: str, error_analysis: str, original_error: str
 ) -> None:
     """Save error analysis results to output folder."""
     try:
         output_folder.mkdir(parents=True, exist_ok=True)
-        
+
         analysis_data = {
             "context": context,
             "error_analysis": error_analysis,
             "original_error": original_error,
-            "timestamp": str(datetime.now())
+            "timestamp": str(datetime.now()),
         }
-        
+
         with open(output_folder / "error_analysis.json", "w", encoding="utf-8") as f:
             json.dump(analysis_data, f, indent=2)
-            
+
     except Exception as e:
         logger.error(f"Error saving error analysis: {e}")

@@ -1,11 +1,11 @@
 import os
 import subprocess
 import sys
-from omegaconf import OmegaConf
 from pathlib import Path
 
-from .coder import (generate_coder, write_code_script,
-                     write_retrieved_context)
+from omegaconf import OmegaConf
+
+from .coder import generate_coder, write_code_script, write_retrieved_context
 from .prompt import PromptGenerator, write_prompt_to_file
 
 
@@ -114,8 +114,12 @@ def generate_code_script(
         output_folder=output_folder,
         config=config,
     )
-    python_coder = generate_coder(llm_config=config.coder, tutorial_link_for_rag=tutorial_link)
-    bash_coder = generate_coder(llm_config=config.coder, tutorial_link_for_rag=tutorial_link)
+    python_coder = generate_coder(
+        llm_config=config.coder, tutorial_link_for_rag=tutorial_link
+    )
+    bash_coder = generate_coder(
+        llm_config=config.coder, tutorial_link_for_rag=tutorial_link
+    )
 
     iteration = 0
     while iteration < max_iterations:
@@ -142,9 +146,7 @@ def generate_code_script(
         write_prompt_to_file(coding_prompt, coding_prompt_path)
 
         # Generate code
-        generated_content = python_coder(
-            prompt=coding_prompt, language="python"
-        )
+        generated_content = python_coder(prompt=coding_prompt, language="python")
         generated_python_code = generated_content["code_script"]
 
         # Save the python code
@@ -170,9 +172,9 @@ def generate_code_script(
         write_prompt_to_file(execution_prompt, execution_prompt_path)
 
         # Generate bash code
-        generated_bash_script = bash_coder(
-            prompt=execution_prompt, language="bash"
-        )["code_script"]
+        generated_bash_script = bash_coder(prompt=execution_prompt, language="bash")[
+            "code_script"
+        ]
 
         # Save the bash code
         bash_file_path = os.path.join(iteration_folder, "execution_script.sh")

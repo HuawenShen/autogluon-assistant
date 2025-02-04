@@ -1,7 +1,6 @@
 import logging
-from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 from .data_prompt import generate_data_prompt
 from .error_prompt import generate_error_prompt
@@ -38,9 +37,7 @@ class PromptGenerator:
         self.output_folder = output_folder
 
         # Validate paths
-        for path, name in [
-            (input_data_folder, "input_data_folder"),
-        ]:
+        for path, name in [(input_data_folder, "input_data_folder")]:
             if not Path(path).exists():
                 raise FileNotFoundError(f"{name} not found: {path}")
 
@@ -78,10 +75,7 @@ class PromptGenerator:
 
         # TODO: use LLM to select a task prompt from tabular/automm/timeseries
 
-        return {
-            "task_prompt": task_prompt,
-            "data_prompt": data_prompt,
-        }
+        return {"task_prompt": task_prompt, "data_prompt": data_prompt}
 
     @property
     def user_input(self) -> str:
@@ -227,7 +221,6 @@ class PromptGenerator:
         assert len(self.tutorial_prompts) == self.time_step
         self.tutorial_prompts.append(tutorial_prompt)
 
-        
     def get_coding_prompt(self) -> str:
         """Get the complete iterative prompt.
 
