@@ -20,7 +20,6 @@ class PromptGenerator:
     def __init__(
         self,
         input_data_folder: str,
-        tutorials_folder: str,
         output_folder: str,
         config: str,
     ):
@@ -28,7 +27,6 @@ class PromptGenerator:
 
         Args:
             input_data_folder: Path to input data directory
-            tutorials_folder: Path to tutorials directory (DEPRECATED)
             output_folder: Path to output directory
             config_path: Path to YAML configuration file
         """

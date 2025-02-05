@@ -93,13 +93,10 @@ def save_iteration_state(iteration_folder, prompt_generator, stdout, stderr):
             f.write(content)
 
 
-def generate_code_script(
+def run_agent(
     input_data_folder,
-    tutorial_path,
     tutorial_link,
     output_folder,
-    model_id,
-    backend,
     config_path,
     max_iterations=5,
     need_user_input=False,
@@ -111,7 +108,6 @@ def generate_code_script(
 
     prompt_generator = PromptGenerator(
         input_data_folder=input_data_folder,
-        tutorials_folder=tutorial_path,
         output_folder=output_folder,
         config=config,
     )
