@@ -153,25 +153,6 @@ outputs/
 ├── iteration_3/             # Fourth iteration
 │   └── ...                 # Same structure as iteration_0
 └── model_YYYYMMDD_HHMMSS/   # Trained model directory
-    ├── learner.pkl         # Trained model learner
-    ├── logs/              # Model training logs
-    │   └── predictor_log.txt
-    ├── models/            # Individual model files
-    │   ├── Chronos[bolt_small]/
-    │   ├── DirectTabular/
-    │   ├── ETS/
-    │   ├── Naive/
-    │   ├── RecursiveTabular/
-    │   ├── SeasonalNaive/
-    │   ├── TemporalFusionTransformer/
-    │   ├── Theta/
-    │   ├── WeightedEnsemble/
-    │   └── trainer.pkl
-    ├── predictor.pkl      # Main model predictor
-    ├── utils/            # Utility files and data
-    │   └── data/
-    │       └── train.pkl
-    └── version.txt       # Model version information
 ```
 
 Each iteration directory contains the prompts, generated code, and execution states for that specific iteration. The model directory contains all artifacts related to the trained model, including individual model components, logs, and utilities.
