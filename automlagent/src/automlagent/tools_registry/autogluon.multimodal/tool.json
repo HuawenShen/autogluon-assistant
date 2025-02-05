@@ -1,0 +1,16 @@
+{
+  "name": "autogluon.multimodal",
+  "version": "1.2.0",
+  "description": "AutoGluon Multimodal is an open-source AutoML framework that simplifies the training of models across multiple data types including text, images, and tabular data, automating tasks from preprocessing to model ensembling with minimal code required.",
+  "features": [
+    "Does not work the best with pure tabular data (categorical and numerical)."
+  ],
+  "requirements": [],
+  "prompt_template": [
+    "Use Autogluon Multimodal with the following parameters:",
+    "- time_limit: 3600 seconds",
+    "- presets: \\\"medium_quality\\\"",
+    "- tuning_data: only use validation if there is a validation dataset.",
+    "For segmentation, save the mask as greyscale JPG image (squeeze then cv2.imwrite) in \\\"predicted_mask\\\" folder under output folder and save its absolute path in label column."
+  ]
+}

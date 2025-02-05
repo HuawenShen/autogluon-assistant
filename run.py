@@ -2,7 +2,7 @@ import argparse
 import logging
 from pathlib import Path
 
-from agent.src.coding_agent import generate_code_script
+from automlagent.src.automlagent.coding_agent import generate_code_script
 
 # Configure logging
 logging.basicConfig(

@@ -2,6 +2,8 @@
 runs/
 temp_run/
 AutogluonModels/
+AutogluonTutorials/
+backup/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
