@@ -111,7 +111,7 @@ def get_tabular_data_info(file_path):
         # For CSV files, detect the separator first
         if Path(file_path).suffix.lower() == '.csv':
             separator = detect_separator(file_path)
-            df = load_pd.load(file_path, sep=separator)
+            df = load_pd.load(file_path, delimiter=separator)
         else:
             # For other formats (parquet, excel etc.), load normally
             df = load_pd.load(file_path)
