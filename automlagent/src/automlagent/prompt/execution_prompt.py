@@ -39,6 +39,8 @@ def generate_execution_prompt(
                 "- Install required packages",
             ]
         )
+    else:
+        instructions.append("The environment is already configured. Do not install or update any package.")
 
     instructions.append(f"Execute the Python script: {python_file_path}")
 

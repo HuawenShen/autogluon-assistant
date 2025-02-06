@@ -47,7 +47,8 @@ def generate_error_prompt(
             )
 
         # Create LLM instance
-        llm = ChatLLMFactory.get_chat_model(llm_config)
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        llm = ChatLLMFactory.get_chat_model(llm_config, session_name=f"error_summarizer_{timestamp}")
 
         # Construct context for error analysis
         context = f"""{task_prompt}

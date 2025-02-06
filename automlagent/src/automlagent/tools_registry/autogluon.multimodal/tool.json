@@ -8,9 +8,10 @@
   "requirements": [],
   "prompt_template": [
     "Use Autogluon Multimodal with the following parameters:",
-    "- time_limit: 3600 seconds",
+    "- time_limit: 600 seconds",
     "- presets: \\\"medium_quality\\\"",
     "- tuning_data: only use validation if there is a validation dataset.",
+    "For segmentation, use single GPU to run",
     "For segmentation, save the mask as greyscale JPG image (squeeze then cv2.imwrite) in \\\"predicted_mask\\\" folder under output folder and save its absolute path in label column."
   ]
 }

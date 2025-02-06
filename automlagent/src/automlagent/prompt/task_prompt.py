@@ -1,5 +1,6 @@
 import logging
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -279,9 +280,12 @@ def generate_task_prompt(data_prompt: str, output_folder: str, llm_config) -> st
     Path(output_folder).mkdir(parents=True, exist_ok=True)
 
     # TODO: use one conversation for both tasks?
-    llm_find_description_files = ChatLLMFactory.get_chat_model(llm_config)
-    llm_generate_task_description = ChatLLMFactory.get_chat_model(llm_config)
-    llm_tool_selection = ChatLLMFactory.get_chat_model(llm_config)
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    llm_find_description_files = ChatLLMFactory.get_chat_model(llm_config, session_name=f"description_finder_{timestamp}")
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    llm_generate_task_description = ChatLLMFactory.get_chat_model(llm_config, session_name=f"task_generator_{timestamp}")
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    llm_tool_selection = ChatLLMFactory.get_chat_model(llm_config, session_name=f"tool_selector_{timestamp}")
 
     # Step 1: Find description files (just identifies files, doesn't read content)
     description_files, description_analysis = find_description_files(

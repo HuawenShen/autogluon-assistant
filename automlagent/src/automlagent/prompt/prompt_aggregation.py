@@ -41,6 +41,10 @@ class PromptGenerator:
 
         # Create output folder if it doesn't exist
         Path(output_folder).mkdir(parents=True, exist_ok=True)
+        
+        # Create prompts folder
+        self.prompts_folder = Path(output_folder) / "prompts"
+        self.prompts_folder.mkdir(parents=True, exist_ok=True)
 
         self.config = config
         self.coder_multi_turn = config.coder.multi_turn
@@ -49,6 +53,10 @@ class PromptGenerator:
         initial_prompts = self.generate_initial_prompts()
         self.task_prompt = initial_prompts["task_prompt"]
         self.data_prompt = initial_prompts["data_prompt"]
+        
+        # Save initial prompts
+        self._save_prompt("task_prompt", self.task_prompt)
+        self._save_prompt("data_prompt", self.data_prompt)
 
         self.user_inputs: List[str] = []
         self.error_messages: List[str] = []
@@ -58,6 +66,24 @@ class PromptGenerator:
         self.tutorial_prompts: List[str] = []
 
         self.time_step = -1
+
+    def _save_prompt(self, prompt_type: str, content: str, step: int = None):
+        """Save a prompt to the prompts folder.
+        
+        Args:
+            prompt_type: Type of the prompt (e.g., 'task', 'data', 'user')
+            content: The prompt content to save
+            step: Optional step number for iterative prompts
+        """
+        if step is not None:
+            filename = f"{prompt_type}_step_{step}.txt"
+        else:
+            filename = f"{prompt_type}.txt"
+            
+        file_path = self.prompts_folder / filename
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        logger.info(f"Saved {prompt_type} prompt to {file_path}")
 
     def generate_initial_prompts(self):
         data_prompt = generate_data_prompt(
@@ -70,8 +96,6 @@ class PromptGenerator:
             output_folder=self.output_folder,
             llm_config=self.config.llm,
         )
-
-        # TODO: use LLM to select a task prompt from tabular/automm/timeseries
 
         return {"task_prompt": task_prompt, "data_prompt": data_prompt}
 
@@ -183,6 +207,10 @@ class PromptGenerator:
             user_input=user_input,
             max_user_input_length=self.config.max_user_input_length,
         )
+        
+        # Save user prompt
+        if user_input:
+            self._save_prompt("user_prompt", user_prompt, self.time_step)
 
         if self.time_step > 0:
             previous_error_prompt = generate_error_prompt(
@@ -199,6 +227,9 @@ class PromptGenerator:
             )
             assert len(self.error_prompts) == self.time_step - 1
             self.error_prompts.append(previous_error_prompt)
+            
+            # Save error prompt
+            self._save_prompt("error_prompt", previous_error_prompt, self.time_step - 1)
 
         tutorial_prompt = generate_tutorial_prompt(
             task_prompt=self.task_prompt,
@@ -212,6 +243,10 @@ class PromptGenerator:
             max_tutorial_length=self.config.max_tutorial_length,
             condense_tutorials=self.config.condense_tutorials,
         )
+        
+        # Save tutorial prompt
+        if tutorial_prompt:
+            self._save_prompt("tutorial_prompt", tutorial_prompt, self.time_step)
 
         assert len(self.user_inputs) == self.time_step
         self.user_inputs.append(user_input)
@@ -231,7 +266,7 @@ class PromptGenerator:
 
         prompt_parts = []
 
-        if self.time_step == 0 or self.coder_multi_turn:
+        if self.time_step == 0 or not self.coder_multi_turn:
             prompt_parts.extend([self.task_prompt, self.data_prompt])
 
         if self.user_input:
@@ -247,7 +282,12 @@ class PromptGenerator:
         if self.tutorial_prompt:
             prompt_parts.append(self.tutorial_prompt)
 
-        return "\n\n".join(prompt_parts)
+        complete_prompt = "\n\n".join(prompt_parts)
+        
+        # Save the complete coding prompt
+        self._save_prompt("complete_coding_prompt", complete_prompt, self.time_step)
+        
+        return complete_prompt
 
     def get_execution_prompt(self, python_file_path) -> str:
         self.execution_prompt = generate_execution_prompt(
@@ -259,6 +299,10 @@ class PromptGenerator:
             current_python=self.python_code,
             error_message=self.previous_error_message,
         )
+        
+        # Save the execution prompt
+        self._save_prompt("execution_prompt", self.execution_prompt, self.time_step)
+        
         return self.execution_prompt
 
     def update_python_code(self, python_code: str):
@@ -267,7 +311,7 @@ class PromptGenerator:
         self.python_codes.append(python_code)
 
     def update_bash_script(self, bash_script: str):
-        """Update the current bash code."""
+        """Update the current bash script."""
         assert len(self.bash_scripts) == self.time_step
         self.bash_scripts.append(bash_script)
 
@@ -275,3 +319,4 @@ class PromptGenerator:
         """Update the current error message."""
         assert len(self.error_messages) == self.time_step
         self.error_messages.append(error_message)
+        

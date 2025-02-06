@@ -1,6 +1,7 @@
 import json
 import logging
 import shutil
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
@@ -182,7 +183,8 @@ class ToolsRegistry:
             condensed_dir = tool_path / "condensed_tutorials"
             condensed_dir.mkdir(exist_ok=True)
             
-            llm_condense = ChatLLMFactory.get_chat_model(llm_config)
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            llm_condense = ChatLLMFactory.get_chat_model(llm_config, session_name=f"tutorial_condenser_{timestamp}")
             
             # Process all markdown files in tutorials directory and its subdirectories
             for tutorial_file in tutorials_dir.rglob("*.md"):

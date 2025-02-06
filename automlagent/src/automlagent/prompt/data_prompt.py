@@ -53,25 +53,72 @@ def is_tabular_file(file_path):
     return Path(file_path).suffix.lower() in tabular_extensions
 
 
+def should_truncate(text, threshold=50):
+    """
+    Determine if text should be truncated based on criteria:
+    - Must be string type
+    - Longer than threshold
+    - Not a file path or relative path
+    """
+    if not isinstance(text, str):
+        return False
+    if len(text) <= threshold:
+        return False
+    # Check if text matches the pattern xxx/xxx.xxx
+    import re
+    if re.match(r'^[^/]+(/[^/]+)*\.[^/]+$', text):
+        return False
+    return True
+
+def truncate_text(text, max_length=50):
+    """
+    Truncate text to specified length and add ellipsis
+    """
+    return text[:max_length] + "..."
+
+def format_value(value):
+    """
+    Format a single value, truncating if necessary
+    """
+    str_value = str(value)
+    if should_truncate(str_value):
+        return truncate_text(str_value)
+    return str_value
+
 def get_tabular_data_info(file_path):
     """
     Load tabular data and return column information and first two rows.
+    Truncates long text content that isn't a path.
     """
     try:
         df = load_pd.load(file_path)
-
+        
         # Get column information
         all_columns = df.columns.tolist()
-        if len(all_columns) > 10:
-            display_columns = all_columns[:5] + all_columns[-5:]
-            columns_info = f"First 5 and last 5 columns (total {len(all_columns)}): {display_columns}"
+        if len(all_columns) > 20:
+            display_columns = all_columns[:10] + all_columns[-10:]
+            columns_info = f"First 10 and last 10 columns (total {len(all_columns)}): {display_columns}"
         else:
             columns_info = f"Columns: {all_columns}"
 
         # Get first two rows
-        first_two_rows = df.head(2).to_string()
-
+        first_two = df.head(2)
+        
+        # Convert to formatted strings with truncation
+        formatted_rows = []
+        
+        # Format column headers
+        formatted_rows.append("\t".join(first_two.columns))
+        
+        # Format data rows
+        for _, row in first_two.iterrows():
+            formatted_row = "\t".join(format_value(val) for val in row)
+            formatted_rows.append(formatted_row)
+            
+        first_two_rows = "\n".join(formatted_rows)
+        
         return f"{columns_info}\nFirst two rows:\n{first_two_rows}"
+    
     except Exception as e:
         return f"Error reading tabular data: {str(e)}"
 

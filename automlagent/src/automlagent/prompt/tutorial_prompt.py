@@ -1,5 +1,6 @@
 import json
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -46,7 +47,8 @@ def select_relevant_tutorials(
 ) -> List[Tuple[Path, str]]:
     """Select most relevant tutorials using LLM scoring based only on titles."""
 
-    llm_select_tutorial = ChatLLMFactory.get_chat_model(llm_config)
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    llm_select_tutorial = ChatLLMFactory.get_chat_model(llm_config, session_name=f"tutorial_selector_{timestamp}")
 
     context = f"""Task: {task_prompt}
     Data: {data_prompt}

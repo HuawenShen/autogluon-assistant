@@ -1,5 +1,7 @@
 import logging
 import os
+import json
+from tenacity import retry, stop_after_attempt, wait_exponential
 from typing import Any, Dict, List, Optional
 import uuid
 
@@ -27,38 +29,63 @@ class GlobalTokenTracker:
             cls._instance.total_input_tokens = 0
             cls._instance.total_output_tokens = 0
             cls._instance.conversations = {}  # Track per-conversation usage
+            cls._instance.sessions = {}  # Track per-session usage
         return cls._instance
     
-    def add_tokens(self, conversation_id: str, input_tokens: int, output_tokens: int):
-        """Add token counts for a specific conversation."""
+    def add_tokens(self, conversation_id: str, session_name: str, input_tokens: int, output_tokens: int):
+        """Add token counts for a specific conversation and session."""
         self.total_input_tokens += input_tokens
         self.total_output_tokens += output_tokens
         
+        # Track conversation-level usage
         if conversation_id not in self.conversations:
             self.conversations[conversation_id] = {"input_tokens": 0, "output_tokens": 0}
         
         self.conversations[conversation_id]["input_tokens"] += input_tokens
         self.conversations[conversation_id]["output_tokens"] += output_tokens
-    
-    def get_total_usage(self) -> Dict[str, int]:
-        """Get total token usage across all conversations."""
-        return {
-            "total_input_tokens": self.total_input_tokens,
-            "total_output_tokens": self.total_output_tokens,
-            "total_tokens": self.total_input_tokens + self.total_output_tokens
-        }
-    
-    def get_conversation_usage(self, conversation_id: str) -> Dict[str, int]:
-        """Get token usage for a specific conversation."""
-        if conversation_id not in self.conversations:
-            return {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
         
-        conv = self.conversations[conversation_id]
-        return {
-            "input_tokens": conv["input_tokens"],
-            "output_tokens": conv["output_tokens"],
-            "total_tokens": conv["input_tokens"] + conv["output_tokens"]
+        # Track session-level usage
+        if session_name not in self.sessions:
+            self.sessions[session_name] = {"input_tokens": 0, "output_tokens": 0}
+        
+        self.sessions[session_name]["input_tokens"] += input_tokens
+        self.sessions[session_name]["output_tokens"] += output_tokens
+    
+    def get_total_usage(self, save_path: Optional[str] = None) -> Dict[str, Any]:
+        """Get total token usage across all conversations and sessions."""
+        usage_data = {
+            "total": {
+                "total_input_tokens": self.total_input_tokens,
+                "total_output_tokens": self.total_output_tokens,
+                "total_tokens": self.total_input_tokens + self.total_output_tokens
+            },
+            "conversations": {},
+            "sessions": {}
         }
+        
+        # Add conversation-level usage
+        for conv_id, conv_usage in self.conversations.items():
+            usage_data["conversations"][conv_id] = {
+                "input_tokens": conv_usage["input_tokens"],
+                "output_tokens": conv_usage["output_tokens"],
+                "total_tokens": conv_usage["input_tokens"] + conv_usage["output_tokens"]
+            }
+        
+        # Add session-level usage
+        for session_name, session_usage in self.sessions.items():
+            usage_data["sessions"][session_name] = {
+                "input_tokens": session_usage["input_tokens"],
+                "output_tokens": session_usage["output_tokens"],
+                "total_tokens": session_usage["input_tokens"] + session_usage["output_tokens"]
+            }
+        
+        # Save to file if path is provided
+        if save_path:
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            with open(save_path, 'w') as f:
+                json.dump(usage_data, f, indent=2)
+        
+        return usage_data
 
 
 class BaseAssistantChat(BaseModel):
@@ -74,6 +101,7 @@ class BaseAssistantChat(BaseModel):
     memory: Optional[Any] = Field(default=None, exclude=True)
     token_tracker: GlobalTokenTracker = Field(default_factory=GlobalTokenTracker)
     conversation_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    session_name: str = Field(default="default_session")
 
     def initialize_conversation(
         self,
@@ -114,9 +142,10 @@ class BaseAssistantChat(BaseModel):
             "history": self.history_,
             "conversation_tokens": conversation_usage,
             "total_tokens_across_all_conversations": total_usage,
+            "session_name": self.session_name
         }
 
-    #@retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=10))
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=60, max=120))
     def assistant_chat(self, message: str) -> str:
         """Send a message and get response using LangGraph."""
         if not self.app:
@@ -142,6 +171,7 @@ class BaseAssistantChat(BaseModel):
             self.output_tokens_ += output_tokens
             self.token_tracker.add_tokens(
                 self.conversation_id,
+                self.session_name,
                 input_tokens,
                 output_tokens
             )
@@ -203,9 +233,9 @@ class ChatLLMFactory:
     """Factory class for creating chat models with LangGraph support."""
     
     @staticmethod
-    def get_total_token_usage() -> Dict[str, int]:
-        """Get total token usage across all conversations without creating a new LLM instance."""
-        return GlobalTokenTracker().get_total_usage()
+    def get_total_token_usage(save_path: Optional[str] = None) -> Dict[str, Any]:
+        """Get total token usage across all conversations and sessions."""
+        return GlobalTokenTracker().get_total_usage(save_path)
 
     @staticmethod
     def get_openai_models() -> List[str]:
@@ -232,7 +262,7 @@ class ChatLLMFactory:
             return []
 
     @classmethod
-    def get_chat_model(cls, config: DictConfig) -> BaseAssistantChat:
+    def get_chat_model(cls, config: DictConfig, session_name: str = "default_session") -> BaseAssistantChat:
         """Get a configured chat model instance using LangGraph patterns."""
         provider = config.provider
         model = config.model
@@ -258,7 +288,7 @@ class ChatLLMFactory:
             if "OPENAI_API_KEY" not in os.environ:
                 raise ValueError("OpenAI API key not found in environment")
 
-            logger.info(f"Using OpenAI model: {model}")
+            logger.info(f"Using OpenAI model: {model} for session: {session_name}")
             return AssistantChatOpenAI(
                 model_name=model,
                 temperature=config.temperature,
@@ -266,9 +296,10 @@ class ChatLLMFactory:
                 verbose=config.verbose,
                 openai_api_key=os.environ["OPENAI_API_KEY"],
                 openai_api_base=config.proxy_url,
+                session_name=session_name
             )
         else:  # bedrock
-            logger.info(f"Using Bedrock model: {model}")
+            logger.info(f"Using Bedrock model: {model} for session: {session_name}")
             return AssistantChatBedrock(
                 model_id=model,
                 model_kwargs={
@@ -277,4 +308,5 @@ class ChatLLMFactory:
                 },
                 region_name="us-west-2",
                 verbose=config.verbose,
+                session_name=session_name
             )

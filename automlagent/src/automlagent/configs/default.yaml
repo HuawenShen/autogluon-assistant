@@ -6,7 +6,7 @@ max_user_input_length: 9999
 max_error_message_length: 9999
 max_tutorial_length: 99999
 create_venv: false
-condense_tutorials: false
+condense_tutorials: True
 
 # Default LLM Configuration
 # For each agent (coder, etc.) you can use a different one
@@ -21,11 +21,11 @@ llm: &default_llm
   proxy_url: null
   temperature: 0
   verbose: True
-  multi_turn: True
+  multi_turn: False
 
 coder:
   <<: *default_llm  # Merge llm_config
   temperature: 0.5
   max_tokens: 4096
   top_p: 1
-  multi_turn: True
+  multi_turn: False
