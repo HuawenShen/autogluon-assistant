@@ -84,14 +84,39 @@ def format_value(value):
     if should_truncate(str_value):
         return truncate_text(str_value)
     return str_value
+def detect_separator(file_path):
+    """
+    Detect the separator used in a tabular file.
+    Returns the detected separator or comma as default.
+    """
+    import csv
+    
+    try:
+        with open(file_path, 'r', newline='') as csvfile:
+            # Read a few lines to detect the dialect
+            sample = csvfile.read(1024)
+            csvfile.seek(0)
+            dialect = csv.Sniffer().sniff(sample)
+            return dialect.delimiter
+    except Exception:
+        # Default to comma if detection fails
+        return ','
 
 def get_tabular_data_info(file_path):
     """
     Load tabular data and return column information and first two rows.
-    Truncates long text content that isn't a path.
+    Preserves original file separator and truncates long text content that isn't a path.
     """
     try:
-        df = load_pd.load(file_path)
+        # For CSV files, detect the separator first
+        if Path(file_path).suffix.lower() == '.csv':
+            separator = detect_separator(file_path)
+            df = load_pd.load(file_path, sep=separator)
+        else:
+            # For other formats (parquet, excel etc.), load normally
+            df = load_pd.load(file_path)
+            # Use the same separator as detected in CSV files for consistency in output
+            separator = ',' 
         
         # Get column information
         all_columns = df.columns.tolist()
@@ -108,11 +133,11 @@ def get_tabular_data_info(file_path):
         formatted_rows = []
         
         # Format column headers
-        formatted_rows.append("\t".join(first_two.columns))
+        formatted_rows.append(separator.join(str(col) for col in first_two.columns))
         
         # Format data rows
         for _, row in first_two.iterrows():
-            formatted_row = "\t".join(format_value(val) for val in row)
+            formatted_row = separator.join(format_value(val) for val in row)
             formatted_rows.append(formatted_row)
             
         first_two_rows = "\n".join(formatted_rows)
