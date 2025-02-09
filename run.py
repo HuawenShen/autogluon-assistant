@@ -1,8 +1,10 @@
 import argparse
 import logging
+import sys
 from pathlib import Path
 
-from automlagent.src.automlagent.coding_agent import run_agent
+sys.path.append(str(Path(__file__).parent.parent))
+from automlagent.coding_agent import run_agent
 
 # Configure logging
 logging.basicConfig(
