@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(
     name="AutoMLAgent",
@@ -10,5 +10,5 @@ setup(
         "langgraph",
     ],
     author="FANGAreNotGnu",
-    description="AutoMLAgent beta"
+    description="AutoMLAgent beta",
 )
