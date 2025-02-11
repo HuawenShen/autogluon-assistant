@@ -1,6 +1,7 @@
 # Tutorial Prompt Generator Configuration
 
 max_chars_per_file: 100
+max_chars_per_tabular_to_text: 1000
 max_num_tutorials: 3
 max_user_input_length: 9999
 max_error_message_length: 9999

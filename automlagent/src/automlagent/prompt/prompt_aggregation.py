@@ -89,6 +89,7 @@ class PromptGenerator:
         data_prompt = generate_data_prompt(
             input_data_folder=self.input_data_folder,
             max_chars_per_file=self.config.max_chars_per_file,
+            max_chars_per_tabular_to_text=self.config.max_chars_per_tabular_to_text,
         )
 
         task_prompt, self.selected_tool = generate_task_prompt(

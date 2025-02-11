@@ -34,7 +34,7 @@ def group_similar_files(files):
     files: List of tuples (relative_path, absolute_path)
     
     Returns: 
-    Dict mapping group keys to lists of relative paths
+    Dict mapping group keys to lists of tuples (relative_path, absolute_path)
     """
     # First, analyze folder counts at each depth level
     depth_folders = defaultdict(set)
@@ -51,7 +51,7 @@ def group_similar_files(files):
     
     # Create groups
     groups = defaultdict(list)
-    for rel_path, _ in files:
+    for rel_path, abs_path in files:
         parts = os.path.normpath(rel_path).split(os.sep)
         filename = parts[-1]
         folders = parts[:-1]
@@ -77,15 +77,19 @@ def group_similar_files(files):
         
         # Convert key to immutable tuple for dictionary
         group_key = tuple(group_key_parts)
-        groups[group_key].append(rel_path)
+        groups[group_key].append((rel_path, abs_path))
     
     return groups
 
 
-def pattern_to_path(pattern):
+def pattern_to_path(pattern, base_path):
     """
-    Convert a group pattern tuple to a path string.
+    Convert a group pattern tuple to an absolute path string.
     Pattern tuple format: (folder1, folder2, ..., extension)
+    
+    Parameters:
+    pattern: Tuple of folder names and extension
+    base_path: Base directory path to make the pattern absolute
     """
     # Last element is extension
     folders = pattern[:-1]  # Get all folder patterns
@@ -102,7 +106,9 @@ def pattern_to_path(pattern):
     else:
         path_parts.append(f'*{ext}')
     
-    return os.path.join(*path_parts)
+    # Join with base path to make it absolute
+    relative_pattern = os.path.join(*path_parts)
+    return os.path.join(base_path, relative_pattern)
 
 
 def is_tabular_file(file_path):
@@ -130,11 +136,13 @@ def should_truncate(text, threshold=50):
         return False
     return True
 
+
 def truncate_text(text, max_length=50):
     """
     Truncate text to specified length and add ellipsis
     """
     return text[:max_length] + "..."
+
 
 def format_value(value):
     """
@@ -144,6 +152,7 @@ def format_value(value):
     if should_truncate(str_value):
         return truncate_text(str_value)
     return str_value
+
 
 def detect_separator(file_path):
     """
@@ -162,6 +171,7 @@ def detect_separator(file_path):
     except Exception:
         # Default to comma if detection fails
         return ','
+
 
 def get_tabular_data_info(file_path, max_chars_per_tabular_to_text):
     """
@@ -206,7 +216,6 @@ def get_tabular_data_info(file_path, max_chars_per_tabular_to_text):
         return f"{columns_info}\nFirst two rows:\n{first_two_rows}"
     
     except Exception as e:
-        # TODO: CSV read may fail when we inferred the wrong delimiter, need a better approach
         return read_first_three_lines(
             file_path=file_path, max_length=max_chars_per_tabular_to_text
         )
@@ -219,18 +228,8 @@ def read_first_three_lines(file_path, max_length=100):
     """
     # Common text file extensions and types
     text_extensions = {
-        ".txt",
-        ".md",
-        ".py",
-        ".json",
-        ".yaml",
-        ".yml",
-        ".ini",
-        ".cfg",
-        ".conf",
-        ".sh",
-        ".bat",
-        ".log",
+        ".txt", ".md", ".py", ".json", ".yaml", ".yml", ".ini",
+        ".cfg", ".conf", ".sh", ".bat", ".log",
     }
 
     # Check if file might be text based on extension
@@ -294,39 +293,34 @@ def generate_data_prompt(input_data_folder, max_chars_per_file, max_chars_per_ta
     # Group similar files
     file_groups = group_similar_files(all_files)
 
-    # Create a mapping of relative paths to absolute paths
-    path_mapping = dict(all_files)
-
     # Process files based on their groups and types
     file_contents = {}
     for pattern, group_files in file_groups.items():
         if len(group_files) > 5:
             # For large groups, only show one example
-            example_file = group_files[0]
-            file_path = path_mapping[example_file]
-            pattern_path = pattern_to_path(pattern)
-            group_info = f"Group pattern: {pattern_path} (total {len(group_files)} files)\nExample file: {example_file}"
+            example_rel_path, example_abs_path = group_files[0]
+            pattern_path = pattern_to_path(pattern, abs_folder_path)
+            group_info = f"Group pattern: {pattern_path} (total {len(group_files)} files)\nExample file:\nAbsolute path: {example_abs_path}"
 
             file_contents[group_info] = get_file_content(
-                file_path=file_path, 
+                file_path=example_abs_path, 
                 max_chars_per_file=max_chars_per_file, 
                 max_chars_per_tabular_to_text=max_chars_per_tabular_to_text
             )
         else:
             # For small groups, show all files
-            for file in group_files:
-                file_path = path_mapping[file]
-
-                file_contents[file] = get_file_content(
-                    file_path=file_path, 
+            for rel_path, abs_path in group_files:
+                file_info = f"Absolute path: {abs_path}"
+                file_contents[file_info] = get_file_content(
+                    file_path=abs_path, 
                     max_chars_per_file=max_chars_per_file, 
                     max_chars_per_tabular_to_text=max_chars_per_tabular_to_text
                 )
 
     # Generate the prompt
     prompt = f"Absolute path to the folder: {abs_folder_path}\n\nFiles structures:\n\n{'-' * 10}\n\n"
-    for file, content in file_contents.items():
-        prompt += f"{file}:\n{content}\n{'-' * 10}\n"
+    for file_info, content in file_contents.items():
+        prompt += f"{file_info}\nContent:\n{content}\n{'-' * 10}\n"
 
     return prompt
 
