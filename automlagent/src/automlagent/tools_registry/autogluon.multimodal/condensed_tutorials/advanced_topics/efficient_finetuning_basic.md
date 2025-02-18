@@ -1,91 +1,79 @@
 # Condensed: Single GPU Billion-scale Model Training via Parameter-Efficient Finetuning
 
+Summary: This tutorial demonstrates parameter-efficient finetuning techniques for large language models using AutoGluon's MultiModalPredictor. It specifically covers implementation of IA3-bias finetuning combined with gradient checkpointing to enable training billion-parameter models (like FLAN-T5-XL) on limited hardware resources. The tutorial helps with tasks requiring efficient model adaptation while tuning only ~0.5% of parameters. Key features include memory optimization configurations, batch size adjustments, and cache management practices. It's particularly valuable for developers working on cross-lingual tasks or needing to finetune large models on single GPUs while maintaining comparable performance to full finetuning.
+
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the condensed tutorial maintaining essential information:
+Here's the condensed tutorial focusing on key implementation details and concepts:
 
-# Single GPU Billion-scale Model Training via Parameter-Efficient Finetuning
+# Parameter-Efficient Finetuning for Billion-scale Models
 
 ## Key Concepts
-- Parameter-efficient finetuning enables training large foundation models on limited hardware
-- Key techniques: BitFit, Prompt Tuning, LoRA, Adapter, MAM Adapter, and IA^3
-- Combines efficient finetuning with gradient checkpointing for large model training
+- Uses parameter-efficient finetuning to handle large foundation models
+- Combines gradient checkpointing with efficient finetuning for single GPU training
+- Enables finetuning of billion-parameter models on limited hardware
 
-## Implementation
+## Implementation Details
 
-### 1. Setup and Data Preparation
-```python
-!pip install autogluon.multimodal
+### Basic Parameter-Efficient Finetuning
 
-# Download and prepare dataset
-!wget --quiet https://automl-mm-bench.s3.amazonaws.com/multilingual-datasets/amazon_review_sentiment_cross_lingual.zip
-!unzip -q -o amazon_review_sentiment_cross_lingual.zip -d .
-
-# Cache management
-import os, shutil
-os.environ["TRANSFORMERS_CACHE"] = "cache"
-```
-
-```python
-# Load multilingual sentiment data
-import pandas as pd
-train_en_df = pd.read_csv("amazon_review_sentiment_cross_lingual/en_train.tsv",
-                          sep="\t",
-                          header=None,
-                          names=["label", "text"]) \
-                .sample(1000, random_state=123).reset_index(drop=True)
-
-# Load test sets similarly for en, de, jp
-```
-
-### 2. IA3 + BitFit Finetuning
 ```python
 from autogluon.multimodal import MultiModalPredictor
 
-predictor = MultiModalPredictor(label="label", path=model_path)
-predictor.fit(train_en_df,
+predictor = MultiModalPredictor(label="label")
+predictor.fit(train_df,
               presets="multilingual",
               hyperparameters={
                   "optimization.efficient_finetune": "ia3_bias",  # Enable efficient finetuning
                   "optimization.lr_decay": 0.9,
                   "optimization.learning_rate": 3e-03,
+                  "optimization.end_lr": 3e-03,
                   "optimization.max_epochs": 2,
                   "env.batch_size": 32,
               })
 ```
 
-### 3. FLAN-T5-XL Training on Single GPU
+**Key Points:**
+- Uses `ia3_bias` algorithm for parameter-efficient finetuning
+- Tunes only ~0.5% of model parameters
+- Maintains comparable performance to full finetuning
+
+### Large Model Training (FLAN-T5-XL)
+
 ```python
-predictor = MultiModalPredictor(label="label", path=new_model_path)
-predictor.fit(train_en_df_downsample,
-              presets="multilingual",
+predictor.fit(train_df,
+              presets="multilingual", 
               hyperparameters={
                   "model.hf_text.checkpoint_name": "google/flan-t5-xl",
                   "model.hf_text.gradient_checkpointing": True,  # Enable gradient checkpointing
                   "model.hf_text.low_cpu_mem_usage": True,
                   "optimization.efficient_finetune": "ia3_bias",
+                  "optimization.learning_rate": 3e-03,
+                  "optimization.max_epochs": 1,
                   "env.batch_size": 1,
                   "env.eval_batch_size_ratio": 1
               })
 ```
 
-## Key Implementation Notes
-1. Efficient finetuning reduces trainable parameters to ~0.5% of total parameters
-2. Gradient checkpointing enables training billion-parameter models on limited GPU memory
-3. Combined techniques allow training FLAN-T5-XL (2B parameters) on a single T4 GPU
-4. Model maintains performance across languages despite training only on English data
+**Critical Configurations:**
+- Enable gradient checkpointing with `gradient_checkpointing: True`
+- Use small batch size (1) for large models
+- Set `low_cpu_mem_usage: True` for memory efficiency
+- Combine with `ia3_bias` for parameter-efficient training
 
-## Important Parameters
-- `optimization.efficient_finetune`: Set to "ia3_bias" for parameter-efficient training
-- `model.hf_text.gradient_checkpointing`: Enable for memory efficiency
-- `env.batch_size`: Adjust based on available GPU memory
-- `optimization.learning_rate`: Critical for efficient finetuning performance
-
-## Evaluation
+## Best Practices
+1. Clear cache between training runs:
 ```python
-score_in_en = predictor.evaluate(test_en_df)
-score_in_de = predictor.evaluate(test_de_df)
-score_in_jp = predictor.evaluate(test_jp_df)
+import os, shutil
+if os.path.exists("cache"):
+    shutil.rmtree("cache")
 ```
 
-For customization options, refer to the customization documentation.
+2. Use smaller training samples for initial testing
+3. Monitor memory usage and adjust batch size accordingly
+4. Combine gradient checkpointing with parameter-efficient finetuning for large models
+
+## Performance Notes
+- Achieves comparable results to full finetuning
+- Works well for cross-lingual tasks
+- Enables billion-parameter model training on single GPU (e.g., NVIDIA T4)

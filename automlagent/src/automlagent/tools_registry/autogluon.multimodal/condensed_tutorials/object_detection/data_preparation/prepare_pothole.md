@@ -1,74 +1,53 @@
 # Condensed: AutoMM Detection - Prepare Pothole Dataset
 
+Summary: This tutorial provides implementation guidance for preparing a pothole detection dataset using AutoMM. It covers two main implementation approaches: using a CLI tool and manual download from Kaggle. The tutorial helps with dataset preparation tasks for object detection, specifically handling a 665-image pothole dataset. Key features include COCO/VOC format handling, dataset splitting (3:1:1 ratio), and file organization. It emphasizes using COCO format for AutoGluon MultiModalPredictor compatibility and includes specific CLI commands, storage requirements (1GB, preferably SSD), and expected preparation time (~3 min on AWS EC2).
+
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the focused version of the tutorial:
+Here's the condensed tutorial focusing on essential implementation details:
 
-# AutoMM Detection - Prepare Pothole Dataset
+# AutoMM Detection - Pothole Dataset Preparation
 
-## Overview
-The Pothole dataset is a small object detection dataset (665 images) for detecting potholes on roads. This guide shows how to prepare it for use with AutoMM Detection.
-
-**Requirements:**
+## Key Requirements
 - Disk space: 1 GB
 - Preferred storage: SSD
 - Typical preparation time: ~3 min on AWS EC2 with EBS
 
-## Dataset Preparation Options
+## Dataset Information
+- Size: 665 images
+- Domain: Road pothole detection
+- Format: Available in COCO format (recommended) or VOC format
+- Default split ratio: 3:1:1 (train/validation/test)
 
-### Option 1: Using AutoGluon CLI Tool (Recommended)
-The `prepare_detection_dataset` tool automatically:
-- Downloads the dataset
-- Converts to COCO format
-- Splits into train/validation/test (3:1:1 ratio)
+## Implementation Methods
 
-**Basic Usage:**
-```python
+### 1. Using CLI Tool (Recommended)
+```bash
+# Basic usage - current directory
 python3 -m autogluon.multimodal.cli.prepare_detection_dataset --dataset_name pothole
-```
 
-**With Custom Output Path:**
-```python
+# With custom output path
 python3 -m autogluon.multimodal.cli.prepare_detection_dataset --dataset_name pothole --output_path ~/data
-```
 
-**Shortened Command:**
-```python
+# Short form
 python3 -m autogluon.multimodal.cli.prepare_detection_dataset -d pothole -o ~/data
 ```
 
-**Output Structure:**
-```
-pothole/Annotations/
-    ├── usersplit_train_cocoformat.json
-    ├── usersplit_val_cocoformat.json
-    └── usersplit_test_cocoformat.json
-```
-
-### Option 2: Manual Download from Kaggle
-- Available at: [Kaggle Pothole Detection Dataset](https://www.kaggle.com/datasets/andrewmvd/pothole-detection)
-- **Important:** Dataset comes in VOC format and requires conversion to COCO format
-- Refer to these tutorials for conversion:
-  - [AutoMM Detection - Prepare COCO2017 Dataset](prepare_coco17.ipynb)
-  - [Convert Data to COCO Format](convert_data_to_coco_format.ipynb)
+### 2. Manual Download
+Download from [Kaggle](https://www.kaggle.com/datasets/andrewmvd/pothole-detection)
 
 ## Important Notes
-- COCO format is strongly recommended for AutoGluon MultiModalPredictor
-- The dataset is used in tutorials:
-  - [Fast Finetune on COCO Format Dataset](../finetune/detection_fast_finetune_coco.ipynb)
-  - [High Performance Finetune on COCO Format Dataset](../finetune/detection_high_performance_finetune_coco.ipynb)
+- **Strongly recommended**: Use COCO format instead of VOC format
+- Generated annotation files location:
+  ```
+  pothole/Annotations/usersplit_train_cocoformat.json
+  pothole/Annotations/usersplit_val_cocoformat.json
+  pothole/Annotations/usersplit_test_cocoformat.json
+  ```
 
-## Additional Resources
-- [AutoMM Examples](https://github.com/autogluon/autogluon/tree/master/examples/automm)
-- [Customize AutoMM](../../advanced_topics/customization.ipynb)
+## Best Practices
+1. Use COCO format for compatibility with AutoGluon MultiModalPredictor
+2. Refer to "Convert Data to COCO Format" tutorial for format conversion
+3. Use SSD for better performance during data preparation
 
-## Citation
-```
-@inproceedings{inoue_2018_cvpr,
-    author = {Inoue, Naoto and Furuta, Ryosuke and Yamasaki, Toshihiko and Aizawa, Kiyoharu},
-    title = {Cross-Domain Weakly-Supervised Object Detection Through Progressive Domain Adaptation},
-    booktitle = {The IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
-    month = {June},
-    year = {2018}
-}
-```
+For customization details, refer to the "Customize AutoMM" documentation.

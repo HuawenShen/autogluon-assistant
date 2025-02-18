@@ -1,64 +1,59 @@
 # Condensed: AutoMM Detection - Finetune on COCO Format Dataset with Customized Settings
 
+Summary: This tutorial demonstrates implementing object detection using AutoGluon's MultiModalPredictor with COCO-format datasets. It covers essential techniques for model setup, training, and evaluation using YOLOX architectures, specifically focusing on finetuning pretrained models. Key functionalities include configuring two-stage learning rates, batch size optimization, and early stopping strategies. The tutorial helps with tasks like setting up the detection pipeline, customizing training parameters, and visualizing predictions. Notable features include preset configurations for different quality requirements, GPU utilization settings, and performance optimization techniques. It's particularly useful for implementing efficient object detection systems with minimal code while maintaining flexibility for advanced customization.
+
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the condensed tutorial maintaining essential information:
+Here's the condensed tutorial focusing on essential implementation details:
 
-# AutoMM Detection - Finetune on COCO Format Dataset
+# AutoMM Detection - COCO Format Dataset Finetuning
 
-## Overview
-This tutorial demonstrates how to finetune a pretrained model on the Pothole dataset (single object detection) using COCO format. The dataset contains 665 images with bounding box annotations for pothole detection.
+## Key Setup Requirements
 
-## Setup and Dependencies
-
-```python
-!pip install autogluon.multimodal
-!mim install "mmcv==2.1.0"
-!pip install "mmdet==3.2.0"
-
-from autogluon.multimodal import MultiModalPredictor
-import os
-from autogluon.core.utils.loaders import load_zip
+```bash
+# Required installations
+pip install autogluon.multimodal
+pip install -U pip setuptools wheel
+sudo apt-get install -y ninja-build gcc g++
+python3 -m mim install "mmcv==2.1.0"
+python3 -m pip install "mmdet==3.2.0"
+python3 -m pip install "mmengine>=0.10.6"
 ```
 
-## Data Preparation
+⚠️ **Important**: MMDet requires MMCV 2.1.0 and works best with CUDA 12.4 + PyTorch 2.5
 
+## Implementation Steps
+
+1. **Data Preparation**
 ```python
-# Download and extract dataset
+from autogluon.multimodal import MultiModalPredictor
+from autogluon.core.utils.loaders import load_zip
+
+# Download and setup dataset
 zip_file = "https://automl-mm-bench.s3.amazonaws.com/object_detection/dataset/pothole.zip"
 download_dir = "./pothole"
 load_zip.unzip(zip_file, unzip_dir=download_dir)
-
-# Set paths for data splits
-data_dir = os.path.join(download_dir, "pothole")
-train_path = os.path.join(data_dir, "Annotations", "usersplit_train_cocoformat.json")
-val_path = os.path.join(data_dir, "Annotations", "usersplit_val_cocoformat.json")
-test_path = os.path.join(data_dir, "Annotations", "usersplit_test_cocoformat.json")
 ```
 
-## Model Configuration and Training
-
+2. **Model Configuration**
 ```python
-# Model configuration
-checkpoint_name = "yolox_s"  # YOLOX-small model for fast training
-num_gpus = 1
-
-# Initialize predictor
 predictor = MultiModalPredictor(
     hyperparameters={
-        "model.mmdet_image.checkpoint_name": checkpoint_name,
-        "env.num_gpus": num_gpus,
+        "model.mmdet_image.checkpoint_name": "yolox_s",  # Using YOLOX-small
+        "env.num_gpus": 1,
     },
     problem_type="object_detection",
     sample_data_path=train_path,
 )
+```
 
-# Training configuration
+3. **Training Configuration**
+```python
 predictor.fit(
     train_path,
     tuning_data=val_path,
     hyperparameters={
-        "optimization.learning_rate": 1e-4,  # Head layers use 100x this rate
+        "optimization.learning_rate": 1e-4,  # Head layers get 100x this rate
         "env.per_gpu_batch_size": 16,
         "optimization.max_epochs": 30,
         "optimization.val_check_interval": 1.0,
@@ -68,58 +63,43 @@ predictor.fit(
 )
 ```
 
-## Evaluation and Prediction
-
-```python
-# Evaluate model
-predictor.evaluate(test_path)
-
-# Generate predictions
-pred = predictor.predict(test_path)
-```
-
-## Visualization
-
-```python
-!pip install opencv-python
-
-from autogluon.multimodal.utils import visualize_detection
-
-# Visualize predictions
-conf_threshold = 0.25
-visualization_result_dir = "./"
-visualized = visualize_detection(
-    pred=pred[12:13],
-    detection_classes=predictor.classes,
-    conf_threshold=conf_threshold,
-    visualization_result_dir=visualization_result_dir,
-)
-
-from PIL import Image
-from IPython.display import display
-img = Image.fromarray(visualized[0][:, :, ::-1], 'RGB')
-display(img)
-```
-
-## Quick Alternative Using Presets
-For faster implementation, use predefined presets:
+## Quick Implementation Using Presets
 
 ```python
 predictor = MultiModalPredictor(
     problem_type="object_detection",
     sample_data_path=train_path,
-    presets="medium_quality",
+    presets="medium_quality",  # Options: medium_quality, high_quality, best_quality
 )
 predictor.fit(train_path, tuning_data=val_path)
-predictor.evaluate(test_path)
 ```
 
-## Key Implementation Notes
-- Uses two-stage learning rate with 100x rate for head layers
-- Default batch size of 16 (adjust based on GPU memory)
-- Early stopping after 3 consecutive non-improving validations
-- Validation checks every 3 epochs
-- YOLOX-small model selected for speed (larger models available for better performance)
-- Confidence threshold of 0.25 for visualization filtering
+## Evaluation and Visualization
 
-For higher performance, consider using larger models like VFNet with longer training times.
+```python
+# Evaluate model
+results = predictor.evaluate(test_path)
+
+# Visualize predictions
+from autogluon.multimodal.utils import visualize_detection
+pred = predictor.predict(test_path)
+visualized = visualize_detection(
+    pred=pred[12:13],
+    detection_classes=predictor.classes,
+    conf_threshold=0.25,
+    visualization_result_dir="./"
+)
+```
+
+## Best Practices
+
+1. Use two-stage learning rate (default) for faster convergence
+2. Adjust batch size based on GPU memory
+3. Consider using larger models (via `checkpoint_name`) for better performance
+4. Use predefined presets for optimal configurations
+5. Monitor validation metrics for early stopping
+
+## Performance Notes
+- Fast finetuning achieves decent results in hundreds of seconds
+- For higher performance, consider longer training times with larger models
+- Default configuration uses YOLOX-small for balance of speed and accuracy

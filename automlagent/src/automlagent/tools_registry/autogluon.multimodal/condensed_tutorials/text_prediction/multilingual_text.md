@@ -1,88 +1,76 @@
 # Condensed: AutoMM for Text - Multilingual Problems
 
+Summary: This tutorial demonstrates implementing multilingual text classification using AutoGluon's MultiModalPredictor, covering both monolingual and cross-lingual approaches. It provides code for dataset handling, model configuration, and fine-tuning using language-specific BERT models (e.g., German BERT) and multilingual models (XLM-R/DeBERTa-V3). Key functionalities include zero-shot cross-lingual transfer without translation, support for 7,100+ languages, and flexible model selection between language-specific and multilingual presets. The tutorial helps with tasks like setting up multilingual datasets, configuring appropriate models, and implementing cross-lingual transfer learning, with specific focus on optimization parameters and best practices for model selection.
+
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the focused version of the tutorial:
+Here's the condensed tutorial focusing on essential implementation details and key concepts:
 
-# AutoMM for Text - Multilingual Problems
+# AutoMM for Multilingual Text Classification
 
-## Overview
-This tutorial demonstrates how to use `MultiModalPredictor` for multilingual text classification using the Cross-Lingual Amazon Product Review Sentiment dataset (English, German, French, and Japanese reviews). We'll cover:
-1. Finetuning German BERT
-2. Cross-lingual transfer from English to other languages
+## Key Implementation Details
 
-## Dataset Preparation
+### 1. Dataset Setup
 ```python
-!pip install autogluon.multimodal
-!wget --quiet https://automl-mm-bench.s3.amazonaws.com/multilingual-datasets/amazon_review_sentiment_cross_lingual.zip
-!unzip -q -o amazon_review_sentiment_cross_lingual.zip -d .
-
 import pandas as pd
-import warnings
-warnings.filterwarnings('ignore')
-
-# Load German data
-train_de_df = pd.read_csv('amazon_review_sentiment_cross_lingual/de_train.tsv',
-                          sep='\t', header=None, names=['label', 'text']) \
-                .sample(1000, random_state=123)
-test_de_df = pd.read_csv('amazon_review_sentiment_cross_lingual/de_test.tsv',
-                          sep='\t', header=None, names=['label', 'text']) \
-               .sample(200, random_state=123)
-
-# Load English data
-train_en_df = pd.read_csv('amazon_review_sentiment_cross_lingual/en_train.tsv',
-                          sep='\t', header=None, names=['label', 'text']) \
-                .sample(1000, random_state=123)
-test_en_df = pd.read_csv('amazon_review_sentiment_cross_lingual/en_test.tsv',
-                          sep='\t', header=None, names=['label', 'text']) \
-               .sample(200, random_state=123)
-```
-
-## Approach 1: German BERT Finetuning
-```python
 from autogluon.multimodal import MultiModalPredictor
 
+# Load multilingual data (German/English/Japanese Amazon reviews)
+train_de_df = pd.read_csv('de_train.tsv', sep='\t', 
+                         header=None, names=['label', 'text'])
+test_de_df = pd.read_csv('de_test.tsv', sep='\t', 
+                        header=None, names=['label', 'text'])
+```
+
+### 2. German BERT Finetuning
+```python
+# Finetune German BERT
 predictor = MultiModalPredictor(label='label')
 predictor.fit(train_de_df,
-              hyperparameters={
-                  'model.hf_text.checkpoint_name': 'bert-base-german-cased',
-                  'optimization.max_epochs': 2
-              })
-
-# Evaluate
-score = predictor.evaluate(test_de_df)
-print('Score on the German Testset:', score)
+             hyperparameters={
+                 'model.hf_text.checkpoint_name': 'bert-base-german-cased',
+                 'optimization.max_epochs': 2
+             })
 ```
 
-## Approach 2: Cross-lingual Transfer
-Using multilingual models for zero-shot transfer from English to other languages:
-
+### 3. Cross-lingual Transfer
 ```python
+# Enable multilingual support using XLM-R/DeBERTa-V3
 predictor = MultiModalPredictor(label='label')
 predictor.fit(train_en_df,
-              presets='multilingual',
-              hyperparameters={
-                  'optimization.max_epochs': 2
-              })
-
-# Evaluate on multiple languages
-score_in_en = predictor.evaluate(test_en_df)
-score_in_de = predictor.evaluate(test_de_df)
-
-# Test Japanese performance
-test_jp_df = pd.read_csv('amazon_review_sentiment_cross_lingual/jp_test.tsv',
-                          sep='\t', header=None, names=['label', 'text']) \
-               .sample(200, random_state=123)
-score_in_jp = predictor.evaluate(test_jp_df)
+             presets='multilingual',
+             hyperparameters={
+                 'optimization.max_epochs': 2
+             })
 ```
 
-## Key Points
-- Use `presets="multilingual"` for zero-shot cross-lingual transfer
-- The multilingual model works across languages without additional training
-- AutoGluon automatically uses state-of-the-art models (e.g., DeBERTa-V3)
-- For better performance, consider parameter-efficient finetuning techniques
+## Critical Configurations
 
-## Additional Resources
-- For customization options: See "Customize AutoMM" tutorial
-- More examples: Check AutoMM Examples in the GitHub repository
-- For improved performance: Review "Single GPU Billion-scale Model Training via Parameter-Efficient Finetuning"
+1. **Monolingual Setup**:
+   - Use specific language model (e.g., 'bert-base-german-cased')
+   - Suitable for single language tasks
+
+2. **Multilingual Setup**:
+   - Enable with `presets='multilingual'`
+   - Automatically uses advanced models like DeBERTa-V3
+   - Supports zero-shot cross-lingual transfer
+
+## Best Practices
+
+1. **Model Selection**:
+   - Use language-specific models for single language tasks
+   - Use multilingual preset for cross-lingual transfer
+
+2. **Cross-lingual Transfer**:
+   - Train on source language (e.g., English)
+   - Model can be applied directly to other languages
+   - No translation needed for inference
+
+## Important Notes
+
+- Multilingual models support zero-shot transfer across languages
+- Performance may vary across different languages
+- Check [Single GPU Billion-scale Model Training](../advanced_topics/efficient_finetuning_basic.ipynb) for better performance
+- For customization options, refer to [Customize AutoMM](../advanced_topics/customization.ipynb)
+
+This implementation supports over 7,100 languages through multilingual models and demonstrates effective cross-lingual transfer without the need for translation services.

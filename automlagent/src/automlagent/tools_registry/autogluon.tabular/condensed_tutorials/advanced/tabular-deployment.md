@@ -1,94 +1,76 @@
 # Condensed: Predicting Columns in a Table - Deployment Optimization
 
+Summary: This tutorial demonstrates AutoGluon model deployment optimization techniques, focusing on efficient model serving and performance enhancement. It covers implementation details for model cloning (standard and deployment-optimized), memory persistence, and experimental model compilation. Key functionalities include creating minimal deployment versions with reduced artifact size, maintaining models in memory for faster predictions, and compiling models for improved inference speed. The tutorial helps with tasks like optimizing AutoGluon models for production deployment, managing memory efficiently, and ensuring version compatibility. It's particularly useful for developers looking to streamline their AutoGluon model deployment pipeline while maintaining prediction accuracy.
+
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the condensed tutorial focusing on essential implementation details:
+Here's the condensed tutorial focusing on key implementation details and best practices:
 
-# Predicting Columns in a Table - Deployment Optimization
+# AutoGluon Deployment Optimization Guide
 
-## Key Concepts
-This tutorial covers optimizing AutoGluon models for production deployment, focusing on:
-- Creating deployable model artifacts
-- Model snapshotting and cloning
-- Deployment optimization
-- Model compilation for inference speed
+## Key Implementation Steps
 
-Prerequisites: Familiarity with basic AutoGluon TabularPredictor usage
-
-## Basic Model Training
-
+### 1. Basic Model Training
 ```python
 from autogluon.tabular import TabularDataset, TabularPredictor
 
-# Load and prepare data
-train_data = TabularDataset('https://autogluon.s3.amazonaws.com/datasets/Inc/train.csv')
-test_data = TabularDataset('https://autogluon.s3.amazonaws.com/datasets/Inc/test.csv')
-label = 'class'
-
-# Train predictor
+# Train initial predictor
 save_path = 'agModels-predictClass-deployment'
 predictor = TabularPredictor(label=label, path=save_path).fit(train_data)
-
-# Basic prediction
-y_pred = predictor.predict(test_data)
 ```
 
-## Model Snapshotting with .clone()
+### 2. Predictor Cloning
 
-Key features:
-- Creates exact replica of predictor
-- Allows safe experimentation
-- Preserves original model state
-
+#### Standard Clone
 ```python
-# Create clone
+# Create exact replica of predictor
 save_path_clone = save_path + '-clone'
 path_clone = predictor.clone(path=save_path_clone)
 predictor_clone = TabularPredictor.load(path=path_clone)
-
-# Alternative one-line cloning
-# predictor_clone = predictor.clone(path=save_path_clone, return_clone=True)
 ```
 
-## Deployment Optimization with .clone_for_deployment()
-
-Features:
-- Creates minimal artifact for prediction
-- Reduces disk usage
-- Limited to prediction functionality
-
+#### Deployment-Optimized Clone
 ```python
-# Create optimized clone
+# Create minimal version for deployment
 save_path_clone_opt = save_path + '-clone-opt'
 path_clone_opt = predictor.clone_for_deployment(path=save_path_clone_opt)
-predictor_clone_opt = TabularPredictor.load(path_clone_opt)
+predictor_clone_opt = TabularPredictor.load(path=path_clone_opt)
 
 # Persist model in memory for faster predictions
 predictor_clone_opt.persist()
 ```
 
-## Model Compilation for Speed
-
-Requirements:
-- Install additional packages: `pip install autogluon.tabular[skl2onnx]`
-- Only works with RandomForest and TabularNeuralNetwork models
-- Experimental feature
-
+### 3. Model Compilation (Experimental)
 ```python
-# Compile models for faster inference
-predictor_clone_opt.compile()
+# Compile for improved inference speed
+predictor_clone_opt.compile()  # Requires skl2onnx and onnxruntime packages
 ```
 
-## Important Notes
-1. Always clone before optimization or compilation
-2. Use same Python and AutoGluon versions for training and inference
-3. Optimized predictors have limited functionality (prediction only)
-4. Check disk usage reduction:
-```python
-size_original = predictor.disk_usage()
-size_opt = predictor_clone_opt.disk_usage()
-print(f'Size Original: {size_original} bytes')
-print(f'Size Optimized: {size_opt} bytes')
-```
+## Critical Configurations & Best Practices
 
-This condensed version maintains all critical implementation details while removing redundant explanations and supplementary examples.
+1. **Deployment Optimization**
+   - Use `clone_for_deployment()` for production to minimize artifact size
+   - Only prediction functionality remains in optimized version
+   - Significant disk usage reduction (typically >50%)
+
+2. **Memory Management**
+   - Use `persist()` to keep model in memory for faster predictions
+   - Beneficial for repeated predictions
+
+3. **Version Compatibility**
+   - Use same Python version for training and inference
+   - Maintain consistent AutoGluon versions
+
+4. **Model Compilation**
+   - Currently supports RandomForest and TabularNeuralNetwork
+   - Install required packages: `pip install autogluon.tabular[skl2onnx]`
+   - Slight variations in predictions may occur after compilation
+
+## Important Warnings
+
+1. Optimized clones have limited functionality (predict/predict_proba only)
+2. Compilation is experimental and affects model modification capabilities
+3. Original predictor should be preserved before optimization/compilation
+4. Compiled models may show slight prediction variations
+
+This condensed version maintains all critical implementation details while removing redundant examples and explanatory text.

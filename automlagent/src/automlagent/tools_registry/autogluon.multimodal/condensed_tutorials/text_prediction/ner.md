@@ -1,95 +1,101 @@
 # Condensed: AutoMM for Named Entity Recognition - Quick Start
 
+Summary: This tutorial demonstrates implementing Named Entity Recognition (NER) using AutoGluon's MultiModalPredictor. It covers essential techniques for training NER models with structured JSON annotations, including data preparation with specific entity formatting, model initialization, training configuration with customizable BERT-based backbones, and prediction workflows. Key functionalities include flexible model selection (with ELECTRA as a lightweight option), evaluation using seqeval metrics, handling BIO format, model persistence, and continuous training capabilities. The tutorial helps with tasks like setting up NER training pipelines, configuring hyperparameters, performing model evaluation, and making predictions with probability scores.
+
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the focused version of the AutoMM NER tutorial:
+Here's the condensed tutorial focusing on essential implementation details:
 
 # AutoMM for Named Entity Recognition - Quick Start
 
-## Overview
-Named Entity Recognition (NER) identifies and categorizes entities (e.g., person names, locations) in text. AutoMM simplifies NER model training and deployment.
-
 ## Data Preparation
-Required format:
-- DataFrame with text and annotation columns
-- Annotations in JSON format with:
-  - entity_group: category label
-  - start: character position where entity begins
-  - end: character position where entity ends
-
+- Required format: DataFrame with text column and annotation column
+- Annotation format must be JSON with specific structure:
 ```python
-!pip install autogluon.multimodal
+[{
+    "entity_group": "CATEGORY",
+    "start": char_start_position,
+    "end": char_end_position
+}]
+```
 
-import json
-# Example annotation format
-annotation = json.dumps([
+Example:
+```python
+annotation = [
     {"entity_group": "PERSON", "start": 0, "end": 15},
     {"entity_group": "LOCATION", "start": 28, "end": 35}
-])
+]
 ```
 
-Visualization utility:
+## Implementation
+
+1. Install and import:
 ```python
-from autogluon.multimodal.utils import visualize_ner
-
-sentence = "Albert Einstein was born in Germany and is widely acknowledged to be one of the greatest physicists."
-annotation = [{"entity_group": "PERSON", "start": 0, "end": 15},
-              {"entity_group": "LOCATION", "start": 28, "end": 35}]
-
-visualize_ner(sentence, annotation)
-```
-
-## Training
-```python
+!pip install autogluon.multimodal
 from autogluon.multimodal import MultiModalPredictor
-import uuid
+```
 
-label_col = "entity_annotations"
-model_path = f"./tmp/{uuid.uuid4().hex}-automm_ner"
+2. Training setup:
+```python
+predictor = MultiModalPredictor(
+    problem_type="ner", 
+    label="entity_annotations",
+    path="model_path"
+)
 
-predictor = MultiModalPredictor(problem_type="ner", label=label_col, path=model_path)
+# Training
 predictor.fit(
     train_data=train_data,
-    hyperparameters={'model.ner_text.checkpoint_name':'google/electra-small-discriminator'},
-    time_limit=300, # seconds
+    hyperparameters={
+        'model.ner_text.checkpoint_name':'google/electra-small-discriminator'
+    },
+    time_limit=300  # in seconds
 )
 ```
 
-Key parameters:
-- problem_type: Set to "ner"
-- label: Column name containing annotations
-- time_limit: Training duration (recommended: 30-60 minutes for production)
-- hyperparameters: Model configuration (using 'google/electra-small-discriminator' as example)
-
-## Evaluation
+3. Evaluation:
 ```python
-# Supported metrics: overall_recall, overall_precision, overall_f1, overall_accuracy
-predictor.evaluate(test_data, metrics=['overall_recall', "overall_precision", "overall_f1", "actor"])
+metrics = predictor.evaluate(
+    test_data,  
+    metrics=['overall_recall', 'overall_precision', 'overall_f1']
+)
 ```
 
-## Prediction and Visualization
+4. Prediction:
 ```python
-sentence = "Game of Thrones is an American fantasy drama television series created by David Benioff"
-predictions = predictor.predict({'text_snippet': [sentence]})
-visualize_ner(sentence, predictions[0])
+# Basic prediction
+predictions = predictor.predict({'text_snippet': [text]})
 
-# Get prediction probabilities
-predictions = predictor.predict_proba({'text_snippet': [sentence]})
+# Prediction with probabilities
+prob_predictions = predictor.predict_proba({'text_snippet': [text]})
 ```
 
-## Model Management
-Load and continue training:
-```python
-new_predictor = MultiModalPredictor.load(model_path)
-new_model_path = f"./tmp/{uuid.uuid4().hex}-automm_ner_continue_train"
-new_predictor.fit(train_data, time_limit=60, save_path=new_model_path)
-```
+## Key Configurations and Best Practices
+
+1. Model Selection:
+- Default: BERT-based models
+- Lightweight option: 'google/electra-small-discriminator'
+
+2. Training Parameters:
+- Recommended time_limit: 30-60 minutes for production use
+- Can specify custom backbone models via hyperparameters
+
+3. Evaluation Metrics:
+- Uses seqeval metrics
+- Available metrics: overall_recall, overall_precision, overall_f1, overall_accuracy
+- Entity-specific metrics available using entity group names
 
 ## Important Notes
-- Use json.dumps() to convert Python objects to JSON strings before creating DataFrames
-- BIO format (Beginning-Inside-Outside) is supported but optional
-- Longer training times (>30 minutes) recommended for production models
-- Model automatically saves during training
-- Entity-specific metrics available by using entity group name in evaluation
 
-This condensed version maintains all essential implementation details while removing redundant explanations and supplementary information not critical for implementation.
+- BIO format (Beginning-Inside-Outside) is supported but optional
+- Model automatically saves during training
+- Continuous training possible with loaded models
+- Visualization available through `visualize_ner` utility
+- JSON annotation format must use exact keys: entity_group, start, end
+
+## Model Reloading
+```python
+loaded_predictor = MultiModalPredictor.load("model_path")
+# Continue training if needed
+loaded_predictor.fit(new_data, time_limit=60, save_path="new_model_path")
+```

@@ -1,25 +1,21 @@
 # Condensed: AutoMM Detection - Prepare Pascal VOC Dataset
 
+Summary: This tutorial provides implementation guidance for preparing the Pascal VOC dataset for object detection tasks using AutoMM. It covers two main implementation methods: using Python CLI commands or bash scripts to download and structure the dataset (8.4GB). The tutorial details the exact directory structure required for VOC format, though it recommends using COCO format for AutoMM MultiModalPredictor. It helps with dataset download automation, proper directory organization, and format conversion tasks. Key features include flexible output path specification, options for downloading VOC2007/2012 separately or combined, and handling a 20-class dataset with 16,551 training images.
+
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the focused version of the tutorial:
+Here's the condensed tutorial focusing on essential implementation details:
 
-# AutoMM Detection - Prepare Pascal VOC Dataset
+# AutoMM Detection - Pascal VOC Dataset Preparation
 
-## Overview
-Pascal VOC is an object detection dataset containing 20 classes across 16,551 training images. Common benchmark setup:
-- Training: VOC2007 trainval + VOC2012 trainval
-- Validation: VOC2007 test
-
-**Requirements:**
+## Key Requirements
 - Disk space: 8.4 GB
 - Recommended: SSD for better performance
-- Typical preparation time: ~10 min on AWS EC2 with EBS
+- Estimated preparation time: ~10 min on AWS EC2 with EBS
 
 ## Dataset Download Options
 
 ### 1. Python Script Method
-Advantages: Cross-platform compatibility
 ```python
 # Basic usage - current directory
 python3 -m autogluon.multimodal.cli.prepare_detection_dataset --dataset_name voc0712
@@ -36,17 +32,15 @@ python3 -m autogluon.multimodal.cli.prepare_detection_dataset -d voc12 -o ~/data
 ```
 
 ### 2. Bash Script Method
-Advantages: Progress bar visibility (Unix systems only)
 ```bash
-# Current directory
+# Basic usage
 bash download_voc0712.sh
 
-# Specify output path
+# With custom output path
 bash download_voc0712.sh ~/data
 ```
 
 ## Dataset Structure
-After extraction:
 ```
 VOCdevkit/
 ├── VOC2007/
@@ -60,31 +54,22 @@ VOCdevkit/
 ```
 
 ## Important Notes
-1. **Recommended Format**: COCO format is preferred over VOC format for AutoMM MultiModalPredictor
-2. **VOC Format Support**: Limited support available for quick testing
-   - Required directory structure:
-     ```
-     ├── Annotations/
-     ├── ImageSets/
-     └── JPEGImages/
-     ```
+1. **Format Recommendation**: COCO format is strongly recommended over VOC format for AutoMM MultiModalPredictor
+2. **Dataset Details**:
+   - Combined VOC2007 trainval and VOC2012 trainval for training
+   - VOC2007 test for validation
+   - 20 classes
+   - 16,551 total training images
 
-## Additional Resources
-- [AutoMM Examples Repository](https://github.com/autogluon/autogluon/tree/master/examples/automm)
-- [Customize AutoMM Tutorial](../../advanced_topics/customization.ipynb)
-- [COCO Dataset Preparation Guide](prepare_coco17.ipynb)
-- [VOC to COCO Conversion Guide](convert_data_to_coco_format.ipynb)
+## Required Directory Structure for VOC Format
+Minimum required folders:
+```
+├── Annotations/
+├── ImageSets/
+└── JPEGImages/
+```
 
-## Citation
-```
-@Article{Everingham10,
-   author = "Everingham, M. and Van~Gool, L. and Williams, C. K. I. and Winn, J. and Zisserman, A.",
-   title = "The Pascal Visual Object Classes (VOC) Challenge",
-   journal = "International Journal of Computer Vision",
-   volume = "88",
-   year = "2010",
-   number = "2",
-   month = jun,
-   pages = "303--338",
-}
-```
+## References
+- For COCO format conversion: See "Convert Data to COCO Format" tutorial
+- For customization: Refer to "Customize AutoMM" documentation
+- Additional examples available in AutoMM Examples repository

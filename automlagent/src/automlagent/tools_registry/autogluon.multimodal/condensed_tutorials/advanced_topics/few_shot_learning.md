@@ -1,106 +1,76 @@
 # Condensed: Few Shot Learning with AutoMM
 
+Summary: This tutorial demonstrates implementing few-shot learning using AutoGluon's MultiModalPredictor for both text and image classification tasks. It provides code examples for setting up few-shot classifiers alongside standard classifiers for comparison, specifically designed for scenarios with limited training data per class. The tutorial covers essential configurations like setting problem_type="few_shot_classification", data formatting requirements for DataFrame inputs, and implementation best practices. Key features include foundation model + SVM architecture, support for both text and image modalities, and performance optimization for small datasets. This knowledge is particularly valuable for developing classification models with limited training samples.
+
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the focused version of the tutorial:
+Here's the condensed tutorial focusing on essential implementation details:
 
 # Few Shot Learning with AutoMM
 
-This tutorial demonstrates few shot classification using AutoMM by leveraging foundation model features with SVM for both text and image classification tasks.
+## Key Concepts
+- Uses foundation model features + SVM for few shot classification
+- Works for both text and image classification tasks
+- Particularly effective for small datasets (few samples per class)
 
-## Text Classification
+## Implementation Details
 
-### Data Preparation
-```python
-import pandas as pd
-import os
-from autogluon.core.utils.loaders import load_zip
+### Text Classification
 
-download_dir = "./ag_automm_tutorial_fs_cls"
-zip_file = "https://automl-mm-bench.s3.amazonaws.com/nlp_datasets/MLDoc-10shot-en.zip"
-load_zip.unzip(zip_file, unzip_dir=download_dir)
-dataset_path = os.path.join(download_dir)
-train_df = pd.read_csv(f"{dataset_path}/train.csv", names=["label", "text"])
-test_df = pd.read_csv(f"{dataset_path}/test.csv", names=["label", "text"])
-```
-
-### Few Shot Classifier Implementation
 ```python
 from autogluon.multimodal import MultiModalPredictor
 
-predictor_fs_text = MultiModalPredictor(
-    problem_type="few_shot_classification",  # Key parameter for few shot learning
+# Few-shot classifier
+predictor_fs = MultiModalPredictor(
+    problem_type="few_shot_classification",
     label="label",
-    eval_metric="acc",
+    eval_metric="acc"
 )
-predictor_fs_text.fit(train_df)
-scores = predictor_fs_text.evaluate(test_df, metrics=["acc", "f1_macro"])
-```
+predictor_fs.fit(train_df)
 
-### Standard Classifier Comparison
-```python
-predictor_default_text = MultiModalPredictor(
-    label="label",
+# Standard classifier (for comparison)
+predictor_default = MultiModalPredictor(
     problem_type="classification",
-    eval_metric="acc",
+    label="label",
+    eval_metric="acc"
 )
-predictor_default_text.fit(train_data=train_df)
-scores = predictor_default_text.evaluate(test_df, metrics=["acc", "f1_macro"])
+predictor_default.fit(train_df)
 ```
 
-## Image Classification
+### Image Classification
 
-### Data Preparation
 ```python
-import os
-from autogluon.core.utils.loaders import load_zip
-
-download_dir = "./ag_automm_tutorial_fs_cls/stanfordcars/"
-zip_file = "https://automl-mm-bench.s3.amazonaws.com/vision_datasets/stanfordcars/stanfordcars.zip"
-load_zip.unzip(zip_file, unzip_dir=download_dir)
-
-# Download CSV files
-!wget https://automl-mm-bench.s3.amazonaws.com/vision_datasets/stanfordcars/train_8shot.csv -O ./ag_automm_tutorial_fs_cls/stanfordcars/train.csv
-!wget https://automl-mm-bench.s3.amazonaws.com/vision_datasets/stanfordcars/test.csv -O ./ag_automm_tutorial_fs_cls/stanfordcars/test.csv
-
-# Process DataFrames
-train_df_raw = pd.read_csv(os.path.join(download_dir, "train.csv"))
-train_df = train_df_raw.drop(columns=["Source", "Confidence", "XMin", "XMax", "YMin", "YMax", 
-                                     "IsOccluded", "IsTruncated", "IsGroupOf", "IsDepiction", "IsInside"])
-train_df["ImageID"] = download_dir + train_df["ImageID"].astype(str)
-
-test_df_raw = pd.read_csv(os.path.join(download_dir, "test.csv"))
-test_df = test_df_raw.drop(columns=["Source", "Confidence", "XMin", "XMax", "YMin", "YMax", 
-                                   "IsOccluded", "IsTruncated", "IsGroupOf", "IsDepiction", "IsInside"])
-test_df["ImageID"] = download_dir + test_df["ImageID"].astype(str)
-```
-
-### Few Shot Classifier Implementation
-```python
+# Few-shot classifier
 predictor_fs_image = MultiModalPredictor(
     problem_type="few_shot_classification",
     label="LabelName",
-    eval_metric="acc",
+    eval_metric="acc"
 )
 predictor_fs_image.fit(train_df)
-scores = predictor_fs_image.evaluate(test_df, metrics=["acc", "f1_macro"])
-```
 
-### Standard Classifier Comparison
-```python
+# Standard classifier (for comparison)
 predictor_default_image = MultiModalPredictor(
     problem_type="classification",
     label="LabelName",
-    eval_metric="acc",
+    eval_metric="acc"
 )
-predictor_default_image.fit(train_data=train_df)
-scores = predictor_default_image.evaluate(test_df, metrics=["acc", "f1_macro"])
+predictor_default_image.fit(train_df)
 ```
 
-Key Points:
-- Use `problem_type="few_shot_classification"` for few shot learning tasks
-- Works with both text and image data
-- Typically outperforms standard classification on small datasets
-- Requires data in DataFrame format with appropriate column names for labels and features
+## Critical Configurations
+- Must specify `problem_type="few_shot_classification"` for few-shot learning
+- Input data should be in `pd.DataFrame` format
+- For images: DataFrame should contain image paths and labels
+- For text: DataFrame should contain text content and labels
 
-For customization options, refer to the AutoMM customization documentation.
+## Best Practices
+1. Use few-shot learning when you have very limited samples per class
+2. Ensure data is properly formatted before training
+3. Compare performance with standard classification approach
+4. Use appropriate evaluation metrics (acc, f1_macro recommended)
+
+## Important Notes
+- Few-shot classification typically performs better than standard classification with limited data
+- Works with both text and image modalities
+- Built on foundation models + SVM architecture
+- For customization options, refer to the AutoMM customization documentation

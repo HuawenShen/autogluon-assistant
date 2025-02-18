@@ -1,41 +1,35 @@
 # Condensed: AutoMM Detection - Prepare Watercolor Dataset
 
+Summary: This tutorial provides implementation guidance for preparing the Watercolor dataset for object detection tasks using AutoMM. It covers two installation methods (Python CLI and Bash script), focusing on dataset structure and format requirements. The tutorial helps with tasks related to dataset preparation, format conversion, and proper directory setup for object detection. Key features include cross-platform installation options, COCO/VOC format handling, and dataset organization with 2,000 watercolor images. It's particularly useful for understanding proper data structuring and format recommendations when working with AutoMM MultiModalPredictor for detection tasks.
+
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the condensed tutorial focused on essential implementation details:
+Here's the condensed tutorial focusing on essential implementation details:
 
-# AutoMM Detection - Prepare Watercolor Dataset
+# AutoMM Detection - Watercolor Dataset Preparation
 
-## Overview
-The Watercolor dataset is a specialized object detection dataset containing:
-- 1,000 training images and 1,000 testing images
-- Domain: watercolor images
-- Required disk space: 7.5 GB (SSD recommended)
+## Key Requirements
+- Disk space: 7.5 GB
+- Preferred storage: SSD
+- Estimated preparation time: ~8 min (on AWS EC2 with EBS)
 
-## Dataset Download Options
+## Dataset Installation Methods
 
-### Option 1: Python CLI Tool
-Use the built-in AutoGluon CLI tool:
-
+### 1. Using Python CLI (Cross-platform)
 ```python
-# Basic usage
+# Basic installation in current directory
 python3 -m autogluon.multimodal.cli.prepare_detection_dataset --dataset_name watercolor
 
-# Specify custom output path
-python3 -m autogluon.multimodal.cli.prepare_detection_dataset --dataset_name watercolor --output_path ~/data
-
-# Short form
+# Installation with custom output path
 python3 -m autogluon.multimodal.cli.prepare_detection_dataset -d watercolor -o ~/data
 ```
 
-### Option 2: Bash Script
-Download using the provided bash script:
-
+### 2. Using Bash Script (Unix systems)
 ```bash
-# Extract in current directory
+# Basic installation
 bash download_watercolor.sh
 
-# Extract to specific path
+# Installation with custom path
 bash download_watercolor.sh ~/data
 ```
 
@@ -48,29 +42,19 @@ watercolor/
 └── JPEGImages
 ```
 
-## Important Implementation Notes
+## Important Notes
+1. **Format Recommendation**: COCO format is strongly recommended over VOC format for AutoMM MultiModalPredictor
+2. **Dataset Details**:
+   - 1,000 training images
+   - 1,000 testing images
+   - Domain: Watercolor images
 
-1. **Format Recommendation**:
-   - AutoMM MultiModalPredictor strongly recommends using COCO format
-   - VOC format has limited support (used by Watercolor dataset)
+## Best Practices
+1. Use COCO format when possible
+2. Refer to "Convert Data to COCO Format" tutorial for format conversion
+3. For VOC format usage, ensure root path contains required directories (Annotations, ImageSets, JPEGImages)
 
-2. **VOC Format Requirements**:
-   - Root path must contain: `Annotations`, `ImageSets`, and `JPEGImages` directories
-   - Used primarily for quick testing purposes
-
-3. **Format Conversion**:
-   - For production use, convert VOC to COCO format
-   - Refer to "Convert Data to COCO Format" tutorial for conversion instructions
-
-## Citation
-```
-@inproceedings{inoue_2018_cvpr,
-    author = {Inoue, Naoto and Furuta, Ryosuke and Yamasaki, Toshihiko and Aizawa, Kiyoharu},
-    title = {Cross-Domain Weakly-Supervised Object Detection Through Progressive Domain Adaptation},
-    booktitle = {The IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
-    month = {June},
-    year = {2018}
-}
-```
-
-For customization options, refer to the "Customize AutoMM" tutorial.
+## References
+- [Official Dataset Page](https://naoto0804.github.io/cross_domain_detection/)
+- [AutoMM Examples](https://github.com/autogluon/autogluon/tree/master/examples/automm)
+- For customization: Refer to "Customize AutoMM" tutorial

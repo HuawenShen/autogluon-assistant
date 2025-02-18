@@ -1,32 +1,26 @@
 # Condensed: AutoMM Detection - Prepare COCO2017 Dataset
 
+Summary: This tutorial provides implementation guidance for preparing the COCO2017 dataset specifically for AutoMM Detection tasks. It covers two main implementation approaches: using Python CLI and Bash scripts, with detailed commands for dataset download and custom path configuration. The tutorial helps with dataset setup tasks, including proper directory structure organization and format requirements for AutoGluon MultiModalPredictor. Key features covered include handling a large-scale dataset (42.7GB) with 80 classes and 123,287 images, COCO format specifications, and system requirements like SSD storage recommendations. It's particularly useful for setting up object detection datasets in the correct format and structure.
+
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the focused version of the tutorial:
+Here's the condensed tutorial focusing on essential implementation details:
 
-# AutoMM Detection - Prepare COCO2017 Dataset
+# AutoMM Detection - COCO2017 Dataset Preparation
 
-## Overview
-COCO2017 is a large-scale object detection dataset featuring:
-- 80 classes
-- 123,287 images
-- 886,284 instances
-- Median image ratio: 640 x 480
-
-**Requirements:**
-- 42.7 GB disk space (SSD recommended)
+## Key Requirements
+- Disk space: 42.7 GB
+- Recommended: SSD over HDD
 - Typical setup time: ~20 min on AWS EC2 with EBS
 
-## Installation Options
+## Installation Methods
 
-### 1. Python Script Method
-Uses `prepare_detection_dataset` CLI tool. Works across all platforms but without progress bar.
-
-```python
-# Basic usage - extract to current directory
+### 1. Python CLI Method
+```bash
+# Basic usage
 python3 -m autogluon.multimodal.cli.prepare_detection_dataset --dataset_name coco2017
 
-# Extract to specific path
+# With custom output path
 python3 -m autogluon.multimodal.cli.prepare_detection_dataset --dataset_name coco2017 --output_path ~/data
 
 # Short form
@@ -34,18 +28,16 @@ python3 -m autogluon.multimodal.cli.prepare_detection_dataset -d coco17 -o ~/dat
 ```
 
 ### 2. Bash Script Method
-Provides progress bar visualization (Unix systems only).
-
 ```bash
-# Extract to current directory
+# Basic usage
 bash download_coco17.sh
 
-# Extract to specific path
+# With custom output path
 bash download_coco17.sh ~/data
 ```
 
-## Directory Structure
-After extraction, the `coco17` folder contains:
+## Dataset Structure
+After download, the `coco17` folder contains:
 ```
 annotations/
 test2017/
@@ -54,25 +46,21 @@ unlabeled2017/
 val2017/
 ```
 
-## Data Format
-COCO uses a specific JSON format for annotations. This format is recommended for use with AutoGluon MultiModalPredictor.
+## Important Notes
+- COCO2017 contains:
+  - 80 classes
+  - 123,287 images
+  - 886,284 instances
+  - Median image ratio: 640 x 480
+- The COCO format (.json) is the recommended format for AutoGluon MultiModalPredictor
+- For format conversion:
+  - Refer to "Convert Data to COCO Format" tutorial
+  - See "AutoMM Detection - Convert VOC Format Dataset to COCO Format"
 
-For format conversion guidance:
-- See "Convert Data to COCO Format" tutorial
-- See "AutoMM Detection - Convert VOC Format Dataset to COCO Format" tutorial
+## Best Practices
+1. Use SSD for better performance
+2. Follow the COCO format for dataset organization
+3. Check available disk space before starting download
+4. Use bash script on Unix systems if progress monitoring is needed
 
-## Additional Resources
-- [AutoMM Examples Repository](https://github.com/autogluon/autogluon/tree/master/examples/automm)
-- For customization: Refer to "Customize AutoMM" tutorial
-
-## Citation
-```
-@misc{https://doi.org/10.48550/arxiv.1405.0312,
-  doi = {10.48550/ARXIV.1405.0312},
-  url = {https://arxiv.org/abs/1405.0312},
-  author = {Lin, Tsung-Yi and Maire, Michael and Belongie, Serge and Bourdev, Lubomir and Girshick, Ross and Hays, James and Perona, Pietro and Ramanan, Deva and Zitnick, C. Lawrence and Dollár, Piotr},
-  title = {Microsoft COCO: Common Objects in Context},
-  publisher = {arXiv},
-  year = {2014}
-}
-```
+For customization details, refer to the "Customize AutoMM" documentation.

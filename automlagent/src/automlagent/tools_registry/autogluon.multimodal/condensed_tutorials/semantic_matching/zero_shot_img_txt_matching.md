@@ -1,64 +1,44 @@
 # Condensed: Image-Text Semantic Matching with AutoMM - Zero-Shot
 
+Summary: This tutorial demonstrates implementing zero-shot image-text semantic matching using AutoMM's MultiModalPredictor with CLIP model. It covers three main functionalities: image retrieval, text retrieval, and pair matching. Key implementation techniques include efficient embedding extraction (with offline storage capability), semantic search operations, and pair matching predictions. The tutorial shows how to initialize the predictor, extract embeddings with tensors, perform search operations with customizable top-k results, and conduct pair matching with probability scores. It's particularly useful for building image-text search systems, content matching applications, and semantic similarity tasks without requiring model training.
+
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the focused version of the tutorial:
+Here's the condensed tutorial focusing on essential implementation details:
 
 # Zero-Shot Image-Text Semantic Matching with AutoMM
 
-## Overview
-AutoMM enables zero-shot image-text matching using CLIP, which features:
-- Two-tower architecture (separate image and text encoders)
-- Pre-trained embeddings for efficient similarity matching
-- Offline embedding extraction for scalability
+## Key Concepts
+- Uses CLIP model for image-text matching without training
+- Two-tower architecture: separate encoders for images and text
+- Enables offline embedding extraction for scalability
+- Supports image retrieval, text retrieval, and pair matching
 
-## Installation
-```python
-!pip install autogluon.multimodal
-```
+## Implementation
 
-## Basic Usage
-
-### 1. Prepare Data
-```python
-from autogluon.multimodal import download
-
-# Sample texts and image URLs
-texts = [
-    "A cheetah chases prey on across a field.",
-    "A man is eating a piece of bread.",
-    # ... additional examples ...
-]
-
-urls = ['http://farm4.staticflickr.com/3179/2872917634_f41e6987a8_z.jpg',
-        # ... additional URLs ...
-]
-
-image_paths = [download(url) for url in urls]
-```
-
-### 2. Extract Embeddings
+### 1. Basic Setup
 ```python
 from autogluon.multimodal import MultiModalPredictor
+from autogluon.multimodal.utils import semantic_search
 
 # Initialize predictor
 predictor = MultiModalPredictor(problem_type="image_text_similarity")
+```
 
+### 2. Embedding Extraction
+```python
 # Extract embeddings
 image_embeddings = predictor.extract_embedding(image_paths, as_tensor=True)
 text_embeddings = predictor.extract_embedding(texts, as_tensor=True)
 ```
 
-### 3. Image-Text Matching Tasks
+### 3. Image-Text Search Operations
 
 #### Image Retrieval with Text Query
 ```python
-from autogluon.multimodal.utils import semantic_search
-
-# Search images matching a text query
 hits = semantic_search(
     matcher=predictor,
-    query_embeddings=text_embeddings[6][None,],
+    query_embeddings=text_embeddings[query_idx][None,],
     response_embeddings=image_embeddings,
     top_k=5
 )
@@ -68,16 +48,16 @@ hits = semantic_search(
 ```python
 hits = semantic_search(
     matcher=predictor,
-    query_embeddings=image_embeddings[4][None,],
+    query_embeddings=image_embeddings[query_idx][None,],
     response_embeddings=text_embeddings,
     top_k=5
 )
 ```
 
-### 4. Direct Matching Predictions
+### 4. Pair Matching Predictions
 
 ```python
-# Initialize predictor for matching
+# Initialize predictor for pair matching
 predictor = MultiModalPredictor(
     query="abc",
     response="xyz",
@@ -85,21 +65,26 @@ predictor = MultiModalPredictor(
 )
 
 # Predict matches
-pred = predictor.predict({"abc": [image_paths[4]], "xyz": [texts[3]]})
+pred = predictor.predict({
+    "abc": [image_paths[4]], 
+    "xyz": [texts[3]]
+})
 
 # Get matching probabilities
-proba = predictor.predict_proba({"abc": [image_paths[4]], "xyz": [texts[3]]})
+proba = predictor.predict_proba({
+    "abc": [image_paths[4]], 
+    "xyz": [texts[3]]
+})
 ```
 
-## Key Implementation Notes
+## Important Notes
+- Embedding extraction can be done offline for better scalability
 - Use `as_tensor=True` for efficient embedding operations
-- Embeddings can be extracted offline for large-scale applications
-- Semantic search supports customizable `top_k` results
-- Predictor requires explicit `query` and `response` names for direct matching
+- Specify `query` and `response` parameters when doing pair matching
+- The model uses cosine similarity for matching scores
 
 ## Best Practices
-- Extract embeddings once and reuse for multiple queries
-- Use probability predictions when threshold customization is needed
-- Consider offline embedding extraction for large datasets
-
-For customization options, refer to the AutoMM customization documentation.
+1. Extract embeddings in batch for better performance
+2. Store embeddings offline for large-scale applications
+3. Use appropriate `top_k` values based on your use case
+4. Consider probability thresholds for matching decisions

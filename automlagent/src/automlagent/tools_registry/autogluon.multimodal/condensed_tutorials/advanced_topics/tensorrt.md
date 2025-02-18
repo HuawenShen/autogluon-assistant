@@ -1,67 +1,25 @@
 # Condensed: Faster Prediction with TensorRT
 
+Summary: This tutorial demonstrates how to optimize AutoGluon models using TensorRT for faster inference, specifically covering the implementation of mixed-precision optimization and model conversion. It helps with tasks like configuring TensorRT integration, optimizing trained models for inference, and validating prediction accuracy post-optimization. Key features include FP16 precision optimization, execution provider configuration, batch size tuning, and performance benchmarking techniques. The tutorial provides essential code patterns for model optimization, accuracy verification, and performance evaluation while highlighting critical considerations for maintaining prediction accuracy during the optimization process.
+
 *This is a condensed version that preserves essential implementation details and context.*
 
 Here's the condensed tutorial focusing on essential implementation details:
 
-# Faster Prediction with TensorRT
+# Faster Prediction with TensorRT in AutoGluon
 
-This tutorial demonstrates how to use TensorRT with AutoGluon-MultiModal to optimize inference speed.
-
-## Setup
-
+## Key Setup
 ```python
-import os
-import numpy as np
-import time
-import warnings
-from IPython.display import clear_output
-warnings.filterwarnings('ignore')
-np.random.seed(123)
-
-# Install required packages
-try:
-    import tensorrt, onnx, onnxruntime
-except ImportError:
-    !pip install autogluon.multimodal[tests]
-    !pip install -U "tensorrt>=10.0.0b0,<11.0"
-    clear_output()
+# Required packages
+import tensorrt, onnx, onnxruntime
+!pip install autogluon.multimodal[tests]
+!pip install -U "tensorrt>=10.0.0b0,<11.0"
 ```
 
-## Data Preparation
+## Implementation Details
 
+### 1. Training Configuration
 ```python
-# Download and load dataset
-download_dir = './ag_automm_tutorial'
-zip_file = 'https://automl-mm-bench.s3.amazonaws.com/petfinder_for_tutorial.zip'
-from autogluon.core.utils.loaders import load_zip
-load_zip.unzip(zip_file, unzip_dir=download_dir)
-
-# Load CSV files
-import pandas as pd
-dataset_path = download_dir + '/petfinder_for_tutorial'
-train_data = pd.read_csv(f'{dataset_path}/train.csv', index_col=0)
-test_data = pd.read_csv(f'{dataset_path}/test.csv', index_col=0)
-label_col = 'AdoptionSpeed'
-
-# Process image paths
-image_col = 'Images'
-train_data[image_col] = train_data[image_col].apply(lambda ele: ele.split(';')[0])
-test_data[image_col] = test_data[image_col].apply(lambda ele: ele.split(';')[0])
-
-def path_expander(path, base_folder):
-    path_l = path.split(';')
-    return ';'.join([os.path.abspath(os.path.join(base_folder, path)) for path in path_l])
-
-train_data[image_col] = train_data[image_col].apply(lambda ele: path_expander(ele, base_folder=dataset_path))
-test_data[image_col] = test_data[image_col].apply(lambda ele: path_expander(ele, base_folder=dataset_path))
-```
-
-## Model Training
-
-```python
-from autogluon.multimodal import MultiModalPredictor
-
 hyperparameters = {
     "optimization.max_epochs": 2,
     "model.names": ["numerical_mlp", "categorical_mlp", "timm_image", "hf_text", "fusion_mlp"],
@@ -72,54 +30,57 @@ hyperparameters = {
 predictor = MultiModalPredictor(label=label_col).fit(
     train_data=train_data,
     hyperparameters=hyperparameters,
-    time_limit=120,
+    time_limit=120
 )
 ```
 
-## TensorRT Optimization
-
+### 2. TensorRT Optimization
 ```python
-# Baseline PyTorch prediction
-batch_size = 2
-n_trails = 10
-sample = test_data.head(batch_size)
-y_pred = predictor.predict_proba(sample)
-
-# TensorRT optimization
+# Load and optimize predictor
 model_path = predictor.path
 trt_predictor = MultiModalPredictor.load(path=model_path)
 trt_predictor.optimize_for_inference()
-y_pred_trt = trt_predictor.predict_proba(sample)
 ```
 
-Important Notes:
-- `optimize_for_inference()` modifies the model for inference only
-- Cannot call `predictor.fit()` after optimization
-- Uses FP16 precision by default
+⚠️ **Important Warning**: `optimize_for_inference()` modifies internal model definition for inference only. Don't call `predictor.fit()` after optimization.
 
-## Performance Comparison
+### 3. Key Configuration Options
 
-```python
-# Compare accuracy
-np.testing.assert_allclose(y_pred, y_pred_trt, atol=0.01)
-
-# Compare metrics
-metric = predictor.evaluate(test_data)
-metric_trt = trt_predictor.evaluate(test_data)
-metric_df = pd.DataFrame.from_dict({"PyTorch": metric, "TensorRT": metric_trt})
-```
-
-## Customization Options
-
-To use different precision:
+- Default: Uses TensorRT with FP16 precision
+- Alternative provider configuration:
 ```python
 predictor.optimize_for_inference(providers=["CUDAExecutionProvider"])
 ```
 
-Key Points:
-- TensorRT optimization significantly improves inference speed
-- Minor accuracy differences due to FP16 precision
-- Can switch to CUDA provider for full precision if needed
-- Optimization is inference-only; reload model for retraining
+## Best Practices
 
-For more examples and customization options, refer to the AutoMM Examples repository.
+1. **Initialization**: Always run first prediction separately for memory allocation
+```python
+y_pred_trt = trt_predictor.predict_proba(sample)  # Initial run
+```
+
+2. **Accuracy Verification**: Check prediction consistency
+```python
+np.testing.assert_allclose(y_pred, y_pred_trt, atol=0.01)
+```
+
+3. **Performance Evaluation**: 
+- Benchmark with multiple trials
+- Compare metrics between PyTorch and TensorRT versions
+- Monitor accuracy loss with mixed precision
+
+## Critical Parameters
+
+- `batch_size`: Affects inference speed
+- `atol`: Tolerance for accuracy comparison (default: 0.01)
+- `providers`: Execution provider selection for optimization
+
+## Performance Considerations
+
+1. Mixed precision (FP16) is used by default for better performance
+2. If accuracy loss is significant:
+   - Switch to CUDA execution provider
+   - Adjust precision settings
+3. Evaluate trade-off between speed improvement and accuracy loss
+
+This implementation enables significant inference speed improvements while maintaining accuracy within acceptable tolerances.

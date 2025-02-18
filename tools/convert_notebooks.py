@@ -5,10 +5,59 @@ import nbformat
 from nbconvert import MarkdownExporter
 
 
+def clear_notebook_outputs(notebook):
+    """
+    Clear all outputs from notebook cells.
+    Args:
+        notebook: nbformat.NotebookNode object
+    """
+    for cell in notebook.cells:
+        if cell.cell_type == "code":
+            cell.outputs = []
+            cell.execution_count = None
+
+
+def contains_image(cell):
+    """
+    Check if a cell contains an image.
+    Args:
+        cell: notebook cell object
+    Returns:
+        bool: True if cell contains an image, False otherwise
+    """
+    if cell.cell_type == "markdown":
+        # Check for markdown image syntax
+        if "![" in cell.source:
+            return True
+    elif cell.cell_type == "code":
+        # Check for image outputs
+        for output in cell.outputs:
+            if "data" in output and any(
+                key.startswith("image/") for key in output.get("data", {})
+            ):
+                return True
+    return False
+
+
+def filter_notebook_content(notebook):
+    """
+    Filter out cells containing images from the notebook.
+    Args:
+        notebook: nbformat.NotebookNode object
+    Returns:
+        nbformat.NotebookNode: Filtered notebook
+    """
+    filtered_cells = []
+    for cell in notebook.cells:
+        if not contains_image(cell):
+            filtered_cells.append(cell)
+    notebook.cells = filtered_cells
+    return notebook
+
+
 def convert_notebook_to_markdown(notebook_path, output_path):
     """
-    Convert a single Jupyter notebook to Markdown format.
-
+    Convert a single Jupyter notebook to Markdown format, removing images and outputs.
     Args:
         notebook_path (str): Path to the input notebook
         output_path (str): Path where the markdown file should be saved
@@ -19,6 +68,14 @@ def convert_notebook_to_markdown(notebook_path, output_path):
     # Read the notebook
     with open(notebook_path, "r", encoding="utf-8") as notebook_file:
         notebook = nbformat.read(notebook_file, as_version=4)
+
+    # Clear outputs and remove images
+    clear_notebook_outputs(notebook)
+    notebook = filter_notebook_content(notebook)
+
+    # Save cleared notebook back to original file
+    with open(notebook_path, "w", encoding="utf-8") as notebook_file:
+        nbformat.write(notebook, notebook_file)
 
     # Convert to markdown
     markdown_exporter = MarkdownExporter()
@@ -32,7 +89,6 @@ def convert_notebook_to_markdown(notebook_path, output_path):
 def batch_convert_notebooks(input_dir, output_dir):
     """
     Convert all Jupyter notebooks in a directory (and its subdirectories) to Markdown.
-
     Args:
         input_dir (str): Root directory containing the notebooks
         output_dir (str): Directory where markdown files will be saved
@@ -45,7 +101,6 @@ def batch_convert_notebooks(input_dir, output_dir):
 
     # Get all notebook files
     notebook_files = input_path.rglob("*.ipynb")
-
     for notebook_path in notebook_files:
         # Skip checkpoint files
         if ".ipynb_checkpoints" in str(notebook_path):
@@ -64,6 +119,6 @@ def batch_convert_notebooks(input_dir, output_dir):
 
 if __name__ == "__main__":
     # Replace with your directory paths
-    input_directory = "/media/ag/autogluon/docs/tutorials"
-    output_directory = "/media/deephome/AutoMLAgent/AutogluonTutorials"
+    input_directory = "/media/agent/speechbrain/tutorials"
+    output_directory = "/media/agent/AutoMLAgent/SpeechbrainTutorials"
     batch_convert_notebooks(input_directory, output_directory)

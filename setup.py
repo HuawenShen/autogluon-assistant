@@ -8,6 +8,8 @@ setup(
     install_requires=[
         "autogluon.assistant",
         "langgraph",
+        "autogluon",
+        "speechbrain",
     ],
     author="FANGAreNotGnu",
     description="AutoMLAgent beta",

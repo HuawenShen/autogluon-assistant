@@ -2,6 +2,7 @@
 runs/
 temp_run/
 AutogluonModels/
+raw_tutorials/
 AutogluonTutorials/
 backup/
 

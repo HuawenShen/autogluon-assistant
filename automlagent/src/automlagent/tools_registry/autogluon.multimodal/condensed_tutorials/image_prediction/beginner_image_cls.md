@@ -1,96 +1,85 @@
 # Condensed: AutoMM for Image Classification - Quick Start
 
+Summary: This tutorial demonstrates the implementation of AutoGluon's MultiModalPredictor for image classification tasks, covering essential techniques for model training, evaluation, and deployment. It shows how to load image data using both file paths and bytearrays, train models with customizable time limits, perform predictions, extract embeddings, and handle model persistence. Key functionalities include flexible data input formats, automatic model training, evaluation metrics calculation, probability predictions, and feature extraction. The tutorial is particularly useful for tasks involving quick setup of image classification pipelines, model evaluation, and production deployment with proper model saving/loading mechanisms.
+
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the focused version of the tutorial:
+Here's the condensed tutorial focusing on essential implementation details:
 
 # AutoMM for Image Classification - Quick Start
 
-## Overview
-This tutorial demonstrates using MultiModalPredictor for image classification. The predictor handles model training with a single `fit()` call once data is prepared in Pandas DataFrame format.
+## Key Implementation Details
 
-## Data Preparation
-Using a subset of the Shopee-IET dataset containing clothing images with four categories: `BabyPants`, `BabyShirt`, `womencasualshoes`, `womenchiffontop`.
-
+### Setup and Data Loading
 ```python
-!pip install autogluon.multimodal
-
-import warnings
-warnings.filterwarnings('ignore')
-import pandas as pd
-
+from autogluon.multimodal import MultiModalPredictor
 from autogluon.multimodal.utils.misc import shopee_dataset
-download_dir = './ag_automm_tutorial_imgcls'
-train_data_path, test_data_path = shopee_dataset(download_dir)
-```
 
-**Note**: MultiModalPredictor supports both image paths and bytearrays:
-```python
+# Load dataset (supports two formats)
+# 1. With image paths
+train_data_path, test_data_path = shopee_dataset(download_dir)
+
+# 2. With bytearrays
 train_data_byte, test_data_byte = shopee_dataset(download_dir, is_bytearray=True)
 ```
 
-## Model Training
+### Model Training
 ```python
-from autogluon.multimodal import MultiModalPredictor
-import uuid
-model_path = f"./tmp/{uuid.uuid4().hex}-automm_shopee"
-predictor = MultiModalPredictor(label="label", path=model_path)
+predictor = MultiModalPredictor(
+    label="label",  # Column name containing target variable
+    path="./model_path"  # Save directory for models
+)
+
 predictor.fit(
     train_data=train_data_path,
-    time_limit=30, # seconds
+    time_limit=30  # Training time in seconds
 )
 ```
 
-Key Parameters:
-- `label`: Column name containing target variable
-- `path`: Directory for model and output storage
-- `time_limit`: Training duration in seconds
-
-## Model Evaluation
-Evaluate on test data using either image paths or bytearrays:
+### Evaluation and Prediction
 ```python
-# Using image paths
+# Evaluate model
 scores = predictor.evaluate(test_data_path, metrics=["accuracy"])
-print('Top-1 test acc: %.3f' % scores["accuracy"])
 
-# Using bytearrays
-scores = predictor.evaluate(test_data_byte, metrics=["accuracy"])
-```
-
-## Prediction
-```python
-# Single prediction
+# Make predictions
 predictions = predictor.predict({'image': [image_path]})
+probabilities = predictor.predict_proba({'image': [image_path]})
 
-# Probability predictions
-proba = predictor.predict_proba({'image': [image_path]})
-
-# Works with bytearrays too
-image_byte = test_data_byte.iloc[0]['image']
-predictions = predictor.predict({'image': [image_byte]})
+# Extract embeddings
+features = predictor.extract_embedding({'image': [image_path]})
 ```
 
-## Feature Extraction
-Extract image embeddings:
-```python
-feature = predictor.extract_embedding({'image': [image_path]})
-print(feature[0].shape)
-```
-
-## Model Persistence
+### Model Persistence
 ```python
 # Save happens automatically after fit()
 # Load saved model
 loaded_predictor = MultiModalPredictor.load(model_path)
 ```
 
-⚠️ **Warning**: Only load models from trusted sources due to pickle security concerns.
+## Important Notes
 
-## Key Features
-- Supports both image paths and bytearrays
-- Automatic model training with minimal configuration
-- Built-in evaluation metrics
-- Feature extraction capabilities
-- Easy model persistence
+1. Data Format:
+   - Requires Pandas DataFrame with image paths or bytearrays
+   - Must have columns for image data and labels
 
-For advanced customization, refer to the Customize AutoMM documentation.
+2. Input Flexibility:
+   - Supports both image paths and bytearrays
+   - Can mix formats between training and inference
+
+3. Security Warning:
+   - `MultiModalPredictor.load()` uses pickle
+   - Only load models from trusted sources
+
+4. Model Output Options:
+   - Class predictions
+   - Class probabilities
+   - Feature embeddings (N-dimensional vectors)
+
+## Best Practices
+
+1. Adjust `time_limit` parameter based on dataset size and requirements
+2. Use consistent data formats throughout the pipeline
+3. Save model checkpoints in a dedicated directory
+4. Validate model performance on test data before deployment
+
+For advanced customization, refer to the AutoMM customization documentation.

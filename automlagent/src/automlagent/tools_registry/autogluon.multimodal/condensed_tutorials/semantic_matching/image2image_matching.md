@@ -1,105 +1,88 @@
 # Condensed: Image-to-Image Semantic Matching with AutoMM
 
+Summary: This tutorial demonstrates implementing image-to-image semantic matching using AutoGluon's MultiModalPredictor. It covers techniques for setting up paired image comparison tasks, including data preparation with path handling, model configuration for similarity learning, and training implementation. The tutorial helps with tasks like binary classification of image pairs, generating similarity scores, and extracting image embeddings. Key features include Swin Transformer-based feature extraction, cosine similarity computation, and multiple prediction methods (binary predictions, probability scores, and embedding extraction), making it valuable for applications requiring image pair matching or similarity assessment.
+
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the focused version of the tutorial:
+Here's the condensed tutorial focusing on essential implementation details:
 
 # Image-to-Image Semantic Matching with AutoMM
 
-## Overview
-This tutorial demonstrates how to use AutoMM for computing similarity between image pairs using the Stanford Online Products (SOP) dataset. The model uses Swin Transformer to generate image embeddings and computes cosine similarity between them.
+## Key Implementation Details
 
-## Setup
-
+### Setup
 ```python
 !pip install autogluon.multimodal
-
-import os
 import pandas as pd
-import warnings
-from IPython.display import Image, display
-warnings.filterwarnings('ignore')
+from autogluon.multimodal import MultiModalPredictor
 ```
 
-## Data Preparation
+### Data Preparation
+1. Dataset structure:
+   - Two image columns (Image1, Image2)
+   - Label column (1 = matching pair, 0 = non-matching pair)
+   - Uses Stanford Online Products dataset with 12 product categories
 
-1. Download and extract the dataset:
-```python
-download_dir = './ag_automm_tutorial_img2img'
-zip_file = 'https://automl-mm-bench.s3.amazonaws.com/Stanford_Online_Products.zip'
-from autogluon.core.utils.loaders import load_zip
-load_zip.unzip(zip_file, unzip_dir=download_dir)
-```
-
-2. Load annotations:
-```python
-dataset_path = os.path.join(download_dir, 'Stanford_Online_Products')
-train_data = pd.read_csv(f'{dataset_path}/train.csv', index_col=0)
-test_data = pd.read_csv(f'{dataset_path}/test.csv', index_col=0)
-image_col_1 = "Image1"
-image_col_2 = "Image2"
-label_col = "Label"
-match_label = 1  # 1 indicates matching pairs
-```
-
-3. Expand image paths:
+2. Path handling:
 ```python
 def path_expander(path, base_folder):
     path_l = path.split(';')
     return ';'.join([os.path.abspath(os.path.join(base_folder, path)) for path in path_l])
 
+# Apply to image columns
 for image_col in [image_col_1, image_col_2]:
     train_data[image_col] = train_data[image_col].apply(lambda ele: path_expander(ele, base_folder=dataset_path))
-    test_data[image_col] = test_data[image_col].apply(lambda ele: path_expander(ele, base_folder=dataset_path))
 ```
 
-## Model Training
-
+### Model Training
 ```python
-from autogluon.multimodal import MultiModalPredictor
 predictor = MultiModalPredictor(
     problem_type="image_similarity",
     query=image_col_1,          # first image column
     response=image_col_2,       # second image column
     label=label_col,           # label column
-    match_label=match_label,   # label indicating matching pairs
-    eval_metric='auc',         # evaluation metric
+    match_label=match_label,   # label value indicating match (e.g., 1)
+    eval_metric='auc'          # evaluation metric
 )
 
 predictor.fit(
     train_data=train_data,
-    time_limit=180,
+    time_limit=180
 )
 ```
 
-## Model Usage
+### Key Features
 
-1. Evaluate model performance:
+1. Prediction Methods:
 ```python
-score = predictor.evaluate(test_data)
-print("evaluation score: ", score)
+# Binary predictions
+predictions = predictor.predict(test_data)
+
+# Probability scores
+probabilities = predictor.predict_proba(test_data)
+
+# Extract embeddings
+embeddings_1 = predictor.extract_embedding({image_col_1: test_data[image_col_1]})
+embeddings_2 = predictor.extract_embedding({image_col_2: test_data[image_col_2]})
 ```
 
-2. Predict matches:
-```python
-# Binary predictions (threshold = 0.5)
-pred = predictor.predict(test_data.head(3))
+2. Model Architecture:
+- Uses Swin Transformer for image feature extraction
+- Computes cosine similarity between image feature vectors
 
-# Probability predictions
-proba = predictor.predict_proba(test_data.head(3))
-```
+## Important Notes
 
-3. Extract embeddings:
-```python
-embeddings_1 = predictor.extract_embedding({image_col_1: test_data[image_col_1][:5].tolist()})
-embeddings_2 = predictor.extract_embedding({image_col_2: test_data[image_col_2][:5].tolist()})
-```
+1. Technical Details:
+- Default probability threshold: 0.5
+- Outputs embeddings as high-dimensional vectors
+- Uses AUC as default evaluation metric
 
-## Key Points
-- The model uses Swin Transformer for feature extraction
-- Cosine similarity is used to compute image pair similarity
-- Default prediction threshold is 0.5
-- Dataset labels: 1 for matching pairs, 0 for non-matching pairs
-- AUC is used as the evaluation metric
+2. Best Practices:
+- Ensure image paths are properly expanded
+- Correctly specify match_label based on your dataset
+- Consider adjusting time_limit based on dataset size
 
-For customization options, refer to the AutoMM customization documentation.
+3. Data Requirements:
+- Two image columns with corresponding paths
+- Binary labels indicating match/non-match
+- Consistent image format and accessibility

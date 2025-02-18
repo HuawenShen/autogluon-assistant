@@ -1,96 +1,79 @@
 # Condensed: Predicting Multiple Columns in a Table (Multi-Label Prediction)
 
+Summary: This tutorial covers the implementation of multi-label prediction using AutoGluon's MultilabelPredictor class, specifically focusing on handling multiple target variables with different problem types (regression, classification) simultaneously. It demonstrates how to configure and train models with correlated labels, manage model persistence, and make predictions. Key functionalities include initialization with custom problem types and evaluation metrics, prediction methods (predict and predict_proba), model evaluation, and save/load operations. The tutorial emphasizes best practices for performance optimization, memory management, and proper evaluation techniques, making it valuable for tasks requiring simultaneous prediction of multiple target variables with potential interdependencies.
+
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the condensed tutorial maintaining essential information:
+Here's the condensed tutorial focusing on essential implementation details:
 
-# Predicting Multiple Columns in a Table (Multi-Label Prediction)
+# Multi-Label Prediction with AutoGluon
 
-## Overview
-This tutorial demonstrates how to predict multiple columns (labels) in a table using AutoGluon. The approach uses separate TabularPredictor instances for each label, with optional correlation handling between labels.
-
-## Key Implementation
+## Key Implementation Details
 
 ### MultilabelPredictor Class
-The core implementation uses a custom class that manages multiple TabularPredictors:
-
 ```python
-from autogluon.tabular import TabularDataset, TabularPredictor
-from autogluon.common.utils.utils import setup_outputdir
-from autogluon.core.utils.loaders import load_pkl
-from autogluon.core.utils.savers import save_pkl
-import os.path
-
 class MultilabelPredictor:
     def __init__(self, labels, path=None, problem_types=None, eval_metrics=None, 
                  consider_labels_correlation=True, **kwargs):
-        # [Previous implementation code remains the same]
+        # Core parameters:
+        # - labels: List of columns to predict
+        # - problem_types: List of prediction types for each label
+        # - eval_metrics: List of metrics for each label
+        # - consider_labels_correlation: Whether to account for label dependencies
 ```
 
-### Key Parameters
-- `labels`: List of column names to predict
-- `problem_types`: Prediction type for each label (regression/classification)
-- `eval_metrics`: Evaluation metric for each label
-- `consider_labels_correlation`: Whether to account for label correlations
-- `path`: Save location for models
-
-## Usage Example
-
-### 1. Data Preparation
+### Critical Configurations
 ```python
-train_data = TabularDataset('https://autogluon.s3.amazonaws.com/datasets/Inc/train.csv')
-subsample_size = 500
-train_data = train_data.sample(n=subsample_size, random_state=0)
-
-labels = ['education-num','education','class']
-problem_types = ['regression','multiclass','binary']
-eval_metrics = ['mean_absolute_error','accuracy','accuracy']
+# Required parameters
+labels = ['education-num', 'education', 'class']
+problem_types = ['regression', 'multiclass', 'binary']
+eval_metrics = ['mean_absolute_error', 'accuracy', 'accuracy']
 save_path = 'agModels-predictEducationClass'
+
+# Initialize and train
+predictor = MultilabelPredictor(
+    labels=labels, 
+    problem_types=problem_types, 
+    eval_metrics=eval_metrics, 
+    path=save_path
+)
+predictor.fit(train_data, time_limit=time_limit)
 ```
 
-### 2. Training
+### Core Methods
 ```python
-multi_predictor = MultilabelPredictor(labels=labels, 
-                                    problem_types=problem_types, 
-                                    eval_metrics=eval_metrics, 
-                                    path=save_path)
-multi_predictor.fit(train_data, time_limit=5)
-```
+# Prediction
+predictions = predictor.predict(test_data)
 
-### 3. Prediction and Evaluation
-```python
-# Load test data
-test_data = TabularDataset('https://autogluon.s3.amazonaws.com/datasets/Inc/test.csv')
-test_data = test_data.sample(n=subsample_size, random_state=0)
-test_data_nolab = test_data.drop(columns=labels)
+# Probability predictions
+pred_proba = predictor.predict_proba(test_data)
 
-# Make predictions
-predictions = multi_predictor.predict(test_data_nolab)
+# Evaluation
+results = predictor.evaluate(test_data)
 
-# Evaluate
-evaluations = multi_predictor.evaluate(test_data)
+# Save/Load
+predictor.save()
+predictor = MultilabelPredictor.load(save_path)
 ```
 
 ## Best Practices
 
 1. Performance Optimization:
    - Use `presets='best_quality'` for best predictive performance
-   - Set `consider_labels_correlation=False` if using individual predictors
+   - Enable `consider_labels_correlation=True` when predicting all labels together
+   - Set `consider_labels_correlation=False` when using individual predictors
 
 2. Memory Management:
-   - For memory issues: Adjust fit() arguments as per tabular-indepth tutorial
-   - For faster inference: Use `presets = ['good_quality', 'optimize_for_deployment']`
+   - Adjust memory usage through fit() arguments
+   - Use `presets=['good_quality', 'optimize_for_deployment']` for faster inference
 
-3. Model Persistence:
-   ```python
-   # Save
-   multi_predictor.save()
-   
-   # Load
-   multi_predictor = MultilabelPredictor.load(save_path)
-   ```
+3. Evaluation:
+   - Always specify appropriate eval_metrics for each label
+   - Access individual predictors using `get_predictor(label)` for detailed analysis
 
-4. Individual Predictor Access:
-   ```python
-   predictor_single = multi_predictor.get_predictor('label_name')
-   ```
+## Important Warnings
+
+- Must specify different paths or use default for multiple fit() calls to avoid overwriting
+- Directory size may grow large with many labels
+- Setting consider_labels_correlation affects prediction dependencies between labels
+- Individual predictor usage requires consider_labels_correlation=False during training

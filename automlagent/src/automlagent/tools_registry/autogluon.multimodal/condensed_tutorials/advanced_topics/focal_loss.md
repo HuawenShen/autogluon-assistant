@@ -1,97 +1,69 @@
 # Condensed: Handling Class Imbalance with AutoMM - Focal Loss
 
+Summary: This tutorial demonstrates implementing focal loss in AutoGluon's MultiModalPredictor to handle class imbalance problems. It covers specific techniques for dataset preparation with controlled imbalance creation, focal loss configuration through key parameters (alpha, gamma, reduction), and training setup with Swin Transformer models. The tutorial helps with tasks involving imbalanced classification problems, particularly in multimodal settings. Key features include customizing focal loss parameters, calculating appropriate class weights, and optimizing model performance through gamma value tuning. It provides practical code examples for integrating focal loss into the training pipeline and best practices for handling imbalanced datasets.
+
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the focused version of the tutorial:
+Here's the condensed tutorial focusing on essential implementation details:
 
 # Handling Class Imbalance with AutoMM - Focal Loss
 
-This tutorial demonstrates how to use focal loss in AutoMM for handling class imbalance problems.
-
 ## Key Concepts
-- Focal loss helps balance training between:
-  - Hard vs. easy samples
-  - Uneven class distributions
-- Main parameters:
-  - `alpha`: Per-class loss weights
-  - `gamma`: Controls focus on hard samples
-  - `reduction`: Loss aggregation method ("mean" or "sum")
+- Focal loss helps balance hard/easy samples and uneven class distributions
+- Useful for improving model performance on imbalanced datasets
 
-## Implementation
+## Implementation Details
 
-### 1. Setup and Data Preparation
+### 1. Dataset Preparation
 ```python
-!pip install autogluon.multimodal
-
 from autogluon.multimodal.utils.misc import shopee_dataset
-
-# Load dataset
-download_dir = "./ag_automm_tutorial_imgcls_focalloss"
 train_data, test_data = shopee_dataset(download_dir)
 
 # Create imbalanced dataset
-import numpy as np
-import pandas as pd
-
-ds = 1
 imbalanced_train_data = []
 for lb in range(4):
     class_data = train_data[train_data.label == lb]
-    sample_index = np.random.choice(np.arange(len(class_data)), size=int(len(class_data) * ds), replace=False)
-    ds /= 3  # downsample 1/3 each time for each class
+    sample_index = np.random.choice(np.arange(len(class_data)), 
+                                  size=int(len(class_data) * ds), 
+                                  replace=False)
+    ds /= 3  # downsample 1/3 each time
     imbalanced_train_data.append(class_data.iloc[sample_index])
-imbalanced_train_data = pd.concat(imbalanced_train_data)
-
-# Calculate class weights
-weights = []
-for lb in range(4):
-    class_data = imbalanced_train_data[imbalanced_train_data.label == lb]
-    weights.append(1 / (class_data.shape[0] / imbalanced_train_data.shape[0]))
-weights = list(np.array(weights) / np.sum(weights))
 ```
 
-### 2. Training with Focal Loss
-```python
-from autogluon.multimodal import MultiModalPredictor
-import uuid
+### 2. Focal Loss Configuration
+Key parameters:
+- `optimization.loss_function`: Set to "focal_loss"
+- `optimization.focal_loss.alpha`: Class weights list (must match number of classes)
+- `optimization.focal_loss.gamma`: Controls focus on hard samples (higher = more focus)
+- `optimization.focal_loss.reduction`: "mean" or "sum"
 
-model_path = f"./tmp/{uuid.uuid4().hex}-automm_shopee_focal"
-predictor = MultiModalPredictor(label="label", problem_type="multiclass", path=model_path)
+### 3. Training with Focal Loss
+```python
+predictor = MultiModalPredictor(label="label", 
+                              problem_type="multiclass", 
+                              path=model_path)
 
 predictor.fit(
     hyperparameters={
         "model.mmdet_image.checkpoint_name": "swin_tiny_patch4_window7_224",
         "env.num_gpus": 1,
         "optimization.loss_function": "focal_loss",
-        "optimization.focal_loss.alpha": weights,  # Class weights
-        "optimization.focal_loss.gamma": 1.0,      # Hard sample focus
+        "optimization.focal_loss.alpha": weights,
+        "optimization.focal_loss.gamma": 1.0,
         "optimization.focal_loss.reduction": "sum",
         "optimization.max_epochs": 10,
     },
-    train_data=imbalanced_train_data,
-)
-```
-
-### 3. Training without Focal Loss (Comparison)
-```python
-model_path = f"./tmp/{uuid.uuid4().hex}-automm_shopee_non_focal"
-predictor2 = MultiModalPredictor(label="label", problem_type="multiclass", path=model_path)
-
-predictor2.fit(
-    hyperparameters={
-        "model.mmdet_image.checkpoint_name": "swin_tiny_patch4_window7_224",
-        "env.num_gpus": 1,
-        "optimization.max_epochs": 10,
-    },
-    train_data=imbalanced_train_data,
+    train_data=imbalanced_train_data
 )
 ```
 
 ## Best Practices
-1. Use focal loss when dealing with significant class imbalance
-2. Set `alpha` weights inversely proportional to class frequencies
-3. Adjust `gamma` to control focus on hard samples (typical range: 0.5-2.0)
-4. Compare performance with and without focal loss for your specific use case
+1. Calculate class weights using inverse of class sample proportions
+2. Experiment with different gamma values for optimal performance
+3. Use focal loss when dealing with significant class imbalances
+4. Compare performance with and without focal loss to validate improvements
 
-## Evaluation
-Use `predictor.evaluate(test_data, metrics=["acc"])` to assess model performance. Models trained with focal loss typically show better performance on imbalanced datasets.
+## Important Notes
+- Class weights list length must match total number of classes
+- Higher gamma values increase focus on hard samples
+- Focal loss can significantly improve performance on imbalanced datasets

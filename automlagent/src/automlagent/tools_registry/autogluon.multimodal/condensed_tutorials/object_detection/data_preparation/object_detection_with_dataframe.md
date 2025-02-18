@@ -1,103 +1,87 @@
 # Condensed: AutoMM Detection - Object detection data formats
 
+Summary: This tutorial covers object detection data handling and model training in AutoGluon's MultiModal framework, specifically focusing on COCO and DataFrame format implementations. It provides code examples for format conversions between COCO JSON and DataFrame structures, along with essential data fields and their requirements. The tutorial demonstrates how to configure and train object detection models using MultiModalPredictor, including hyperparameter settings, GPU utilization, and learning rate optimization. Key functionalities include format conversion utilities, model training setup, and best practices for handling detection datasets, making it valuable for implementing object detection pipelines with proper data formatting and model configuration.
+
 *This is a condensed version that preserves essential implementation details and context.*
 
 Here's the condensed tutorial focusing on essential implementation details:
 
-# AutoMM Detection - Object Detection Data Formats
+# AutoMM Detection Data Formats
 
 ## Supported Data Formats
+1. COCO Format (.json)
+2. DataFrame Format (pandas)
 
-AutoMM Detection supports two data formats:
-1. COCO Format (JSON)
-2. DataFrame Format
-
-## COCO Format
-
-Essential structure:
+## COCO Format Implementation
 ```python
 data = {
     "categories": [
         {"supercategory": "none", "id": 1, "name": "person"},
-        # ... other categories
+        # ... additional categories
     ],
     "images": [
         {
-            "file_name": "<imagename0>.<ext>",
+            "file_name": "<imagename>.<ext>",
             "height": 427,
             "width": 640,
             "id": 1
         },
-        # ... other images
+        # ... additional images
     ],
     "annotations": [
         {
             'area': 33453,
             'iscrowd': 0,
-            'bbox': [181, 133, 177, 189],  # [x, y, width, height]
+            'bbox': [x, y, width, height],
             'category_id': 8,
+            'ignore': 0,
+            'segmentation': [],
             'image_id': 1617,
             'id': 1
         },
-        # ... other annotations
+        # ... additional annotations
     ],
     "type": "instances"
 }
 ```
 
-## DataFrame Format
-
+## DataFrame Format Requirements
 Required columns:
 - `image`: Path to image file
 - `rois`: List of arrays with format `[x1, y1, x2, y2, class_label]`
 - `label`: Copy of `rois` column
 
-## Implementation
+## Key Implementation Steps
 
-### Setup and Data Preparation
-```python
-import os
-from autogluon.core.utils.loaders import load_zip
-from autogluon.multimodal import MultiModalPredictor
-from autogluon.multimodal.utils.object_detection import from_coco, object_detection_df_to_coco
-
-# Download sample dataset
-zip_file = "https://automl-mm-bench.s3.amazonaws.com/object_detection_dataset/tiny_motorbike_coco.zip"
-download_dir = "./tiny_motorbike_coco"
-load_zip.unzip(zip_file, unzip_dir=download_dir)
-data_dir = os.path.join(download_dir, "tiny_motorbike")
-train_path = os.path.join(data_dir, "Annotations", "trainval_cocoformat.json")
-test_path = os.path.join(data_dir, "Annotations", "test_cocoformat.json")
-```
-
-### Format Conversion
+### 1. Format Conversion Utilities
 ```python
 # COCO to DataFrame
+from autogluon.multimodal.utils.object_detection import from_coco
 train_df = from_coco(train_path)
 
 # DataFrame to COCO
-train_coco = object_detection_df_to_coco(train_df, save_path="./df_converted_to_coco.json")
-
-# Load saved COCO format
-train_df_from_saved_coco = from_coco("./df_converted_to_coco.json", root="./")
+from autogluon.multimodal.utils.object_detection import object_detection_df_to_coco
+train_coco = object_detection_df_to_coco(train_df, save_path="output.json")
 ```
 
-### Model Training
+### 2. Model Training Setup
 ```python
-checkpoint_name = "yolov3_mobilenetv2_320_300e_coco"
-num_gpus = -1  # use all GPUs
+from autogluon.multimodal import MultiModalPredictor
 
-predictor_df = MultiModalPredictor(
+predictor = MultiModalPredictor(
     hyperparameters={
-        "model.mmdet_image.checkpoint_name": checkpoint_name,
-        "env.num_gpus": num_gpus,
+        "model.mmdet_image.checkpoint_name": "yolov3_mobilenetv2_320_300e_coco",
+        "env.num_gpus": -1,  # use all GPUs
     },
     problem_type="object_detection",
     sample_data_path=train_df,
-    path=f"./tmp/{uuid.uuid4().hex}-df_train_temp_save"
+    path=model_path,
 )
+```
 
-predictor_df.fit(
+### 3. Training Configuration
+```python
+predictor.fit(
     train_df,
     hyperparameters={
         "optimization.learning_rate": 2e-4,
@@ -107,16 +91,14 @@ predictor_df.fit(
 )
 ```
 
-### Evaluation
-```python
-test_df = from_coco(test_path)
-predictor_df.evaluate(test_df)
-```
-
-## Key Points
-- Install required dependencies: `mmcv` and `mmdet==3.1.0`
-- Ensure correct image paths when converting between formats
+## Important Notes
+- When loading from JSON, ensure correct root path for images
+- Dependencies required: `mmcv` and `mmdet==3.1.0`
 - Adjust batch size based on model size and available memory
-- Learning rate uses two-stage training with detection head having 100x lr
+- Two-stage detection head uses 100x learning rate
 
-For customization options, refer to the AutoMM customization documentation.
+## Best Practices
+1. Verify data format consistency before training
+2. Use appropriate batch size for available GPU memory
+3. Ensure correct image paths when converting between formats
+4. Test with small dataset before full training

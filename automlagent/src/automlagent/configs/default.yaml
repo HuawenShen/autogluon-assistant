@@ -18,7 +18,7 @@ llm: &default_llm
   model: "anthropic.claude-3-5-sonnet-20241022-v2:0"
   # provider: openai
   # model: gpt-4o-2024-08-06
-  max_tokens: 4096
+  max_tokens: 16384
   proxy_url: null
   temperature: 0
   verbose: True
@@ -27,6 +27,6 @@ llm: &default_llm
 coder:
   <<: *default_llm  # Merge llm_config
   temperature: 0.5
-  max_tokens: 4096
+  max_tokens: 16384
   top_p: 1
   multi_turn: False

@@ -1,108 +1,87 @@
 # Condensed: AutoMM for Entity Extraction with Text and Image - Quick Start
 
+Summary: This tutorial demonstrates implementing multimodal entity extraction using AutoGluon's MultiModalPredictor, specifically focusing on processing text and image data from tweets. It covers essential techniques for dataset preparation (image path handling), model configuration for NER tasks, and training workflows. The tutorial helps with tasks like setting up multimodal NER models, handling image-text data preprocessing, and implementing transfer learning. Key features include automatic modality detection, model selection from multimodal pools, late-fusion model implementation, model persistence, and continuous training capabilities. It provides practical code examples for model training, evaluation, prediction, and best practices for handling NER-specific configurations.
+
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the focused version of the tutorial:
+Here's the condensed tutorial focusing on essential implementation details:
 
-# AutoMM for Entity Extraction with Text and Image - Quick Start
+# AutoMM for Multimodal Entity Extraction - Quick Start
 
-## Overview
-This tutorial demonstrates how to build a multimodal named entity recognition (NER) model using text and image data with AutoGluon's AutoMM. The example uses a Twitter dataset where each tweet contains both text and an image.
-
-## Setup
-
+## Key Setup
 ```python
 !pip install autogluon.multimodal
-
-import os
-import pandas as pd
-import warnings
-warnings.filterwarnings('ignore')
+from autogluon.multimodal import MultiModalPredictor
 ```
 
-## Data Preparation
+## Dataset Preparation
+1. Dataset contains tweets with text and images
+2. Critical preprocessing steps:
 
-1. Download and extract the Twitter dataset:
 ```python
-download_dir = './ag_automm_tutorial_ner'
-zip_file = 'https://automl-mm-bench.s3.amazonaws.com/ner/multimodal_ner.zip'
-from autogluon.core.utils.loaders import load_zip
-load_zip.unzip(zip_file, unzip_dir=download_dir)
-
-dataset_path = download_dir + '/multimodal_ner'
-train_data = pd.read_csv(f'{dataset_path}/twitter17_train.csv')
-test_data = pd.read_csv(f'{dataset_path}/twitter17_test.csv')
-label_col = 'entity_annotations'
-```
-
-2. Process image paths:
-```python
-image_col = 'image'
-# Use first image for quick tutorial
-train_data[image_col] = train_data[image_col].apply(lambda ele: ele.split(';')[0])
-test_data[image_col] = test_data[image_col].apply(lambda ele: ele.split(';')[0])
-
+# Expand image paths
 def path_expander(path, base_folder):
     path_l = path.split(';')
     p = ';'.join([os.path.abspath(base_folder+path) for path in path_l])
     return p
 
+# Apply to image column
 train_data[image_col] = train_data[image_col].apply(lambda ele: path_expander(ele, base_folder=dataset_path))
-test_data[image_col] = test_data[image_col].apply(lambda ele: path_expander(ele, base_folder=dataset_path))
 ```
 
 ## Model Training
 
-Key configuration:
-- Set problem_type to "ner"
-- Specify text_ner column type for entity extraction
-- Set time limit for training duration
-
+### Essential Configuration
 ```python
-from autogluon.multimodal import MultiModalPredictor
-import uuid
+predictor = MultiModalPredictor(
+    problem_type="ner",  # Specify NER task
+    label=label_col,
+    path=model_path
+)
 
-label_col = "entity_annotations"
-model_path = f"./tmp/{uuid.uuid4().hex}-automm_multimodal_ner"
-predictor = MultiModalPredictor(problem_type="ner", label=label_col, path=model_path)
+# Training with critical parameters
 predictor.fit(
     train_data=train_data,
-    column_types={"text_snippet":"text_ner"},
-    time_limit=300, #seconds
+    column_types={"text_snippet":"text_ner"},  # Important: Specify text_ner column type
+    time_limit=300  # Training time in seconds
 )
 ```
 
+### Key Features
+- Automatic modality detection
+- Automatic model selection from multimodal pools
+- Late-fusion model implementation for multiple backbones
+
 ## Evaluation and Prediction
-
-1. Evaluate model performance:
 ```python
+# Evaluate
 predictor.evaluate(test_data, metrics=['overall_recall', "overall_precision", "overall_f1"])
-```
 
-2. Make predictions:
-```python
-prediction_input = test_data.drop(columns=label_col).head(1)
+# Predict
 predictions = predictor.predict(prediction_input)
-
-# Display predictions
-for entity in predictions[0]:
-    print(f"Word '{prediction_input.text_snippet[0][entity['start']:entity['end']]}' belongs to group: {entity['entity_group']}")
 ```
 
-## Model Persistence and Continued Training
-
-Load and continue training a saved model:
+## Model Persistence and Transfer Learning
 ```python
+# Load saved model
 new_predictor = MultiModalPredictor.load(model_path)
-new_model_path = f"./tmp/{uuid.uuid4().hex}-automm_multimodal_ner_continue_train"
-new_predictor.fit(train_data, time_limit=60, save_path=new_model_path)
-test_score = new_predictor.evaluate(test_data, metrics=['overall_f1'])
+
+# Continue training
+new_predictor.fit(
+    train_data, 
+    time_limit=60,
+    save_path=new_model_path
+)
 ```
 
 ## Important Notes
-- AutoMM automatically detects data modalities and selects appropriate models
-- For multiple backbones, AutoMM implements late-fusion
-- The model is automatically saved during training
-- Continued training can be used to improve model performance
+1. Set `problem_type="ner"` for entity extraction tasks
+2. Use `column_types={"text_snippet":"text_ner"}` to specify NER text columns
+3. Model automatically saves during training
+4. Supports continuous training on loaded models
 
-For customization options, refer to the AutoMM customization documentation.
+## Best Practices
+1. Ensure correct image path expansion for training
+2. Specify appropriate time limits based on dataset size
+3. Use evaluation metrics suitable for NER tasks
+4. Consider continuous training for model improvement

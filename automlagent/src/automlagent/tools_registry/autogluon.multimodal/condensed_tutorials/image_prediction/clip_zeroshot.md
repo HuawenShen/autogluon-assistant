@@ -1,90 +1,79 @@
 # Condensed: Zero-Shot Image Classification with CLIP
 
+Summary: This tutorial demonstrates implementing zero-shot image classification using CLIP through AutoGluon's MultiModalPredictor. It covers essential code patterns for performing classification without training data, simply by providing image inputs and text descriptions of target classes. Key functionalities include basic classification tasks, novel object detection, and handling arbitrary visual categories. The tutorial explains how to initialize the predictor, structure input data as image-text pairs, and obtain probability distributions across classes. It also addresses important limitations like typographic attacks and provides best practices for robust classification. This implementation knowledge is particularly valuable for tasks requiring flexible image classification without dedicated training data.
+
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the focused version of the CLIP zero-shot classification tutorial:
+Here's the condensed tutorial focusing on essential implementation details and key concepts:
 
 # Zero-Shot Image Classification with CLIP
 
-CLIP enables visual classification without training data by matching images with text descriptions. It achieves 76.2% top-1 accuracy on ImageNet without using training samples, comparable to supervised ResNet50.
+## Key Implementation Details
 
-## Implementation
-
-First, install the required package:
 ```python
-!pip install autogluon.multimodal
-```
-
-### Basic Usage
-Import core dependencies:
-```python
-from autogluon.multimodal import MultiModalPredictor, download
-from IPython.display import Image, display
-```
-
-#### Example 1: Dog Breed Classification
-```python
-# Load image
-url = "https://farm4.staticflickr.com/3445/3262471985_ed886bf61a_z.jpg"
-dog_image = download(url)
+from autogluon.multimodal import MultiModalPredictor
+from autogluon.multimodal import download
 
 # Initialize predictor
 predictor = MultiModalPredictor(problem_type="zero_shot_image_classification")
 
-# Predict with candidate labels
+# Basic usage pattern
+prob = predictor.predict_proba(
+    {"image": [image_path]}, 
+    {"text": ['class1', 'class2', 'class3']}
+)
+```
+
+## Core Concepts & Capabilities
+
+1. **Zero-Shot Classification**: CLIP can classify images without training data by simply providing class names/descriptions
+2. **Performance**: Achieves 76.2% top-1 accuracy on ImageNet without training samples (comparable to supervised ResNet50)
+3. **Flexibility**: Works with arbitrary visual categories by providing text descriptions
+
+## Key Use Cases & Examples
+
+### 1. Basic Classification
+```python
+# Dog breed classification example
 prob = predictor.predict_proba(
     {"image": [dog_image]}, 
-    {"text": ['This is a Husky', 'This is a Golden Retriever', 
-              'This is a German Sheperd', 'This is a Samoyed.']}
+    {"text": [
+        'This is a Husky',
+        'This is a Golden Retriever',
+        'This is a German Sheperd',
+        'This is a Samoyed.'
+    ]}
 )
-print("Label probs:", prob)
 ```
 
-#### Example 2: Uncommon Object Classification
+### 2. Novel Object Classification
 ```python
-# Classify Segway image
-url = "https://live.staticflickr.com/7236/7114602897_9cf00b2820_b.jpg"
-segway_image = download(url)
-
+# Uncommon object classification
 prob = predictor.predict_proba(
-    {"image": [segway_image]}, 
+    {"image": [image_path]}, 
     {"text": ['segway', 'bicycle', 'wheel', 'car']}
 )
-print("Label probs:", prob)
 ```
 
-## Key Concepts
-- CLIP uses contrastive learning on 400M image-text pairs
-- Matches images with text descriptions without traditional training
-- Suitable for arbitrary visual classification tasks
-- Input format: Dictionary with image path and list of text candidates
+## Important Limitations & Warnings
 
-## Important Limitations
-
-### Typographic Attack Example
-```python
-# Original apple image classification
-url = "https://cdn.openai.com/multimodal-neurons/assets/apple/apple-blank.jpg"
-image_path = download(url)
-
-prob = predictor.predict_proba(
-    {"image": [image_path]}, 
-    {"text": ['Granny Smith', 'iPod', 'library', 'pizza', 'toaster', 'dough']}
-)
-
-# Same image with text overlay
-url = "https://cdn.openai.com/multimodal-neurons/assets/apple/apple-ipod.jpg"
-image_path = download(url)
-
-prob = predictor.predict_proba(
-    {"image": [image_path]}, 
-    {"text": ['Granny Smith', 'iPod', 'library', 'pizza', 'toaster', 'dough']}
-)
-```
+1. **Typographic Attacks**: CLIP is vulnerable to text in images affecting classifications
+2. **Model Basis**: 
+   - Trained on 400M image-text pairs
+   - Uses contrastive learning to match images with text descriptions
 
 ## Best Practices
-1. Provide clear, descriptive text candidates
-2. Consider potential text interference in images
-3. Test with multiple candidate labels for better accuracy
 
-For customization options, refer to the AutoMM documentation. Additional examples available in the [AutoMM Examples repository](https://github.com/autogluon/autogluon/tree/master/examples/automm).
+1. Provide clear, descriptive text labels for classification
+2. Be aware of potential text-based vulnerabilities in images
+3. Test with multiple text descriptions for robust classification
+4. Consider CLIP's limitations for critical applications
+
+## Technical Details
+
+- Model Type: Contrastive Language-Image Pre-training
+- Input Format: Dictionary with 'image' and 'text' keys
+- Output: Probability distribution across provided classes
+- No training required for basic classification tasks
+
+This implementation uses AutoGluon's MultiModal framework for simplified CLIP deployment.

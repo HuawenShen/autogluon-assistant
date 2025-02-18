@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 from ..llm import ChatLLMFactory  # Import here to avoid circular imports
+from .utils import split_markdown_into_chunks
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +83,9 @@ class ToolsRegistry:
         requirements: List[str] = None,
         prompt_template: List[str] = None,
         tutorials_path: Optional[Path] = None,
+        condense: bool = True,
+        llm_config = None,
+        max_length: int = 9999,
     ) -> None:
         """
         Register a new ML tool in the registry.
@@ -131,7 +135,9 @@ class ToolsRegistry:
 
         # Handle tutorials if provided
         if tutorials_path and tutorials_path.exists():
-            self.add_tool_tutorials(name, tutorials_path)
+            # Clear cache to force reload
+            self._tools_cache = None
+            self.add_tool_tutorials(tool_name=name, tutorials_source=tutorials_path, condense=condense, llm_config=llm_config, max_length=max_length)
 
         # Clear cache to force reload
         self._tools_cache = None
@@ -143,17 +149,20 @@ class ToolsRegistry:
         condense: bool = True,
         llm_config = None,
         max_length: int = 9999,
+        chunk_size: int = 8192  # Size of chunks for processing
     ) -> None:
         """
         Add tutorials to a registered tool, with option to condense them using LLM.
-        Maintains nested directory structure and creates parallel condensed_tutorials folder.
+        Processes tutorials chunk by chunk and maintains one LLM session per tutorial.
+        Only generates summaries for condensed tutorials.
 
         Args:
             tool_name: Name of the tool
             tutorials_source: Path to source tutorials directory
-            condense: Whether to create condensed versions of tutorials
+            condense: Whether to create condensed versions and summaries
             llm_config: Configuration for the LLM (required if condense=True)
             max_length: Maximum length for condensed tutorials
+            chunk_size: Size of chunks for processing tutorials
         """
         tool_path = self.get_tool_path(tool_name)
         if not tool_path:
@@ -170,99 +179,96 @@ class ToolsRegistry:
         tutorials_dir = tool_path / "tutorials"
         tutorials_dir.mkdir(exist_ok=True)
 
-        # Copy original tutorials preserving structure
+        # Process each tutorial file
         for tutorial_file in tutorials_source.rglob("*.md"):
             relative_path = tutorial_file.relative_to(tutorials_source)
             destination = tutorials_dir / relative_path
             destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(tutorial_file, destination)
 
-        # Create condensed versions if requested
-        if condense:
-            # Create parallel condensed_tutorials directory
+            # Read original content
+            with open(tutorial_file, "r", encoding="utf-8") as f:
+                content = f.read()
+                first_line = content.split('\n')[0]
+                title = first_line.lstrip('#').strip()
+
+            # Copy original content without modification if not condensing
+            if not condense:
+                with open(destination, "w", encoding="utf-8") as f:
+                    f.write(content)
+                continue
+
+            # Create LLM instance for this tutorial with multi_turn enabled
+            tutorial_config = llm_config.copy()
+            tutorial_config.multi_turn = True  # Always enable multi-turn for tutorial processing
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            tutorial_id = f"{tool_name}_{relative_path.stem}_{timestamp}"
+            llm = ChatLLMFactory.get_chat_model(tutorial_config, session_name=tutorial_id)
+
+            if len(content) > 2 * chunk_size:
+                # Process tutorial in chunks using smart markdown splitting
+                chunks = split_markdown_into_chunks(content, max_chunk_size=chunk_size)
+            else:
+                chunks = [content]
+            condensed_chunks = []
+
+            for i, chunk in enumerate(chunks):
+                context = "This is a continuation of the previous chunk. " if i > 0 else ""
+                chunk_prompt = f"""{context}Condense this portion of the tutorial while preserving essential implementation details, code samples, and key concepts. Focus on:
+
+1. Implementation details and techniques
+2. Code snippets with necessary context
+3. Critical configurations and parameters
+4. Important warnings and best practices
+
+Chunk {i+1}/{len(chunks)}:
+{chunk}
+
+Provide the condensed content in markdown format."""
+
+                condensed_chunk = llm.assistant_chat(chunk_prompt)
+                condensed_chunks.append(condensed_chunk)
+
+            # Combine chunks and generate summary
+            condensed_content = "\n\n".join(condensed_chunks)
+            
+            # Generate summary using the same LLM instance
+            summary_prompt = f"""Generate a concise summary (within 100 words) of this tutorial that helps a code generation LLM understand:
+1. What specific implementation knowledge or techniques it can find in this tutorial
+2. What coding tasks this tutorial can help with
+3. Key features or functionalities covered
+
+Tutorial content:
+{condensed_content}
+
+Provide the summary in a single paragraph starting with "Summary: "."""
+
+            tutorial_summary = llm.assistant_chat(summary_prompt)
+            if not tutorial_summary.startswith("Summary: "):
+                tutorial_summary = "Summary: " + tutorial_summary
+
+            # Truncate if needed while preserving complete sections
+            if len(condensed_content) > max_length:
+                last_section = condensed_content[:max_length].rfind("\n#")
+                if last_section > 0:
+                    truncate_point = last_section
+                else:
+                    truncate_point = condensed_content[:max_length].rfind("\n\n")
+                    if truncate_point == -1:
+                        truncate_point = max_length
+                
+                condensed_content = condensed_content[:truncate_point] + "\n\n...(truncated)"
+
+            # Write condensed version with summary
             condensed_dir = tool_path / "condensed_tutorials"
             condensed_dir.mkdir(exist_ok=True)
-            
-            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-            llm_condense = ChatLLMFactory.get_chat_model(llm_config, session_name=f"tutorial_condenser_{timestamp}")
-            
-            # Process all markdown files in tutorials directory and its subdirectories
-            for tutorial_file in tutorials_dir.rglob("*.md"):
-                # Get the relative path from tutorials_dir
-                relative_path = tutorial_file.relative_to(tutorials_dir)
-                # Create corresponding path in condensed_dir
-                condensed_path = condensed_dir / relative_path
-                # Ensure parent directories exist
-                condensed_path.parent.mkdir(parents=True, exist_ok=True)
-                    
-                try:
-                    # Read original content and title
-                    with open(tutorial_file, "r", encoding="utf-8") as f:
-                        content = f.read()
-                        first_line = content.split('\n')[0]
-                        title = first_line.lstrip('#').strip()
+            condensed_path = condensed_dir / relative_path
+            condensed_path.parent.mkdir(parents=True, exist_ok=True)
 
-                    # Create improved condensing prompt
-                    prompt = f"""Create a focused version of this tutorial that maintains essential information while being more concise. Include:
-
-                    1. Key Concepts and Implementation:
-                        - All code snippets with their necessary context
-                        - Essential implementation patterns and techniques
-                        - Important parameters, configurations, and their usage
-                        - Critical warnings and potential pitfalls
-
-                    2. Important Context:
-                        - Brief but necessary background information
-                        - Core theoretical concepts that directly impact implementation
-                        - Key design decisions and their rationale
-                        - Essential best practices and recommendations
-
-                    3. Examples and Usage:
-                        - Primary usage examples that demonstrate core functionality
-                        - Common use cases and their implementation
-                        - Important edge cases and their handling
-
-                    Remove:
-                    - Redundant explanations
-                    - Extended background discussions not critical for implementation
-                    - Supplementary examples that don't add new implementation insights
-                    - Detailed theoretical discussions that don't directly affect usage
-
-                    Tutorial content:
-                    {content}
-
-                    Provide the condensed tutorial content while:
-                    - Maintaining clear markdown formatting
-                    - Preserving section structure for readability
-                    - Keeping all code blocks intact
-                    - Including necessary context for each code example"""
-
-                    # Get condensed content from LLM
-                    condensed_content = llm_condense.assistant_chat(prompt)
-                    
-                    # Truncate if needed, but try to preserve complete sections
-                    if len(condensed_content) > max_length:
-                        # Find the last complete section before max_length
-                        last_section = condensed_content[:max_length].rfind("\n#")
-                        if last_section > 0:
-                            truncate_point = last_section
-                        else:
-                            # If no section found, find last complete paragraph
-                            truncate_point = condensed_content[:max_length].rfind("\n\n")
-                            if truncate_point == -1:
-                                truncate_point = max_length
-                        
-                        condensed_content = condensed_content[:truncate_point] + "\n\n...(truncated)"
-
-                    # Write condensed content with metadata
-                    with open(condensed_path, "w", encoding="utf-8") as f:
-                        f.write(f"# Condensed: {title}\n\n")
-                        f.write("*This is a condensed version that preserves essential implementation details and context.*\n\n")
-                        f.write(condensed_content)
-                        
-                except Exception as e:
-                    logger.warning(f"Error creating condensed version of {tutorial_file}: {e}")
-                    continue
+            with open(condensed_path, "w", encoding="utf-8") as f:
+                f.write(f"# Condensed: {title}\n\n")
+                f.write(f"{tutorial_summary}\n\n")
+                f.write("*This is a condensed version that preserves essential implementation details and context.*\n\n")
+                f.write(condensed_content)
 
     def unregister_tool(self, tool_name: str) -> None:
         """

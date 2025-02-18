@@ -1,27 +1,28 @@
 # Condensed: Classifying PDF Documents with AutoMM
 
+Summary: This tutorial demonstrates PDF document classification using AutoGluon's MultiModalPredictor, specifically implementing LayoutLM-based document understanding. It covers essential techniques for processing PDF documents, including data preparation, model training, and feature extraction. The tutorial helps with tasks like automated document classification, embedding extraction, and probability-based predictions. Key functionalities include automatic PDF processing with built-in text recognition, document embedding extraction, and probability predictions, utilizing the microsoft/layoutlm-base-uncased model. The implementation includes data loading, path handling, model training with customizable hyperparameters, and various prediction methods.
+
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the focused version of the tutorial:
+Here's the condensed tutorial focusing on essential implementation details:
 
-# Classifying PDF Documents with AutoMM
+# PDF Document Classification with AutoMM
 
 ## Prerequisites
-- Requires poppler installation:
-  - Windows: Install from [poppler-windows](https://github.com/oschwartz10612/poppler-windows) and add bin/ to PATH
+- Requires `poppler` installation:
+  - Windows: Install from [poppler-windows](https://github.com/oschwartz10612/poppler-windows) (add bin/ to PATH)
   - Mac: `brew install poppler`
-  - Linux: Install from [poppler source](https://poppler.freedesktop.org)
+  - Linux: Install from [poppler](https://poppler.freedesktop.org)
 
-## Setup and Data Preparation
+## Implementation Steps
 
+### 1. Setup and Data Preparation
 ```python
 !pip install autogluon.multimodal
 
-import warnings
-warnings.filterwarnings('ignore')
-import os
 import pandas as pd
 from autogluon.core.utils.loaders import load_zip
+from autogluon.multimodal.utils.misc import path_expander
 
 # Download and prepare dataset
 download_dir = './ag_automm_tutorial_pdf_classifier'
@@ -33,19 +34,18 @@ dataset_path = os.path.join(download_dir, "pdf_docs_small")
 pdf_docs = pd.read_csv(f"{dataset_path}/data.csv")
 train_data = pdf_docs.sample(frac=0.8, random_state=200)
 test_data = pdf_docs.drop(train_data.index)
-```
 
-## Configure Document Paths
-```python
-from autogluon.multimodal.utils.misc import path_expander
-
+# Update document paths
 DOC_PATH_COL = "doc_path"
-# Ensure correct document paths
-train_data[DOC_PATH_COL] = train_data[DOC_PATH_COL].apply(lambda ele: path_expander(ele, base_folder=download_dir))
-test_data[DOC_PATH_COL] = test_data[DOC_PATH_COL].apply(lambda ele: path_expander(ele, base_folder=download_dir))
+train_data[DOC_PATH_COL] = train_data[DOC_PATH_COL].apply(
+    lambda ele: path_expander(ele, base_folder=download_dir)
+)
+test_data[DOC_PATH_COL] = test_data[DOC_PATH_COL].apply(
+    lambda ele: path_expander(ele, base_folder=download_dir)
+)
 ```
 
-## Create and Train PDF Classifier
+### 2. Create and Train Classifier
 ```python
 from autogluon.multimodal import MultiModalPredictor
 
@@ -60,34 +60,37 @@ predictor.fit(
 )
 ```
 
-## Model Evaluation and Prediction
-
+### 3. Evaluation and Prediction
 ```python
-# Evaluate on test set
+# Evaluate
 scores = predictor.evaluate(test_data, metrics=["accuracy"])
-print('The test acc: %.3f' % scores["accuracy"])
 
 # Single prediction
 predictions = predictor.predict({DOC_PATH_COL: [test_data.iloc[0][DOC_PATH_COL]]})
-print(f"Ground-truth label: {test_data.iloc[0]['label']}, Prediction: {predictions}")
 
-# Probability predictions
+# Probability prediction
 proba = predictor.predict_proba({DOC_PATH_COL: [test_data.iloc[0][DOC_PATH_COL]]})
-print(proba)
-```
 
-## Feature Extraction
-```python
-# Extract document embeddings
+# Extract embeddings
 feature = predictor.extract_embedding({DOC_PATH_COL: [test_data.iloc[0][DOC_PATH_COL]]})
-print(feature[0].shape)
 ```
 
-## Key Implementation Notes
-- Uses LayoutLM base model for document understanding
-- Automatically handles PDF processing and text recognition
-- Supports both classification and feature extraction
-- Dataset contains binary classification (resume vs. historical documents)
-- Training time limit can be adjusted based on needs
+## Key Features
+- Automatic PDF processing and format detection
+- Built-in text recognition
+- Document embedding extraction
+- Support for probability predictions
 
-For customization options, refer to the AutoMM customization documentation.
+## Important Notes
+- Uses LayoutLM base model for document understanding
+- Supports automatic PDF processing without manual intervention
+- Can extract N-dimensional document features for further analysis
+- Allows customization through hyperparameters
+
+## Best Practices
+1. Ensure correct document paths are provided
+2. Verify PDF files are accessible to the predictor
+3. Consider adjusting time_limit based on dataset size
+4. Use path_expander for correct file path handling
+
+For advanced customization, refer to the AutoMM customization documentation.

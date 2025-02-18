@@ -182,20 +182,24 @@ def generate_task_description(
         )
 
         task_prompt = f"""
-        Based on this data prompt and description files:
+Based on this data prompt and description files:
 
-        Data Prompt:
-        {data_prompt}
+Data Prompt:
+{data_prompt}
 
-        Description File Analysis:
-        {description_analysis}
+Description File Analysis:
+{description_analysis}
 
-        Description File Contents:
-        {description_context}
+Description File Contents:
+{description_context}
 
-        Please write a short description of the objective of the data science task.
+Using ONLY the information explicitly stated in the provided data prompt, description files, and analysis:
+    1. Extract the core data science task objective
+    2. List specified requirements and constraints
+    3. List mentioned data sources and their formats
+    4. List any defined outputs or success metrics
 
-        Your reponse should include ONLY the description.
+Format: Provide a concise description containing ONLY information found in the source materials. Do not add any assumptions.
         """
 
         response = llm.assistant_chat(task_prompt)

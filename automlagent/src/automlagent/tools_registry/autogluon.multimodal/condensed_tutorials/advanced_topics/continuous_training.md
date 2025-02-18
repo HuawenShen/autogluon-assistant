@@ -1,80 +1,72 @@
 # Condensed: Continuous Training with AutoMM
 
+Summary: This tutorial demonstrates AutoGluon's MultiModalPredictor implementation for continuous machine learning workflows, specifically covering three key techniques: extending training with new data, resuming interrupted training sessions, and transfer learning across tasks. It helps with coding tasks related to model persistence, checkpoint management, and transfer learning configuration for text, image, and fusion models. The tutorial details essential functionalities including loading/saving models, checkpoint handling, and hyperparameter configuration for transfer learning, while emphasizing best practices for production deployment and data consistency. Implementation specifics include working with model checkpoints, configuring paths for different model types (HuggingFace, TIMM, MMDetection), and managing training continuity across sessions.
+
 *This is a condensed version that preserves essential implementation details and context.*
+
+Here's the condensed tutorial focusing on key implementation details and practices:
 
 # Continuous Training with AutoMM
 
-This tutorial demonstrates three key use cases for continuous training with AutoMM, allowing models to build upon previously acquired knowledge.
+## Key Use Cases
 
-## Use Case 1: Expanding Training with Additional Data or Training Time
+### 1. Expanding Training with Additional Data/Time
 
-AutoMM enables:
-- Extending training time for underfitting models
-- Incorporating new data with the same problem type and classes
-- Continuing training from existing checkpoints
-
-### Implementation Example
 ```python
-# Load and prepare data
-from autogluon.core.utils.loaders import load_pd
+# Initial Training
 from autogluon.multimodal import MultiModalPredictor
-import uuid
-
-train_data = load_pd.load("https://autogluon-text.s3-accelerate.amazonaws.com/glue/sst/train.parquet")
-test_data = load_pd.load("https://autogluon-text.s3-accelerate.amazonaws.com/glue/sst/dev.parquet")
-train_data_1 = train_data.sample(n=1000, random_state=0)  # Subsample for demo
-
-# Initial training
 model_path = f"./tmp/{uuid.uuid4().hex}-automm_sst"
 predictor = MultiModalPredictor(label="label", eval_metric="acc", path=model_path)
 predictor.fit(train_data_1, time_limit=60)
 
-# Continue training with new data
+# Continue Training with New Data
 predictor_2 = MultiModalPredictor.load(model_path)
-train_data_2 = train_data.drop(train_data_1.index).sample(n=1000, random_state=0)
 predictor_2.fit(train_data_2, time_limit=60)
 ```
 
-## Use Case 2: Resuming Training from Last Checkpoint
+**Important Notes:**
+- Use same problem type and classes for additional data
+- Longer time_limit recommended for production (e.g., 1 hour or None)
+- Model checkpoint saved as `model.ckpt` under `model_path`
 
-For interrupted training, resume from the last checkpoint using:
+### 2. Resuming Interrupted Training
 
 ```python
+# Resume from last checkpoint
 predictor_resume = MultiModalPredictor.load(path=model_path, resume=True)
 predictor.fit(train_data, time_limit=60)
 ```
 
-## Use Case 3: Applying Pre-Trained Models to New Tasks
+**Key Point:** Uses `last.ckpt` instead of `model.ckpt`
 
-Transfer learning implementation for related but different tasks:
+### 3. Transfer Learning to New Tasks
 
 ```python
 # Dump existing model
 dump_model_path = f"./tmp/{uuid.uuid4().hex}-automm_sst"
 predictor.dump_model(save_path=dump_model_path)
 
-# Load for new task with custom model configuration
-sts_model_path = f"./tmp/{uuid.uuid4().hex}-automm_sts"
-predictor_sts = MultiModalPredictor(label="score", path=sts_model_path)
-predictor_sts.fit(
-    sts_train_data, 
-    hyperparameters={"model.hf_text.checkpoint_name": f"{dump_model_path}/hf_text"}, 
+# Use as foundation for new task
+predictor_new = MultiModalPredictor(label="new_label", path="new_path")
+predictor_new.fit(
+    new_data, 
+    hyperparameters={
+        "model.hf_text.checkpoint_name": f"{dump_model_path}/hf_text"
+    }, 
     time_limit=30
 )
 ```
 
-### Supported Model Types
-- Text: HuggingFace models
-- Image: timm and MMDetection models
+**Supported Model Types:**
+- HuggingFace text models: `model.hf_text.checkpoint_name`
+- TIMM image models: `model.timm_image.checkpoint_name`
+- MMDetection models: `model.mmdet_image.checkpoint_name`
 - Fusion models combining the above
 
-### Configuration Options
-```python
-# For timm image models
-{"model.timm_image.checkpoint_name": timm_image_model_path}
+**Warning:** Be aware of potential catastrophic forgetting when transferring to new tasks.
 
-# For MMDetection models
-{"model.mmdet_image.checkpoint_name": mmdet_image_model_path}
-```
-
-**Important Note**: When applying models to new tasks, be aware of potential catastrophic forgetting issues where models may lose previously learned information.
+## Best Practices
+1. Use longer training times for production (>1 hour)
+2. Ensure consistent data format between original and new training data
+3. Consider task similarity when using transfer learning
+4. Monitor performance metrics when continuing training to avoid degradation

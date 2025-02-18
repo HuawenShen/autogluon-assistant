@@ -1,71 +1,55 @@
 # Condensed: Hyperparameter Optimization in AutoMM
 
+Summary: This tutorial demonstrates hyperparameter optimization (HPO) implementation in AutoGluon's MultiModalPredictor, specifically for image classification tasks. It covers the integration of Ray Tune for HPO, showing how to define search spaces for parameters like learning rate and model checkpoints, configure searchers (random/bayes) and schedulers (FIFO/ASHA), and implement the optimization process. The tutorial helps with tasks involving automated model tuning and provides code for both standard model fitting and HPO-enhanced training. Key features include customizable search spaces, multiple optimization strategies, checkpoint management, and integration of popular model architectures like GhostNet and MobileNetV3.
+
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the condensed tutorial focusing on essential implementation details:
+Here's the condensed tutorial focusing on key implementation details and practices:
 
 # Hyperparameter Optimization in AutoMM
 
-## Overview
-This tutorial demonstrates hyperparameter optimization (HPO) in AutoMM for improving model performance through automated parameter tuning.
+## Key Implementation Details
 
-## Dataset Setup
-```python
-from autogluon.multimodal.utils.misc import shopee_dataset
-download_dir = './ag_automm_tutorial_hpo'
-train_data, test_data = shopee_dataset(download_dir)
-train_data = train_data.sample(frac=0.5)
-```
-Dataset contains clothing images with categories: `BabyPants`, `BabyShirt`, `womencasualshoes`, `womenchiffontop`.
-
-## Basic Model Training
-Baseline implementation without HPO:
+### Basic Setup
 ```python
 from autogluon.multimodal import MultiModalPredictor
+from ray import tune
+
+# Load and prepare data
+train_data, test_data = shopee_dataset(download_dir)
+```
+
+### Standard Model Fitting
+```python
 predictor_regular = MultiModalPredictor(label="label")
 predictor_regular.fit(
     train_data=train_data,
-    hyperparameters = {"model.timm_image.checkpoint_name": "ghostnet_100"}
+    hyperparameters={"model.timm_image.checkpoint_name": "ghostnet_100"}
 )
 ```
 
-## Hyperparameter Optimization Implementation
-
-### Key Components
-1. **Search Space Definition**:
+### HPO Implementation
 ```python
-hyperparameters = {
-    "optimization.learning_rate": tune.uniform(0.00005, 0.005),
-    "optimization.optim_type": tune.choice(["adamw", "sgd"]),
-    "optimization.max_epochs": tune.choice(["10", "20"]),
-    "model.timm_image.checkpoint_name": tune.choice(["swin_base_patch4_window7_224", "convnext_base_in22ft1k"])
-}
-```
-
-2. **HPO Configuration**:
-- Searcher: `"random"` or `"bayes"`
-- Scheduler: `"FIFO"` or `"ASHA"`
-- `num_trials`: Number of HPO iterations
-- `num_to_keep`: Checkpoints per trial (minimum 1)
-
-### Implementation Example
-```python
-from ray import tune
-
 predictor_hpo = MultiModalPredictor(label="label")
 
+# Define search space
 hyperparameters = {
     "optimization.learning_rate": tune.uniform(0.00005, 0.001),
-    "model.timm_image.checkpoint_name": tune.choice(["ghostnet_100",
-                                                   "mobilenetv3_large_100"])
-}
-hyperparameter_tune_kwargs = {
-    "searcher": "bayes",
-    "scheduler": "ASHA",
-    "num_trials": 2,
-    "num_to_keep": 3,
+    "model.timm_image.checkpoint_name": tune.choice([
+        "ghostnet_100",
+        "mobilenetv3_large_100"
+    ])
 }
 
+# Configure HPO settings
+hyperparameter_tune_kwargs = {
+    "searcher": "bayes",  # Options: random, bayes
+    "scheduler": "ASHA",  # Options: FIFO, ASHA
+    "num_trials": 2,
+    "num_to_keep": 3,  # Number of checkpoints to keep per trial
+}
+
+# Fit with HPO
 predictor_hpo.fit(
     train_data=train_data,
     hyperparameters=hyperparameters,
@@ -73,16 +57,35 @@ predictor_hpo.fit(
 )
 ```
 
-### Evaluation
-```python
-scores_hpo = predictor_hpo.evaluate(test_data, metrics=["accuracy"])
-print('Top-1 test acc: %.3f' % scores_hpo["accuracy"])
-```
+## Critical Configurations
+
+### Supported HPO Parameters
+- `optimization.learning_rate`
+- `optimization.optim_type`
+- `optimization.max_epochs`
+- `model.timm_image.checkpoint_name`
+
+### Search Strategy Options
+1. **Searcher Types**:
+   - `random`
+   - `bayes`
+
+2. **Scheduler Types**:
+   - `FIFO`
+   - `ASHA`
+
+## Best Practices
+
+1. Define appropriate search spaces based on domain knowledge
+2. Balance number of trials with available computing resources
+3. Keep sufficient checkpoints (`num_to_keep >= 1`)
+4. Use Bayesian optimization for better search efficiency
+5. Monitor best trial results during training
 
 ## Important Notes
-- HPO uses Ray Tune backend
+- HPO helps find optimal hyperparameter combinations for better model performance
+- Uses Ray Tune in the backend for optimization
 - Supports both Ray Tune and AutoGluon search spaces
-- Best trial parameters are automatically selected based on validation accuracy
-- More customization options available in the [Customize AutoMM](customization.ipynb) guide
+- Validation accuracy is used to select the best hyperparameter combination
 
-This condensed version maintains all critical implementation details while removing redundant explanations and focusing on practical usage.
+For more customization options, refer to the AutoMM customization documentation.

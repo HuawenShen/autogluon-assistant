@@ -1,136 +1,103 @@
 # Condensed: Image-Text Semantic Matching with AutoMM
 
+Summary: This tutorial demonstrates implementing image-text semantic matching using AutoGluon's MultiModalPredictor, covering essential techniques for both zero-shot and finetuned approaches. It helps with tasks like image-caption matching, semantic search, and embedding extraction. Key functionalities include dataset preparation with proper path handling, predictor configuration for image-text similarity problems, zero-shot evaluation, model finetuning, prediction methods (including probability scores and embedding extraction), and semantic search operations for both text-to-image and image-to-text retrieval. The implementation uses CLIP as the default backbone and supports various evaluation metrics with recall@k.
+
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the focused version of the tutorial:
+Here's the condensed tutorial focusing on essential implementation details:
 
 # Image-Text Semantic Matching with AutoMM
 
-## Overview
-This tutorial demonstrates how to use AutoMM for image-text semantic matching, which measures visual-semantic similarity between images and text using the Flickr30K dataset.
+## Key Implementation Details
 
-## Setup
-
+### Setup
 ```python
 !pip install autogluon.multimodal
-
-import os
-import warnings
-from IPython.display import Image, display
-import numpy as np
-warnings.filterwarnings('ignore')
-np.random.seed(123)
+import pandas as pd
+from autogluon.multimodal import MultiModalPredictor
 ```
 
-## Dataset Preparation
+### Dataset Preparation
+1. Load Flickr30K dataset (image-caption pairs)
+2. Structure requirements:
+   - DataFrame with image and text columns
+   - Image paths must be absolute
+   - Each image can have multiple caption pairs
 
 ```python
-# Download and load dataset
-from autogluon.core.utils.loaders import load_pd, load_zip
-download_dir = './ag_automm_tutorial_imgtxt'
-zip_file = 'https://automl-mm-bench.s3.amazonaws.com/flickr30k.zip'
-load_zip.unzip(zip_file, unzip_dir=download_dir)
-
-# Load CSV files
-dataset_path = os.path.join(download_dir, 'flickr30k_processed')
-train_data = pd.read_csv(f'{dataset_path}/train.csv', index_col=0)
-val_data = pd.read_csv(f'{dataset_path}/val.csv', index_col=0)
-test_data = pd.read_csv(f'{dataset_path}/test.csv', index_col=0)
-image_col = "image"
-text_col = "caption"
-
-# Convert relative paths to absolute
+# Convert relative to absolute paths
 def path_expander(path, base_folder):
     path_l = path.split(';')
     return ';'.join([os.path.abspath(os.path.join(base_folder, path)) for path in path_l])
 
-for data in [train_data, val_data, test_data]:
-    data[image_col] = data[image_col].apply(lambda ele: path_expander(ele, base_folder=dataset_path))
-
-# Prepare test data for evaluation
-test_image_data = pd.DataFrame({image_col: test_data[image_col].unique().tolist()})
-test_text_data = pd.DataFrame({text_col: test_data[text_col].unique().tolist()})
-test_data_with_label = test_data.copy()
-test_label_col = "relevance"
-test_data_with_label[test_label_col] = [1] * len(test_data)
+# Apply to dataframes
+train_data[image_col] = train_data[image_col].apply(lambda ele: path_expander(ele, base_folder=dataset_path))
 ```
 
-## Model Setup and Training
-
+### Predictor Configuration
 ```python
-from autogluon.multimodal import MultiModalPredictor
-
-# Initialize predictor
 predictor = MultiModalPredictor(
     query=text_col,
     response=image_col,
     problem_type="image_text_similarity",
-    eval_metric="recall",
+    eval_metric="recall"
 )
+```
 
-# Zero-shot evaluation
-txt_to_img_scores = predictor.evaluate(
+### Key Operations
+
+1. **Zero-shot Evaluation**
+```python
+scores = predictor.evaluate(
     data=test_data_with_label,
     query_data=test_text_data,
     response_data=test_image_data,
     label=test_label_col,
-    cutoffs=[1, 5, 10],
+    cutoffs=[1, 5, 10]
 )
+```
 
-# Finetune model
+2. **Finetuning**
+```python
 predictor.fit(
     train_data=train_data,
     tuning_data=val_data,
-    time_limit=180,
+    time_limit=180  # in seconds
 )
 ```
 
-## Core Functionality
-
-### Prediction
-
+3. **Prediction Methods**
 ```python
-# Binary matching prediction
-pred = predictor.predict(test_data.head(5))
+# Match prediction
+predictions = predictor.predict(test_data)
 
 # Matching probabilities
-proba = predictor.predict_proba(test_data.head(5))
-```
+probabilities = predictor.predict_proba(test_data)
 
-### Embedding Extraction
-
-```python
 # Extract embeddings
-image_embeddings = predictor.extract_embedding({image_col: test_image_data[image_col][:5].tolist()})
-text_embeddings = predictor.extract_embedding({text_col: test_text_data[text_col][:5].tolist()})
+image_embeddings = predictor.extract_embedding({image_col: image_paths})
+text_embeddings = predictor.extract_embedding({text_col: text_list})
 ```
 
-### Semantic Search
-
+4. **Semantic Search**
 ```python
 from autogluon.multimodal.utils import semantic_search
 
 # Text-to-image search
-text_to_image_hits = semantic_search(
+results = semantic_search(
     matcher=predictor,
-    query_data=test_text_data.iloc[[3]],
-    response_data=test_image_data,
-    top_k=5,
-)
-
-# Image-to-text search
-image_to_text_hits = semantic_search(
-    matcher=predictor,
-    query_data=test_image_data.iloc[[6]],
-    response_data=test_text_data,
-    top_k=5,
+    query_data=text_data,
+    response_data=image_data,
+    top_k=5
 )
 ```
 
-## Key Notes
-- The predictor uses CLIP (openai/clip-vit-base-patch32) as the backbone
-- Text-to-image recalls are typically higher than image-to-text recalls due to the 1:5 image-to-text ratio
-- Finetuning can significantly improve performance over zero-shot prediction
-- The model supports both binary matching prediction and probability scores
+## Important Notes
 
-For customization options, refer to the AutoMM documentation.
+1. Default backbone: `openai/clip-vit-base-patch32`
+2. Evaluation metrics use recall@k where k is specified in cutoffs
+3. For image-to-text retrieval, recall@1 has 20% upper bound due to 1:5 image-text ratio
+4. Finetuning can significantly improve performance over zero-shot
+5. Both text-to-image and image-to-text search are supported
+
+This implementation supports both zero-shot and finetuned approaches for image-text matching, with flexible evaluation and search capabilities.
