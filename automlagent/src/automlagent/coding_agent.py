@@ -207,6 +207,8 @@ def run_agent(
 
     if iteration == max_iterations:
         print(f"Warning: Reached maximum iterations ({max_iterations}) without success")
-    
+
     token_usage_path = os.path.join(iteration_folder, "token_usage.json")
-    print(f"Total token usage:\n{ChatLLMFactory.get_total_token_usage(save_path=token_usage_path)}")
+    print(
+        f"Total token usage:\n{ChatLLMFactory.get_total_token_usage(save_path=token_usage_path)}"
+    )

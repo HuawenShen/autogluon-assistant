@@ -21,7 +21,7 @@ class ToolsRegistry:
     def tools(self) -> Dict:
         """
         Lazy loading of tools information from catalog and individual tool.json files.
-        
+
         Returns:
             Dict: Dictionary containing comprehensive tool information
         """
@@ -84,12 +84,12 @@ class ToolsRegistry:
         prompt_template: List[str] = None,
         tutorials_path: Optional[Path] = None,
         condense: bool = True,
-        llm_config = None,
+        llm_config=None,
         max_length: int = 9999,
     ) -> None:
         """
         Register a new ML tool in the registry.
-        
+
         Args:
             name: Name of the tool
             version: Version of the tool
@@ -102,7 +102,7 @@ class ToolsRegistry:
         # Create tool directory
         tool_path = self.registry_path / name
         tool_path.mkdir(exist_ok=True)
-        
+
         # Update catalog.json
         try:
             with open(self.catalog_path, "r") as f:
@@ -114,7 +114,7 @@ class ToolsRegistry:
         catalog["tools"][name] = {
             "path": str(name),
             "version": version,
-            "description": description
+            "description": description,
         }
 
         with open(self.catalog_path, "w") as f:
@@ -127,7 +127,7 @@ class ToolsRegistry:
             "description": description,
             "features": features or [],
             "requirements": requirements or [],
-            "prompt_template": prompt_template or []
+            "prompt_template": prompt_template or [],
         }
 
         with open(tool_path / "tool.json", "w") as f:
@@ -137,19 +137,25 @@ class ToolsRegistry:
         if tutorials_path and tutorials_path.exists():
             # Clear cache to force reload
             self._tools_cache = None
-            self.add_tool_tutorials(tool_name=name, tutorials_source=tutorials_path, condense=condense, llm_config=llm_config, max_length=max_length)
+            self.add_tool_tutorials(
+                tool_name=name,
+                tutorials_source=tutorials_path,
+                condense=condense,
+                llm_config=llm_config,
+                max_length=max_length,
+            )
 
         # Clear cache to force reload
         self._tools_cache = None
-        
+
     def add_tool_tutorials(
         self,
         tool_name: str,
         tutorials_source: Union[Path, str],
         condense: bool = True,
-        llm_config = None,
+        llm_config=None,
         max_length: int = 9999,
-        chunk_size: int = 8192  # Size of chunks for processing
+        chunk_size: int = 8192,  # Size of chunks for processing
     ) -> None:
         """
         Add tutorials to a registered tool, with option to condense them using LLM.
@@ -170,7 +176,9 @@ class ToolsRegistry:
 
         tutorials_source = Path(tutorials_source)
         if not tutorials_source.exists():
-            raise FileNotFoundError(f"Tutorials source path {tutorials_source} not found")
+            raise FileNotFoundError(
+                f"Tutorials source path {tutorials_source} not found"
+            )
 
         if condense and not llm_config:
             raise ValueError("llm_config is required when condense=True")
@@ -188,15 +196,19 @@ class ToolsRegistry:
             # Read original content
             with open(tutorial_file, "r", encoding="utf-8") as f:
                 content = f.read()
-                first_line = content.split('\n')[0]
-                title = first_line.lstrip('#').strip()
+                first_line = content.split("\n")[0]
+                title = first_line.lstrip("#").strip()
 
             # Create LLM instance for this tutorial with multi_turn enabled
             tutorial_config = llm_config.copy()
-            tutorial_config.multi_turn = True  # Always enable multi-turn for tutorial processing
+            tutorial_config.multi_turn = (
+                True  # Always enable multi-turn for tutorial processing
+            )
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
             tutorial_id = f"{tool_name}_{relative_path.stem}_{timestamp}"
-            llm = ChatLLMFactory.get_chat_model(tutorial_config, session_name=tutorial_id)
+            llm = ChatLLMFactory.get_chat_model(
+                tutorial_config, session_name=tutorial_id
+            )
 
             if len(content) > 2 * chunk_size:
                 # Process tutorial in chunks using smart markdown splitting
@@ -206,7 +218,9 @@ class ToolsRegistry:
             condensed_chunks = []
 
             for i, chunk in enumerate(chunks):
-                context = "This is a continuation of the previous chunk. " if i > 0 else ""
+                context = (
+                    "This is a continuation of the previous chunk. " if i > 0 else ""
+                )
                 chunk_prompt = f"""{context}Condense this portion of the tutorial while preserving essential implementation details, code samples, and key concepts. Focus on:
 
 1. Implementation details and techniques
@@ -224,7 +238,7 @@ Provide the condensed content in markdown format."""
 
             # Combine chunks and generate summary
             condensed_content = "\n\n".join(condensed_chunks)
-            
+
             # Generate summary using the same LLM instance
             summary_prompt = f"""Generate a concise summary (within 100 words) of this tutorial that helps a code generation LLM understand:
 1. What specific implementation knowledge or techniques it can find in this tutorial
@@ -249,9 +263,10 @@ Provide the summary in a single paragraph starting with "Summary: "."""
                     truncate_point = condensed_content[:max_length].rfind("\n\n")
                     if truncate_point == -1:
                         truncate_point = max_length
-                
-                condensed_content = condensed_content[:truncate_point] + "\n\n...(truncated)"
 
+                condensed_content = (
+                    condensed_content[:truncate_point] + "\n\n...(truncated)"
+                )
 
             # Write original content with summary
             with open(destination, "w", encoding="utf-8") as f:
@@ -267,13 +282,15 @@ Provide the summary in a single paragraph starting with "Summary: "."""
             with open(condensed_path, "w", encoding="utf-8") as f:
                 f.write(f"# Condensed: {title}\n\n")
                 f.write(f"{tutorial_summary}\n\n")
-                f.write("*This is a condensed version that preserves essential implementation details and context.*\n\n")
+                f.write(
+                    "*This is a condensed version that preserves essential implementation details and context.*\n\n"
+                )
                 f.write(condensed_content)
 
     def unregister_tool(self, tool_name: str) -> None:
         """
         Remove a tool from the registry.
-        
+
         Args:
             tool_name: Name of the tool to remove
         """
@@ -308,7 +325,7 @@ Provide the summary in a single paragraph starting with "Summary: "."""
     ) -> None:
         """
         Update an existing tool's information.
-        
+
         Args:
             tool_name: Name of the tool to update
             version: New version (optional)

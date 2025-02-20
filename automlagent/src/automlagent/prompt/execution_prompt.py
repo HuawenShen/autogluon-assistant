@@ -13,7 +13,7 @@ def generate_execution_prompt(
 ):
     """
     Generate a prompt for an LLM to create a simplified bash script for environment setup and code execution.
-    
+
     Args:
         output_folder (str): Path to the project folder
         python_file_path (str): Absolute path to the Python file that needs to be executed
@@ -22,7 +22,7 @@ def generate_execution_prompt(
         previous_python (str, optional): Previous Python code in the bash script
         error_message (str, optional): Previous error message to help with debugging
         current_python (str, optional): Current Python code to be executed
-    
+
     Returns:
         str: Formatted prompt for the LLM
     """
@@ -40,7 +40,9 @@ def generate_execution_prompt(
             ]
         )
     else:
-        instructions.append("The environment is already configured. Do not install or update any package.")
+        instructions.append(
+            "The environment is already configured. Do not install or update any package."
+        )
 
     instructions.append(f"Execute the Python script: {python_file_path}")
 

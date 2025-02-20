@@ -1,28 +1,30 @@
+import json
 import logging
 import os
-import json
-from tenacity import retry, stop_after_attempt, wait_exponential
-from typing import Any, Dict, List, Optional
 import uuid
+from typing import Any, Dict, List, Optional
 
 import boto3
 from autogluon.assistant.constants import WHITE_LIST_LLM
+from langchain_aws import ChatBedrock
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_aws import ChatBedrock
 from langchain_openai import ChatOpenAI
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import START, MessagesState, StateGraph
 from omegaconf import DictConfig
 from openai import OpenAI
-from pydantic import BaseModel, Field, ConfigDict
-from langgraph.graph import START, MessagesState, StateGraph
-from langgraph.checkpoint.memory import MemorySaver
+from pydantic import BaseModel, ConfigDict, Field
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
 
+
 class GlobalTokenTracker:
     """Singleton class to track token usage across all conversations."""
+
     _instance = None
-    
+
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(GlobalTokenTracker, cls).__new__(cls)
@@ -31,60 +33,71 @@ class GlobalTokenTracker:
             cls._instance.conversations = {}  # Track per-conversation usage
             cls._instance.sessions = {}  # Track per-session usage
         return cls._instance
-    
-    def add_tokens(self, conversation_id: str, session_name: str, input_tokens: int, output_tokens: int):
+
+    def add_tokens(
+        self,
+        conversation_id: str,
+        session_name: str,
+        input_tokens: int,
+        output_tokens: int,
+    ):
         """Add token counts for a specific conversation and session."""
         self.total_input_tokens += input_tokens
         self.total_output_tokens += output_tokens
-        
+
         # Track conversation-level usage
         if conversation_id not in self.conversations:
-            self.conversations[conversation_id] = {"input_tokens": 0, "output_tokens": 0}
-        
+            self.conversations[conversation_id] = {
+                "input_tokens": 0,
+                "output_tokens": 0,
+            }
+
         self.conversations[conversation_id]["input_tokens"] += input_tokens
         self.conversations[conversation_id]["output_tokens"] += output_tokens
-        
+
         # Track session-level usage
         if session_name not in self.sessions:
             self.sessions[session_name] = {"input_tokens": 0, "output_tokens": 0}
-        
+
         self.sessions[session_name]["input_tokens"] += input_tokens
         self.sessions[session_name]["output_tokens"] += output_tokens
-    
+
     def get_total_usage(self, save_path: Optional[str] = None) -> Dict[str, Any]:
         """Get total token usage across all conversations and sessions."""
         usage_data = {
             "total": {
                 "total_input_tokens": self.total_input_tokens,
                 "total_output_tokens": self.total_output_tokens,
-                "total_tokens": self.total_input_tokens + self.total_output_tokens
+                "total_tokens": self.total_input_tokens + self.total_output_tokens,
             },
             "conversations": {},
-            "sessions": {}
+            "sessions": {},
         }
-        
+
         # Add conversation-level usage
         for conv_id, conv_usage in self.conversations.items():
             usage_data["conversations"][conv_id] = {
                 "input_tokens": conv_usage["input_tokens"],
                 "output_tokens": conv_usage["output_tokens"],
-                "total_tokens": conv_usage["input_tokens"] + conv_usage["output_tokens"]
+                "total_tokens": conv_usage["input_tokens"]
+                + conv_usage["output_tokens"],
             }
-        
+
         # Add session-level usage
         for session_name, session_usage in self.sessions.items():
             usage_data["sessions"][session_name] = {
                 "input_tokens": session_usage["input_tokens"],
                 "output_tokens": session_usage["output_tokens"],
-                "total_tokens": session_usage["input_tokens"] + session_usage["output_tokens"]
+                "total_tokens": session_usage["input_tokens"]
+                + session_usage["output_tokens"],
             }
-        
+
         # Save to file if path is provided
         if save_path:
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
-            with open(save_path, 'w') as f:
+            with open(save_path, "w") as f:
                 json.dump(usage_data, f, indent=2)
-        
+
         return usage_data
 
 
@@ -135,17 +148,21 @@ class BaseAssistantChat(BaseModel):
 
     def describe(self) -> Dict[str, Any]:
         """Get model description and conversation history."""
-        conversation_usage = self.token_tracker.get_conversation_usage(self.conversation_id)
+        conversation_usage = self.token_tracker.get_conversation_usage(
+            self.conversation_id
+        )
         total_usage = self.token_tracker.get_total_usage()
-        
+
         return {
             "history": self.history_,
             "conversation_tokens": conversation_usage,
             "total_tokens_across_all_conversations": total_usage,
-            "session_name": self.session_name
+            "session_name": self.session_name,
         }
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=60, max=120))
+    @retry(
+        stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=60, max=120)
+    )
     def assistant_chat(self, message: str) -> str:
         """Send a message and get response using LangGraph."""
         if not self.app:
@@ -160,20 +177,17 @@ class BaseAssistantChat(BaseModel):
 
         ai_message = response["messages"][-1]
         input_tokens = output_tokens = 0
-        
+
         if hasattr(ai_message, "usage_metadata"):
             usage = ai_message.usage_metadata
             input_tokens = usage.get("input_tokens", 0)
             output_tokens = usage.get("output_tokens", 0)
-            
+
             # Update both instance and global tracking
             self.input_tokens_ += input_tokens
             self.output_tokens_ += output_tokens
             self.token_tracker.add_tokens(
-                self.conversation_id,
-                self.session_name,
-                input_tokens,
-                output_tokens
+                self.conversation_id, self.session_name, input_tokens, output_tokens
             )
 
         self.history_.append(
@@ -231,7 +245,7 @@ class AssistantChatBedrock(ChatBedrock, BaseAssistantChat):
 
 class ChatLLMFactory:
     """Factory class for creating chat models with LangGraph support."""
-    
+
     @staticmethod
     def get_total_token_usage(save_path: Optional[str] = None) -> Dict[str, Any]:
         """Get total token usage across all conversations and sessions."""
@@ -262,7 +276,9 @@ class ChatLLMFactory:
             return []
 
     @classmethod
-    def get_chat_model(cls, config: DictConfig, session_name: str = "default_session") -> BaseAssistantChat:
+    def get_chat_model(
+        cls, config: DictConfig, session_name: str = "default_session"
+    ) -> BaseAssistantChat:
         """Get a configured chat model instance using LangGraph patterns."""
         provider = config.provider
         model = config.model
@@ -296,7 +312,7 @@ class ChatLLMFactory:
                 verbose=config.verbose,
                 openai_api_key=os.environ["OPENAI_API_KEY"],
                 openai_api_base=config.proxy_url,
-                session_name=session_name
+                session_name=session_name,
             )
         else:  # bedrock
             logger.info(f"Using Bedrock model: {model} for session: {session_name}")
@@ -308,5 +324,5 @@ class ChatLLMFactory:
                 },
                 region_name="us-west-2",
                 verbose=config.verbose,
-                session_name=session_name
+                session_name=session_name,
             )

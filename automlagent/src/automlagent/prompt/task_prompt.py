@@ -60,12 +60,12 @@ def find_description_files(data_prompt: str, llm) -> Tuple[List[str], str]:
 def select_tool(data_prompt: str, description: str, llm) -> Tuple[str, str]:
     """
     Use LLM to select the most appropriate tool based on the data description and available tools.
-    
+
     Args:
         data_prompt: Text string containing data prompt
         description: Description of the task/data from previous analysis
         llm: Initialized LLM model
-        
+
     Returns:
         Tuple[str, str]: (Selected tool name, Explanation for the selection)
     """
@@ -129,10 +129,10 @@ Explanation: [detailed explanation of why this tool is the best choice, includin
 def _format_tools_info(tools_info: Dict) -> str:
     """
     Format tools information for the prompt.
-    
+
     Args:
         tools_info: Dictionary containing tool information
-        
+
     Returns:
         str: Formatted string of tool information
     """
@@ -215,13 +215,13 @@ def wrap_task_description(
 ) -> str:
     """
     Wraps the task description with standard instructions and tool-specific requirements.
-    
+
     Args:
         task_description: Generated description of the data science task
         output_folder: Path where outputs should be saved
         tool_name: Name of the selected tool
         registry: Tool registry containing tool-specific information
-        
+
     Returns:
         str: Complete task prompt including general and tool-specific instructions
     """
@@ -285,11 +285,17 @@ def generate_task_prompt(data_prompt: str, output_folder: str, llm_config) -> st
 
     # TODO: use one conversation for both tasks?
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    llm_find_description_files = ChatLLMFactory.get_chat_model(llm_config, session_name=f"description_finder_{timestamp}")
+    llm_find_description_files = ChatLLMFactory.get_chat_model(
+        llm_config, session_name=f"description_finder_{timestamp}"
+    )
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    llm_generate_task_description = ChatLLMFactory.get_chat_model(llm_config, session_name=f"task_generator_{timestamp}")
+    llm_generate_task_description = ChatLLMFactory.get_chat_model(
+        llm_config, session_name=f"task_generator_{timestamp}"
+    )
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    llm_tool_selection = ChatLLMFactory.get_chat_model(llm_config, session_name=f"tool_selector_{timestamp}")
+    llm_tool_selection = ChatLLMFactory.get_chat_model(
+        llm_config, session_name=f"tool_selector_{timestamp}"
+    )
 
     # Step 1: Find description files (just identifies files, doesn't read content)
     description_files, description_analysis = find_description_files(

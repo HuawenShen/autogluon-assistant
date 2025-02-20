@@ -2,7 +2,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Tuple, NamedTuple
+from typing import List, NamedTuple, Optional
 
 from ..llm import ChatLLMFactory
 from ..tools_registry import get_tool_tutorials_folder
@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 class TutorialInfo(NamedTuple):
     """Stores information about a tutorial"""
+
     path: Path
     title: str
     summary: str
@@ -33,21 +34,31 @@ def get_all_tutorials(tool_name: str, condensed: bool = False) -> List[TutorialI
     for file_path in tutorial_dir.rglob("*.md"):
         try:
             with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read().split('\n')
-                
+                content = f.read().split("\n")
+
                 # Find title (first line starting with #)
-                title = next((line.lstrip('#').strip() 
-                            for line in content 
-                            if line.strip().startswith('#')), '')
-                
+                title = next(
+                    (
+                        line.lstrip("#").strip()
+                        for line in content
+                        if line.strip().startswith("#")
+                    ),
+                    "",
+                )
+
                 # Find summary (line starting with "Summary: ")
-                summary = next((line.replace('Summary:', '').strip() 
-                              for line in content 
-                              if line.strip().startswith('Summary:')), '')
-                
+                summary = next(
+                    (
+                        line.replace("Summary:", "").strip()
+                        for line in content
+                        if line.strip().startswith("Summary:")
+                    ),
+                    "",
+                )
+
                 if title:  # Only add if we found a title
                     tutorial_files.append(TutorialInfo(file_path, title, summary))
-                    
+
         except Exception as e:
             logger.warning(f"Error reading tutorial file {file_path}: {e}")
             continue
@@ -67,7 +78,9 @@ def select_relevant_tutorials(
     """Select most relevant tutorials using LLM scoring based on titles and summaries."""
 
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    llm_select_tutorial = ChatLLMFactory.get_chat_model(llm_config, session_name=f"tutorial_selector_{timestamp}")
+    llm_select_tutorial = ChatLLMFactory.get_chat_model(
+        llm_config, session_name=f"tutorial_selector_{timestamp}"
+    )
 
     context = f"""Task: {task_prompt}
 Data: {data_prompt}
@@ -160,7 +173,7 @@ def save_selection_results(
             {
                 "path": str(tutorial.path),
                 "title": tutorial.title,
-                "summary": tutorial.summary
+                "summary": tutorial.summary,
             }
             for tutorial in selected_tutorials
         ]

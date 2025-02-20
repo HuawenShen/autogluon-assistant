@@ -1,20 +1,20 @@
 #!/bin/bash
-
-# Get the directory where the script is located
+# Get the directory where the script is located and its parent directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PARENT_DIR="$(dirname "$SCRIPT_DIR")"
 
-echo "Formatting Python files in $SCRIPT_DIR..."
+echo "Formatting Python files in $PARENT_DIR..."
 
 # Format with black
 echo "Running black..."
-black "$SCRIPT_DIR"
+black "$PARENT_DIR"
 
 # Run ruff with auto-fix
 echo "Running ruff..."
-ruff check --fix "$SCRIPT_DIR"
+ruff check --fix "$PARENT_DIR"
 
 # Sort imports
 echo "Running isort..."
-isort "$SCRIPT_DIR"
+isort "$PARENT_DIR"
 
-echo "Done! All Python files in $SCRIPT_DIR have been formatted."
+echo "Done! All Python files in $PARENT_DIR have been formatted."

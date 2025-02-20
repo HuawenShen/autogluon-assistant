@@ -22,7 +22,7 @@ def generate_error_prompt(
     max_error_message_length: int = 2000,
 ) -> str:
     """Generate an error prompt by analyzing the error message and providing guidance for code improvement.
-    
+
     Args:
         task_prompt: Description of the data science task
         data_prompt: Description of the data
@@ -33,7 +33,7 @@ def generate_error_prompt(
         llm_config: Configuration for the LLM
         output_folder: Optional folder to save the results
         max_error_message_length: Maximum length for error message
-        
+
     Returns:
         str: Formatted error prompt with analysis and suggestions
     """
@@ -48,7 +48,9 @@ def generate_error_prompt(
 
         # Create LLM instance
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        llm = ChatLLMFactory.get_chat_model(llm_config, session_name=f"error_summarizer_{timestamp}")
+        llm = ChatLLMFactory.get_chat_model(
+            llm_config, session_name=f"error_summarizer_{timestamp}"
+        )
 
         # Construct context for error analysis
         context = f"""{task_prompt}

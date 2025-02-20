@@ -1,11 +1,12 @@
 import logging
 from datetime import datetime
 from typing import Dict
+
 from omegaconf import DictConfig
 
-from .utils import extract_script
 from ..constants import VALID_CODING_LANGUAGES
 from ..llm import ChatLLMFactory
+from .utils import extract_script
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ class LLMCoder:
 
     def __init__(self, llm_config: DictConfig):
         """Initialize with LLM configuration.
-        
+
         Args:
             llm_config: Configuration for the LLM model
         """
@@ -23,22 +24,26 @@ class LLMCoder:
         self.multi_turn = llm_config.multi_turn
         if self.multi_turn:
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-            self.llm = ChatLLMFactory.get_chat_model(llm_config, session_name=f"multi_round_coder_{timestamp}")
+            self.llm = ChatLLMFactory.get_chat_model(
+                llm_config, session_name=f"multi_round_coder_{timestamp}"
+            )
 
     def __call__(self, prompt: str, language: str) -> Dict[str, str]:
         """Generate code using LLM based on prompt.
-        
+
         Args:
             prompt: The coding prompt
             language: Target programming language
-            
+
         Returns:
             Dictionary containing full response, language, extracted code
         """
         if not self.multi_turn:
             # create a new session if not multi_turn
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-            self.llm = ChatLLMFactory.get_chat_model(self.llm_config, session_name=f"single_round_coder_{timestamp}")
+            self.llm = ChatLLMFactory.get_chat_model(
+                self.llm_config, session_name=f"single_round_coder_{timestamp}"
+            )
 
         if language not in VALID_CODING_LANGUAGES:
             raise ValueError(f"Language must be one of {VALID_CODING_LANGUAGES}")

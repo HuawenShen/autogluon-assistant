@@ -9,7 +9,7 @@ setup(
         "autogluon.assistant",
         "langgraph",
         "autogluon",
-        #"speechbrain",
+        # "speechbrain",
         "FlagEmbedding",
     ],
     author="FANGAreNotGnu",

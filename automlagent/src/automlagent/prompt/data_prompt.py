@@ -29,39 +29,39 @@ def group_similar_files(files):
     Files are placed in the same group if they follow the same pattern at each level.
     At each level, if there are 5 or fewer unique folders, the actual folder names are used,
     otherwise a wildcard '*' is used.
-    
+
     Parameters:
     files: List of tuples (relative_path, absolute_path)
-    
-    Returns: 
+
+    Returns:
     Dict mapping group keys to lists of tuples (relative_path, absolute_path)
     """
     # First, analyze folder counts at each depth level
     depth_folders = defaultdict(set)
     max_depth = 0
-    
+
     # Collect all unique folders at each depth
     for rel_path, _ in files:
         parts = os.path.normpath(rel_path).split(os.sep)
         max_depth = max(max_depth, len(parts) - 1)  # -1 for filename
-        
+
         # Record folders at each depth
         for depth, folder in enumerate(parts[:-1]):  # Exclude filename
             depth_folders[depth].add(folder)
-    
+
     # Create groups
     groups = defaultdict(list)
     for rel_path, abs_path in files:
         parts = os.path.normpath(rel_path).split(os.sep)
         filename = parts[-1]
         folders = parts[:-1]
-        
+
         # Get file extension (if any)
         ext = os.path.splitext(filename)[1].lower()
-        
+
         # Build group key parts
         group_key_parts = []
-        
+
         # Add folder pattern for each depth
         for depth, folder in enumerate(folders):
             unique_folders = depth_folders[depth]
@@ -70,15 +70,15 @@ def group_similar_files(files):
                 group_key_parts.append(folder)
             else:
                 # Use wildcard if more than 5 unique folders
-                group_key_parts.append('*')
-        
+                group_key_parts.append("*")
+
         # Add extension pattern
-        group_key_parts.append(ext if ext else 'NO_EXT')
-        
+        group_key_parts.append(ext if ext else "NO_EXT")
+
         # Convert key to immutable tuple for dictionary
         group_key = tuple(group_key_parts)
         groups[group_key].append((rel_path, abs_path))
-    
+
     return groups
 
 
@@ -86,7 +86,7 @@ def pattern_to_path(pattern, base_path):
     """
     Convert a group pattern tuple to an absolute path string.
     Pattern tuple format: (folder1, folder2, ..., extension)
-    
+
     Parameters:
     pattern: Tuple of folder names and extension
     base_path: Base directory path to make the pattern absolute
@@ -94,18 +94,18 @@ def pattern_to_path(pattern, base_path):
     # Last element is extension
     folders = pattern[:-1]  # Get all folder patterns
     ext = pattern[-1]
-    
+
     # Create a path-like string from folder patterns
     path_parts = []
     for folder in folders:
         path_parts.append(str(folder))
-    
+
     # Add a placeholder filename with the extension
-    if ext == 'NO_EXT':
-        path_parts.append('*')
+    if ext == "NO_EXT":
+        path_parts.append("*")
     else:
-        path_parts.append(f'*{ext}')
-    
+        path_parts.append(f"*{ext}")
+
     # Join with base path to make it absolute
     relative_pattern = os.path.join(*path_parts)
     return os.path.join(base_path, relative_pattern)
@@ -117,21 +117,21 @@ def is_tabular_file(file_path):
     Also checks if it's a gzipped tabular file.
     """
     # TODO: test suppot for arrow, and compressed files
-    tabular_extensions = {".csv", ".parquet", ".pq", ".xlsx", ".xls", ".arrow"}
+    tabular_extensions = {".csv", ".parquet", ".pq", ".xlsx", ".xls", ".arrow", ".tsv"}
     path = Path(file_path)
     suffix = path.suffix.lower()
-    
+
     # Direct check for tabular extensions
     if suffix in tabular_extensions:
         return True
-    
+
     # Check for compressed tabular files
     if suffix in [".gz", ".zip"]:
         # Get the extension before compression
         stem = Path(path.stem)  # Get filename without compression
         previous_suffix = stem.suffix.lower()
         return previous_suffix in tabular_extensions
-        
+
     return False
 
 
@@ -148,7 +148,8 @@ def should_truncate(text, threshold=50):
         return False
     # Check if text matches the pattern xxx/xxx.xxx
     import re
-    if re.match(r'^[^/]+(/[^/]+)*\.[^/]+$', text):
+
+    if re.match(r"^[^/]+(/[^/]+)*\.[^/]+$", text):
         return False
     return True
 
@@ -176,9 +177,9 @@ def detect_separator(file_path):
     Returns the detected separator or comma as default.
     """
     import csv
-    
+
     try:
-        with open(file_path, 'r', newline='') as csvfile:
+        with open(file_path, "r", newline="") as csvfile:
             # Read a few lines to detect the dialect
             sample = csvfile.read(1024)
             csvfile.seek(0)
@@ -186,7 +187,7 @@ def detect_separator(file_path):
             return dialect.delimiter
     except Exception:
         # Default to comma if detection fails
-        return ','
+        return ","
 
 
 def get_tabular_data_info(file_path, max_chars_per_tabular_to_text):
@@ -196,15 +197,18 @@ def get_tabular_data_info(file_path, max_chars_per_tabular_to_text):
     """
     try:
         # For CSV files, detect the separator first
-        if Path(file_path).suffix.lower() == '.csv':
+        if Path(file_path).suffix.lower() == ".csv":
             separator = detect_separator(file_path)
             df = load_pd.load(file_path, delimiter=separator)
+        elif Path(file_path).suffix.lower() == ".tsv":
+            df = pd.read_csv(file_path, sep="\t")
+            separator = "\t"
         else:
             # For other formats (parquet, excel etc.), load normally
             df = load_pd.load(file_path)
             # Use the same separator as detected in CSV files for consistency in output
-            separator = ',' 
-        
+            separator = ","
+
         # Get column information
         all_columns = df.columns.tolist()
         if len(all_columns) > 20:
@@ -215,23 +219,23 @@ def get_tabular_data_info(file_path, max_chars_per_tabular_to_text):
 
         # Get first two rows
         first_two = df.head(2)
-        
+
         # Convert to formatted strings with truncation
         formatted_rows = []
-        
+
         # Format column headers
         formatted_rows.append(separator.join(str(col) for col in first_two.columns))
-        
+
         # Format data rows
         for _, row in first_two.iterrows():
             formatted_row = separator.join(format_value(val) for val in row)
             formatted_rows.append(formatted_row)
-            
+
         first_two_rows = "\n".join(formatted_rows)
-        
+
         return f"{columns_info}\nFirst two rows:\n{first_two_rows}"
-    
-    except Exception as e:
+
+    except Exception:
         return read_first_three_lines(
             file_path=file_path, max_length=max_chars_per_tabular_to_text
         )
@@ -244,8 +248,18 @@ def read_first_three_lines(file_path, max_length=100):
     """
     # Common text file extensions and types
     text_extensions = {
-        ".txt", ".md", ".py", ".json", ".yaml", ".yml", ".ini",
-        ".cfg", ".conf", ".sh", ".bat", ".log",
+        ".txt",
+        ".md",
+        ".py",
+        ".json",
+        ".yaml",
+        ".yml",
+        ".ini",
+        ".cfg",
+        ".conf",
+        ".sh",
+        ".bat",
+        ".log",
     }
 
     # Check if file might be text based on extension
@@ -299,7 +313,9 @@ def get_file_content(file_path, max_chars_per_file, max_chars_per_tabular_to_tex
     return content
 
 
-def generate_data_prompt(input_data_folder, max_chars_per_file, max_chars_per_tabular_to_text):
+def generate_data_prompt(
+    input_data_folder, max_chars_per_file, max_chars_per_tabular_to_text
+):
     # Get absolute path of the folder
     abs_folder_path = os.path.abspath(input_data_folder)
 
@@ -319,18 +335,18 @@ def generate_data_prompt(input_data_folder, max_chars_per_file, max_chars_per_ta
             group_info = f"Group pattern: {pattern_path} (total {len(group_files)} files)\nExample file:\nAbsolute path: {example_abs_path}"
 
             file_contents[group_info] = get_file_content(
-                file_path=example_abs_path, 
-                max_chars_per_file=max_chars_per_file, 
-                max_chars_per_tabular_to_text=max_chars_per_tabular_to_text
+                file_path=example_abs_path,
+                max_chars_per_file=max_chars_per_file,
+                max_chars_per_tabular_to_text=max_chars_per_tabular_to_text,
             )
         else:
             # For small groups, show all files
             for rel_path, abs_path in group_files:
                 file_info = f"Absolute path: {abs_path}"
                 file_contents[file_info] = get_file_content(
-                    file_path=abs_path, 
-                    max_chars_per_file=max_chars_per_file, 
-                    max_chars_per_tabular_to_text=max_chars_per_tabular_to_text
+                    file_path=abs_path,
+                    max_chars_per_file=max_chars_per_file,
+                    max_chars_per_tabular_to_text=max_chars_per_tabular_to_text,
                 )
 
     # Generate the prompt
@@ -343,34 +359,38 @@ def generate_data_prompt(input_data_folder, max_chars_per_file, max_chars_per_ta
 
 if __name__ == "__main__":
     # Create argument parser
-    parser = argparse.ArgumentParser(description='Generate data prompt from folder contents')
-    
+    parser = argparse.ArgumentParser(
+        description="Generate data prompt from folder contents"
+    )
+
     # Add arguments
-    parser.add_argument('folder_path', 
-                       type=str,
-                       help='Path to the folder to analyze')
-    parser.add_argument('--max-chars-per-file', 
-                       type=int,
-                       default=1000,
-                       help='Maximum characters to read from each non-tabular file')
-    parser.add_argument('--max-chars-per-tabular', 
-                       type=int,
-                       default=2000,
-                       help='Maximum characters to read from each tabular file')
-    
+    parser.add_argument("folder_path", type=str, help="Path to the folder to analyze")
+    parser.add_argument(
+        "--max-chars-per-file",
+        type=int,
+        default=1000,
+        help="Maximum characters to read from each non-tabular file",
+    )
+    parser.add_argument(
+        "--max-chars-per-tabular",
+        type=int,
+        default=2000,
+        help="Maximum characters to read from each tabular file",
+    )
+
     # Parse arguments
     args = parser.parse_args()
-    
+
     # Validate folder path
     if not os.path.isdir(args.folder_path):
         print(f"Error: '{args.folder_path}' is not a valid directory")
         exit(1)
-    
+
     # Generate and print the data prompt
     prompt = generate_data_prompt(
         input_data_folder=args.folder_path,
         max_chars_per_file=args.max_chars_per_file,
-        max_chars_per_tabular_to_text=args.max_chars_per_tabular
+        max_chars_per_tabular_to_text=args.max_chars_per_tabular,
     )
-    
+
     print(prompt)
