@@ -1,12 +1,12 @@
 # Condensed: Predicting Multiple Columns in a Table (Multi-Label Prediction)
 
-Summary: This tutorial covers the implementation of multi-label prediction using AutoGluon's MultilabelPredictor class, specifically focusing on handling multiple target variables with different problem types (regression, classification) simultaneously. It demonstrates how to configure and train models with correlated labels, manage model persistence, and make predictions. Key functionalities include initialization with custom problem types and evaluation metrics, prediction methods (predict and predict_proba), model evaluation, and save/load operations. The tutorial emphasizes best practices for performance optimization, memory management, and proper evaluation techniques, making it valuable for tasks requiring simultaneous prediction of multiple target variables with potential interdependencies.
+Summary: This tutorial covers AutoGluon's MultilabelPredictor implementation for handling multiple prediction tasks simultaneously. It demonstrates how to build models that can predict different types of targets (regression, classification) while considering label correlations. Key implementation knowledge includes initializing the predictor with different problem types and metrics, training with time limits, and accessing individual predictors. The tutorial helps with tasks involving multi-target prediction, model optimization, and memory management. Notable features include label correlation handling, support for mixed problem types (regression/classification), performance optimization through presets, and model persistence capabilities. It's particularly useful for developers working on complex prediction tasks requiring multiple interdependent outputs.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
 Here's the condensed tutorial focusing on essential implementation details:
 
-# Multi-Label Prediction with AutoGluon
+# Multi-Label Prediction in AutoGluon
 
 ## Key Implementation Details
 
@@ -24,56 +24,56 @@ class MultilabelPredictor:
 
 ### Critical Configurations
 ```python
-# Required parameters
+# Example setup
 labels = ['education-num', 'education', 'class']
 problem_types = ['regression', 'multiclass', 'binary']
 eval_metrics = ['mean_absolute_error', 'accuracy', 'accuracy']
 save_path = 'agModels-predictEducationClass'
+```
 
-# Initialize and train
-predictor = MultilabelPredictor(
+### Basic Usage
+```python
+# Initialize
+multi_predictor = MultilabelPredictor(
     labels=labels, 
     problem_types=problem_types, 
     eval_metrics=eval_metrics, 
     path=save_path
 )
-predictor.fit(train_data, time_limit=time_limit)
-```
 
-### Core Methods
-```python
-# Prediction
-predictions = predictor.predict(test_data)
+# Train
+multi_predictor.fit(train_data, time_limit=time_limit)
 
-# Probability predictions
-pred_proba = predictor.predict_proba(test_data)
+# Predict
+predictions = multi_predictor.predict(test_data)
 
-# Evaluation
-results = predictor.evaluate(test_data)
-
-# Save/Load
-predictor.save()
-predictor = MultilabelPredictor.load(save_path)
+# Evaluate
+evaluations = multi_predictor.evaluate(test_data)
 ```
 
 ## Best Practices
 
-1. Performance Optimization:
-   - Use `presets='best_quality'` for best predictive performance
-   - Enable `consider_labels_correlation=True` when predicting all labels together
-   - Set `consider_labels_correlation=False` when using individual predictors
+1. **Performance Optimization**:
+   - Set `presets='best_quality'` for optimal predictions
+   - Use `consider_labels_correlation=False` if planning to use individual predictors
 
-2. Memory Management:
-   - Adjust memory usage through fit() arguments
-   - Use `presets=['good_quality', 'optimize_for_deployment']` for faster inference
+2. **Memory Management**:
+   - For memory issues: Use strategies from tabular-indepth tutorial
+   - For faster inference: Use preset `['good_quality', 'optimize_for_deployment']`
 
-3. Evaluation:
-   - Always specify appropriate eval_metrics for each label
-   - Access individual predictors using `get_predictor(label)` for detailed analysis
+3. **Model Access**:
+   ```python
+   # Access individual predictor
+   predictor_specific = multi_predictor.get_predictor('label_name')
+   ```
 
-## Important Warnings
+## Important Notes
 
-- Must specify different paths or use default for multiple fit() calls to avoid overwriting
-- Directory size may grow large with many labels
-- Setting consider_labels_correlation affects prediction dependencies between labels
-- Individual predictor usage requires consider_labels_correlation=False during training
+- Requires at least 2 labels for prediction
+- Saves separate TabularPredictor for each label
+- Label correlation handling depends on order in labels list
+- Can load/save models using `load()` and `save()` methods
+
+## Warning
+
+When `consider_labels_correlation=True`, prediction order matters as each label is predicted conditionally on previous labels in the sequence.

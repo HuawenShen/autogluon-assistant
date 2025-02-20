@@ -3,9 +3,9 @@
   "version": "1.2.0",
   "description": "AutoGluon Tabular is an open-source AutoML framework that automates the training and tuning of machine learning models for tabular data, handling tasks from preprocessing to model ensembling with minimal code required.",
   "features": [
-    "\"Works best when there are only tabular data (categorical and numerical).\"",
-    "\"Does not work very well on nlp tasks.\"",
-    "\"Does not work with image data.\""
+    "Works best when there are only tabular data (categorical and numerical).",
+    "Does not work very well on nlp tasks.",
+    "Does not work with image data."
   ],
   "requirements": [],
   "prompt_template": [

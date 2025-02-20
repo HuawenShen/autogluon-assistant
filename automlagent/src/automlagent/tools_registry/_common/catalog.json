@@ -5,6 +5,11 @@
       "version": "1.2.0",
       "description": "AutoGluon Timeseries is an open-source AutoML framework that automates the training and tuning of forecasting models for time series data, handling tasks from preprocessing to model ensembling with built-in support for both univariate and multivariate forecasting."
     },
+    "autogluon.multimodal": {
+      "path": "autogluon.multimodal",
+      "version": "1.2.0",
+      "description": "AutoGluon Multimodal is an open-source AutoML framework that simplifies the training of models across multiple data types including text, images, and tabular data, automating tasks from preprocessing to model ensembling with minimal code required."
+    },
     "speechbrain": {
       "path": "speechbrain",
       "version": "1.0.2",
@@ -15,10 +20,10 @@
       "version": "1.2.0",
       "description": "AutoGluon Tabular is an open-source AutoML framework that automates the training and tuning of machine learning models for tabular data, handling tasks from preprocessing to model ensembling with minimal code required."
     },
-    "autogluon.multimodal": {
-      "path": "autogluon.multimodal",
-      "version": "1.2.0",
-      "description": "AutoGluon Multimodal is an open-source AutoML framework that simplifies the training of models across multiple data types including text, images, and tabular data, automating tasks from preprocessing to model ensembling with minimal code required."
+    "FlagEmbedding": {
+      "path": "FlagEmbedding",
+      "version": "1.3.4",
+      "description": "Retrieval and Retrieval-augmented LLMs"
     }
   }
 }

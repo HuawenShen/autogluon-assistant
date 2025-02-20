@@ -1,6 +1,6 @@
 # Condensed: <!-- This cell is automatically updated by tools/tutorial-cell-updater.py -->
 
-Summary: This tutorial covers practical implementation of model quantization in SpeechBrain, specifically for ASR models like Wav2Vec 2.0. It demonstrates both dynamic and static quantization techniques through a custom quantization wrapper and utility functions. Key implementations include module-specific quantization strategies, data preprocessing, benchmarking setup with WER calculation, and performance measurement using RTF metrics. The tutorial provides code for handling quantization boundaries, calibration processes, and transcription timing. Notable features include support for different quantization approaches per module type, handling of quantization-compatible layers, and best practices for balancing accuracy vs. speed. It's particularly useful for tasks involving ASR model optimization, performance benchmarking, and deployment-focused model compression.
+Summary: This tutorial demonstrates implementing model quantization for SpeechBrain ASR models using PyTorch, covering both dynamic and static quantization techniques. It provides implementation details for quantizing specific model components like Wav2Vec 2.0 encoders and feature extractors, with code for custom quantization wrappers, benchmarking utilities, and preprocessing functions. Key functionalities include selective module quantization, calibration for static quantization, performance measurement (WER and RTF metrics), and handling different tokenizer types. The tutorial helps with tasks like reducing model size, improving inference speed, and maintaining accuracy through careful quantization strategy selection, particularly useful for deploying ASR models with memory and latency constraints.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -11,8 +11,8 @@ Here's the condensed tutorial content focusing on essential implementation detai
 ## Key Concepts
 
 ### Quantization Fundamentals
-- Converts model weights/activations from float to lower resolution (e.g., 8-bit integers)
-- Benefits: Reduced memory footprint and faster inference
+- Converts weights/activations from floating point to lower resolution values (e.g., 8-bit integers)
+- Benefits: Reduced memory footprint and inference latency
 - Core formula: `y = round(x/S + Z)` where:
   - S = scale factor
   - Z = zero point
@@ -24,13 +24,17 @@ Here's the condensed tutorial content focusing on essential implementation detai
 1. **Post-Training Quantization (PTQ)**
    - Dynamic Quantization
      - Weights quantized during prep
-     - Activations quantized during runtime
-     - Adapts to input data variations
-     
+     - Activations quantized during inference
+     - Adjusts parameters at runtime
+   
    - Static Quantization  
-     - Both weights and activations quantized before runtime
+     - Uses fixed parameters
      - Requires calibration with sample data
-     - Potentially lower latency but may sacrifice accuracy
+     - Generally lower latency but may sacrifice accuracy
+
+2. **Quantization-Aware Training (QAT)**
+   - Incorporates quantization during training
+   - Not covered in this tutorial
 
 ## Implementation Requirements
 
@@ -55,29 +59,24 @@ from collections import Counter
 from copy import deepcopy
 ```
 
-## Best Practices
+## Best Practices & Warnings
 1. Choose quantization approach based on use case:
-   - Dynamic: When input data range varies significantly
-   - Static: When lower latency is priority and calibration data available
-2. Consider model architecture compatibility with quantization
-3. Test quantized model performance thoroughly before deployment
+   - Dynamic: Better for varying input ranges
+   - Static: Better for latency-critical applications
+2. Consider model architecture compatibility
+3. Test quantized model performance thoroughly
+4. Ensure representative calibration data for static quantization
 
-## Important Notes
-- Quantization primarily targets inference optimization
-- Weight quantization is deterministic and data-independent
-- Activation quantization depends on input data characteristics
-- Performance impact varies by hardware and model architecture
+This tutorial focuses on applying PTQ to pretrained SpeechBrain ASR models using PyTorch quantization functions.
 
-This condensed version maintains the critical implementation details while removing redundant explanations and preserving the essential code snippets and configurations.
+Here's the condensed version of chunk 2/4, focusing on key implementation details and concepts:
 
-Here's the condensed tutorial content focusing on key implementation details:
-
-# ASR Model Quantization - Core Implementation Details
+# ASR Model Quantization - Part 2
 
 ## Model Selection & Architecture
 - Using Wav2Vec 2.0 model with CTC trained on CommonVoice English
 - Transformer-based Encoder ASR model without decoder layer
-- Uses optional language model for n-gram rescoring
+- Optional n-gram rescoring with language model
 
 ```python
 from speechbrain.inference.ASR import EncoderASR
@@ -88,13 +87,12 @@ asr_model = EncoderASR.from_hparams(
 )
 ```
 
-## Quantization Compatibility
-
-### Quantizable Module Types:
+## Quantization Strategy
+### Quantizable Modules
 - Dynamic: `nn.Linear`, `nn.LSTM`, `nn.GRU`, `nn.RNNCell`, `nn.GRUCell`, `nn.LSTMCell`, `nn.EmbeddingBag`, `nn.Embedding`
 - Static: `nn.Linear`, `nn.Conv1d/2d/3d`, `nn.EmbeddingBag`, `nn.Embedding`
 
-### Model-Specific Quantization Strategy:
+### Model-Specific Quantization Plan
 1. Dynamic Quantization:
    - `encoder.wav2vec2.model.encoder.layers`
    - `encoder.enc`
@@ -106,9 +104,7 @@ asr_model = EncoderASR.from_hparams(
 3. No Quantization:
    - `encoder.ctc_lin` (impacts WER significantly)
 
-## Key Implementation Components
-
-### Data Preprocessing
+## Data Preparation
 ```python
 def get_samples(root):
     audios = []
@@ -126,7 +122,7 @@ def get_samples(root):
     return audios, references
 ```
 
-### Utility Functions for Module Management
+## Utility Functions
 ```python
 def get_module(model, module_string):
     curr = model.mods
@@ -151,11 +147,11 @@ def set_module(model, module_string, new_module):
         setattr(curr, attrs[-1], new_module)
 ```
 
-## Best Practices
-1. Avoid over-granular quantization due to quantization/dequantization overhead
-2. Test different quantization combinations empirically
-3. Use LibriSpeech dev-clean for evaluation (clean dataset, reasonable size)
-4. Consider module-specific quantization impacts on model performance
+### Important Notes
+- Avoid over-granular quantization due to quantization/dequantization overhead
+- Different submodules may respond differently to quantization methods
+- Experimentation needed to find optimal quantization combination
+- BatchNorm layers have specific restrictions for static quantization
 
 Here's the condensed version focusing on key implementation details and concepts:
 
@@ -183,7 +179,7 @@ class StaticQuant(nn.Module):
 Key points:
 - Uses `QuantStub`/`DeQuantStub` to mark quantization boundaries
 - Handles both single and tuple outputs from model
-- Observers placed during calibration to determine scale factor and zero point
+- Preserves model attribute access via `__getattr__` override
 
 ## Custom Quantization Function
 
@@ -199,13 +195,14 @@ def custom_quantize(
 ):
     # Dynamic Quantization
     if dynamic_modules:
-        if dynamic_targets is None:
-            dynamic_targets = {torch.nn.LSTM, torch.nn.Linear, ...} # Default targets
-            
+        if not dynamic_targets:
+            dynamic_targets = {nn.LSTM, nn.Linear, nn.GRU, nn.RNNCell, 
+                             nn.GRUCell, nn.LSTMCell}
+        
         for module in dynamic_modules:
             torch.quantization.quantize_dynamic(
                 get_module(model, module),
-                dynamic_targets, 
+                dynamic_targets,
                 dtype=dynamic_dtype,
                 inplace=True
             )
@@ -220,65 +217,100 @@ def custom_quantize(
             get_module(model, module).qconfig = static_qconfig
 
         torch.ao.quantization.prepare(model, inplace=True)
-        # Run calibration
+        
+        # Calibration
         for sample in calibration_samples:
             model.transcribe_batch(sample.unsqueeze(0), torch.tensor([1.0]))
+            
         torch.ao.quantization.convert(model, inplace=True)
 ```
 
 Important aspects:
 - Supports both dynamic and static quantization
-- Allows specifying modules to quantize
+- Allows targeting specific submodules
 - Requires calibration samples for static quantization
 - Configurable quantization parameters
 
 ## Benchmarking Setup
 
-### WER Implementation
-```python
-def compute_wer(references, hypotheses):
-    # Convert to word lists if strings provided
-    references = [ref.split() for ref in references] if isinstance(references, str) else references
-    hypotheses = [hyp.split() for hyp in hypotheses] if isinstance(hypotheses, str) else hypotheses
-    
-    stats = accumulatable_wer_stats(references, hypotheses, Counter())
-    return stats['WER']
-```
-
 Key metrics:
-- Real-time factor (RTF) = inference time / audio length
-- Word Error Rate (WER) = word-level errors / total reference words
+1. Real-time Factor (RTF)
+   - Ratio of inference time to audio length
+   - RTF < 1 indicates potential real-time capability
 
-Best practices:
-- Ensure calibration samples for static quantization
-- Validate input formats for WER calculation
-- Consider both accuracy (WER) and speed (RTF) when evaluating quantization
+2. Word Error Rate (WER)
+   ```python
+   def compute_wer(references, hypotheses):
+       references = [ref.split() for ref in references] 
+       hypotheses = [hyp.split() for hyp in hypotheses]
+       stats = accumulatable_wer_stats(references, hypotheses, Counter())
+       return stats['WER']
+   ```
+
+Best Practices:
+- Use appropriate calibration samples for static quantization
+- Monitor both speed (RTF) and accuracy (WER) metrics
+- Consider module compatibility when choosing quantization strategy
+- Test with representative input data
 
 Here's the condensed version focusing on key implementation details and concepts:
 
 # ASR Model Quantization - Implementation Details
 
-## Core Functions
+## Key Functions
 
 ### Preprocessing and Generation
 ```python
 def preprocess_input(model: EncoderASR, input):
     with torch.no_grad():
-        wavs = input.unsqueeze(0).float()
-        wav_lens = torch.tensor([1.0])
-        return wavs.to(model.device), wav_lens.to(model.device)
+        wavs = input.unsqueeze(0).float().to(model.device)
+        wav_lens = torch.tensor([1.0]).to(model.device)
+        return wavs, wav_lens
 
 def generate(model, predictions):
+    # Handle different tokenizer types
     is_ctc = isinstance(model.tokenizer, speechbrain.dataio.encoder.CTCTextEncoder)
     if isinstance(model.hparams.decoding_function, functools.partial):
-        if is_ctc:
-            predicted_words = ["".join(model.tokenizer.decode_ndim(seq)) for seq in predictions]
-        else:
-            predicted_words = [model.tokenizer.decode_ids(seq) for seq in predictions]
+        predicted_words = [
+            "".join(model.tokenizer.decode_ndim(token_seq)) if is_ctc
+            else model.tokenizer.decode_ids(token_seq)
+            for token_seq in predictions
+        ]
     else:
         predicted_words = [hyp[0].text for hyp in predictions]
     return predicted_words
 ```
+
+### Benchmarking Functions
+```python
+def timed_transcribe(model: EncoderASR, input):
+    with torch.no_grad():
+        wavs, wav_lens = preprocess_input(model, input)
+        start = time.time()
+        encoder_out = model.mods.encoder(wavs, wav_lens)
+        duration = time.time() - start
+        predictions = model.decoding_function(encoder_out, wav_lens)
+        return generate(model, predictions)[0], duration
+
+def benchmark(model, samples, references):
+    # Warmup phase
+    for sample in samples[:10]:
+        timed_transcribe(model, sample)
+    
+    # Actual benchmarking
+    total_audio_length = sum([sample.shape[0] / 16000 for sample in samples])
+    total_cpu_time = 0
+    outputs = []
+    
+    for sample in samples:
+        output, duration = timed_transcribe(model, sample)
+        outputs.append(output)
+        total_cpu_time += duration
+
+    return compute_wer(references, outputs), total_cpu_time / total_audio_length
+```
+
+## Quantization Configuration
 
 
 ...(truncated)

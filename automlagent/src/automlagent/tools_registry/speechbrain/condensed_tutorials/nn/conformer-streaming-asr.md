@@ -1,10 +1,10 @@
 # Condensed: <!-- This cell is automatically updated by tools/tutorial-cell-updater.py -->
 
-Summary: This tutorial provides comprehensive implementation guidance for streaming speech recognition using Conformer models in SpeechBrain. It covers essential techniques for low-latency, long-form transcription including Dynamic Chunk Training, chunked attention mechanisms, and streaming-specific architectural modifications. The tutorial helps with implementing key components like chunked attention masks, dynamic chunk convolutions, positional embeddings, and streaming contexts. It details the configuration of StreamingASR components, feature extraction, and dependency management across neural network layers. Notable features include flexible chunk size configuration, context management between processing chunks, and integration with FFmpeg for live stream processing. The implementation supports both streaming and non-streaming modes, with configurable latency-accuracy tradeoffs through parameters like chunk size and left context values. The tutorial also includes debugging tools, best practices, and alternative architecture suggestions.
+Summary: This tutorial provides comprehensive implementation guidance for streaming speech recognition using Conformer models in SpeechBrain. It covers essential techniques for low-latency, long-form transcription including Dynamic Chunk Training, chunked attention mechanisms, and streaming-specific architectural modifications. The tutorial helps with implementing key components like streaming contexts, feature extraction, positional embeddings, and proper handling of dependencies between input/output frames. It details configuration of crucial parameters like chunk size and left context, along with best practices for training and inference. Notable features include support for various ASR recipes (LibriSpeech, VoxPopuli, CommonVoice), flexible streaming modes, and integration with different architectures like Branchformer and FastConformer. The implementation focuses on balancing latency and accuracy while maintaining consistency between training and inference paths.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the condensed version focusing on key implementation details and concepts:
+Here's the condensed version focusing on key implementation details:
 
 # Streaming Speech Recognition with Conformers
 
@@ -12,7 +12,7 @@ Here's the condensed version focusing on key implementation details and concepts
 
 ### Purpose
 - Enables low-latency, long-form transcription for live stream applications
-- Uses Dynamic Chunk Training approach for streaming capability
+- Uses Dynamic Chunk Training approach for streaming Conformer models
 
 ### Core Requirements
 1. Restrict attention to recent context only
@@ -24,12 +24,13 @@ Here's the condensed version focusing on key implementation details and concepts
 #### 1. Chunked Attention
 - Preferred over causal attention for better WER
 - Groups frames into chunks of size `chunk_size`
-- Key parameters:
+- Allows attention within chunks and to limited past chunks
+- Controlled by parameters:
   - `chunk_size`: Number of frames per chunk
-  - `left_context_chunks`: Number of past chunks allowed for attention
+  - `left_context_chunks`: How many past chunks to attend to
 
 ```python
-# Example: Creating chunked attention mask
+# Example: Creating chunk streaming mask
 chunk_streaming_mask = make_transformer_src_mask(
     torch.empty(1, 16, 128), 
     dynchunktrain_config=DynChunkTrainConfig(4, 1)
@@ -40,8 +41,7 @@ chunk_streaming_mask = make_transformer_src_mask(
 - Training: Uses masking with full batches for GPU efficiency
 - Inference: Processes chunk-by-chunk with state caching
 - Attention mask shape: `(t, t)` boolean tensor
-- Frames within chunks can attend to each other
-- Limited past context reduces computational/memory costs
+- Mask determines which frames can attend to which input frames
 
 ### Best Practices
 1. Use chunked attention instead of causal attention for better performance
@@ -54,10 +54,11 @@ chunk_streaming_mask = make_transformer_src_mask(
 - CommonVoice/ASR/transducer (French, Italian)
 
 ### Prerequisites
-- Basic understanding of speech recognition concepts
+- Basic understanding of speech recognition
 - Familiarity with SpeechBrain framework
+- Python and PyTorch knowledge
 
-This represents the first section of the tutorial, focusing on the fundamental architectural changes needed for streaming ASR with Conformers.
+This implementation serves as a foundation for building streaming ASR systems, though it may not represent state-of-the-art performance.
 
 Here's the condensed version focusing on key implementation details and concepts:
 
@@ -68,7 +69,7 @@ Here's the condensed version focusing on key implementation details and concepts
 ### Key Concepts
 - Careful management of dependencies between output and input frames across layers
 - Chunk boundaries remain consistent across layers
-- Left context allows chunks to attend to previous chunks without exploding memory requirements
+- Left context size defined by number of chunks
 
 ### Implementation Details
 ```python
@@ -79,7 +80,9 @@ attention_module(concat(cached_left_chunks, input_chunk))
 # (batch_size, left_context_chunks * chunk_size, emb_dim)
 ```
 
-## Dynamic Chunk Convolutions (DCC)
+**Best Practice**: Avoid depending on future frames across layers to maintain efficient streaming.
+
+## Dynamic Chunk Convolution (DCC)
 
 ### Types of Convolutions
 1. **Vanilla Convolutions**
@@ -95,33 +98,28 @@ attention_module(concat(cached_left_chunks, input_chunk))
 
 3. **Dynamic Chunk Convolutions**
    - Masks off future chunk frames
-   - Maintains chunk boundaries from attention
-   - Requires caching `(k-1)/2` past frames per layer at inference
+   - Caches `(k-1)/2` past frames per layer
+   - Implementation reference: `speechbrain.lobes.models.transformer.Conformer.ConvolutionModule`
 
-### Implementation Reference
-- See `speechbrain.lobes.models.transformer.Conformer.ConvolutionModule` for detailed implementation
+## Feature Extraction Considerations
 
-## Unchanged Components
+### Key Points
+- Non-causal feature extractor can be used
+- Minimal right context needed (milliseconds scale)
+- Use `StreamingFeatureWrapper` for handling context
 
-### Feature Extraction
-- Non-causal implementation retained
-- Minimal right context needed (milliseconds)
-- Use `StreamingFeatureWrapper` for handling context:
 ```python
 from speechbrain.lobes.features import StreamingFeatureWrapper
+# Automatically handles padding and context caching
 ```
 
 ### Normalization
-- Training/test discrepancy between full audio and per-chunk normalization is minimal
-- Can be left as-is for practical implementations
+- Training vs. test discrepancy is minimal
+- Per-chunk normalization acceptable in practice
 
-### Best Practices
-1. Maintain consistent chunk boundaries across layers
-2. Cache only necessary context for both attention and convolution
-3. Consider feature extraction right context carefully
-4. Use provided wrappers for streaming features when possible
+**Important**: Feature extraction requires minimal future context and can be handled separately from the main streaming architecture.
 
-This implementation enables efficient streaming ASR while maintaining model accuracy through careful management of context and dependencies.
+This condensed version maintains the critical implementation details while removing explanatory text and redundant examples.
 
 Here's the condensed version focusing on key implementation details and concepts:
 
@@ -140,13 +138,13 @@ Here's the condensed version focusing on key implementation details and concepts
 from speechbrain.nnet.attention import RelPosEncXL
 
 test_pos_encoder = RelPosEncXL(64)
-test_pos = test_pos_encoder.make_pos(seq_len=16)
+test_pos = test_pos_encoder.make_pe(seq_len=16)
 # Shape: (batch, seq_len*2-1, emb_size)
 ```
 
 ## Dynamic Chunk Training
 
-### Performance Impacts
+### Performance Impact
 - Smaller chunks: Lower latency but worse accuracy
 - Larger left context: Better accuracy but higher computational cost
 
@@ -167,22 +165,22 @@ sampler = DynChunkTrainConfigRandomSampler(
 
 ### Best Practices
 1. Random chunk size sampling during training:
-   - 40% normal training (no chunks)
+   - 40% normal training (no chunking)
    - 60% chunked training with:
      - Random chunk sizes (8-32 frames)
-     - 75% with limited left context (2-32 chunks)
+     - 75% with restricted left context
      - 25% with full left context
 
 2. Loss Functions:
    - Primary: RNN-T loss
    - Optional: CTC as auxiliary loss
-   - Potential future exploration: encoder-decoder cross-entropy
+   - Potential future: encoder-decoder cross-entropy (currently untested)
 
 ### Important Notes
 - Model can infer in both streaming and non-streaming modes
 - Chunk size can be chosen at runtime
 - Performance degradation vs non-streaming varies by hyperparameters and datasets
-- Test different chunk sizes and left context values for your specific use case
+- Benchmark different chunk sizes on representative test data for your use case
 
 This implementation allows for flexible streaming ASR with configurable latency-accuracy tradeoffs.
 
@@ -193,7 +191,7 @@ Here's the condensed version focusing on key implementation details for streamin
 ## Key Components
 
 ### 1. Configuration Classes
-- Uses `DynChunkTrainConfig` for describing streaming configuration per batch
+- Use `DynChunkTrainConfig` to define streaming configuration for each batch
 - `DynChunkTrainConfigRandomSampler` for random configuration sampling during training
 
 ### 2. YAML Configuration
@@ -228,40 +226,38 @@ x = self.modules.enc(
 )
 ```
 
-## Important Notes and Best Practices
+## Important Considerations
 
-1. Architecture Requirements:
+1. **Architecture Requirements**:
    - Use supported architectures (e.g., Conformer)
    - Set `TransformerASR`'s `causal` parameter to `False`
 
-2. Evaluation Considerations:
-   - Only greedy search is currently supported in streaming mode
+2. **Evaluation Settings**:
+   - Only greedy search is supported in streaming context
    - Configure test set evaluation with greedy search
-   - Optional: Specify `valid_config` or `test_config` for streaming emulation during evaluation
+   - Optional: Specify `valid_config` or `test_config` for evaluation
 
-3. Chunk Sizing:
-   - Default chunk size is approximately 40ms of audio
-   - Configurable through min/max parameters in sampler configuration
+3. **Chunk Sizing**:
+   - Default chunk size ≈ 40ms of audio
+   - Configurable through min/max parameters
 
-4. Debugging:
-   - Use `speechbrain.utils.streaming` module for debugging features
-   - Provides utilities for streaming architecture validation
+4. **Debugging**:
+   - Use `speechbrain.utils.streaming` for debugging functionality
+   - Provides tools for streaming architecture verification
 
 This implementation enables streaming capability with minimal code changes while maintaining flexibility in configuration.
 
 Here's the condensed version focusing on key implementation details and concepts:
 
-# Detecting Dependencies in Neural Network Layers
+### Detecting Dependencies in Neural Network Layers
 
-## Dependency Detection Tools
-- Use `speechbrain.utils.streaming.infer_dependency_matrix` to analyze frame dependencies
-- Visualize using `speechbrain.utils.streaming.plot_dependency_matrix`
-- Red cells indicate output dependency on input frames
-- Note: Tool may show false negatives on larger models
+#### Key Tools
+- `speechbrain.utils.streaming.infer_dependency_matrix`: Analyzes dependencies between input and output frames
+- `speechbrain.utils.streaming.plot_dependency_matrix`: Visualizes the dependencies
 
-## Key Code Examples
+#### Implementation Examples
 
-### 1. Non-causal Conformer
+1. **Non-causal Conformer**
 ```python
 noncausal_model = TransformerASR(
     tgt_vocab=64, input_size=64, d_model=64, nhead=1, d_ffn=64, 
@@ -270,9 +266,10 @@ noncausal_model = TransformerASR(
     num_encoder_layers=4, num_decoder_layers=0,
     causal=False
 )
+noncausal_deps = infer_dependency_matrix(noncausal_model.encode, seq_shape=[1, 16, 64])
 ```
 
-### 2. Causal Conformer
+2. **Causal Conformer**
 ```python
 causal_model = TransformerASR(
     # Same parameters as non-causal but with causal=True
@@ -280,26 +277,31 @@ causal_model = TransformerASR(
 )
 ```
 
-### 3. Chunked Conformer
+3. **Chunked Conformer**
 ```python
 chunked_model = TransformerASR(
     # Base parameters same as above
 )
 chunked_conf = DynChunkTrainConfig(chunk_size=4, left_context_size=1)
+chunked_deps = infer_dependency_matrix(
+    lambda x: chunked_model.encode(x, dynchunktrain_config=chunked_conf), 
+    seq_shape=[1, 16, 64]
+)
 ```
 
-## Feature Extractor Components
+#### Feature Extractor for Inference
+
+**Key Components:**
 1. Filterbank extraction (Fourier transform-based)
 2. Normalization (applied per-chunk during streaming)
-3. Two downsampling CNNs (stride=2, reduces time dimension by 4x)
+3. Two downsampling CNNs (stride=2, reduces time dimension by 4)
 
-## Important Considerations
+**Important Considerations:**
 - Chunk size must be defined at transformer level
-- Need precise understanding of feature extractor's shape transformations
-- Must handle left/past and right/future context correctly
-- Input stride is typically 16 (1ms at 16kHz)
+- Proper handling of left/past and right/future context
+- Input-output shape transformations must be tracked
 
-## Feature Extractor Configuration Example
+**Example Configuration:**
 ```python
 feat_extractor_hparams = {
     "compute_features": Fbank(

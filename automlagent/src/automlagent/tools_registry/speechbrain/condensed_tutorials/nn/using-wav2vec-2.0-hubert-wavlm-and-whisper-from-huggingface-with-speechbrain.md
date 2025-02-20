@@ -1,57 +1,66 @@
 # Condensed: <!-- This cell is automatically updated by tools/tutorial-cell-updater.py -->
 
-Summary: This tutorial demonstrates the implementation of Wav2vec 2.0 and Whisper models within SpeechBrain, focusing on feature extraction, fine-tuning, and encoder-decoder architectures. It provides code examples for model initialization, configuration via YAML files, and integration into SpeechBrain pipelines. Key functionalities include using models as feature extractors, fine-tuning with separate optimizers, and implementing full encoder-decoder setups with Whisper. The tutorial covers essential parameters like freeze settings, encoder_only mode, and proper token indices configuration. It helps with tasks such as ASR model development, feature extraction, and model fine-tuning, while highlighting best practices for model selection, GPU usage, and input formatting.
+Summary: This tutorial demonstrates the implementation of Wav2vec 2.0 and Whisper models within SpeechBrain using HuggingFace integrations. It covers techniques for model initialization, feature extraction, fine-tuning configurations, and encoder-decoder implementations. The tutorial helps with tasks like setting up dual optimizers for pretrained models, configuring YAML parameters, implementing ASR pipelines, and handling both frozen and fine-tunable models. Key features include encoder-only and full encoder-decoder implementations, greedy/beam search decoding, zero-shot ASR/ST capabilities, and proper integration with SpeechBrain's speech processing pipeline. The implementation details span model initialization, output dimension handling, optimizer configurations, and loss computations, with specific code examples for each component.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the condensed version focusing on key implementation details and concepts:
+Here's the condensed tutorial content focusing on key implementation details:
 
-# Using Wav2vec 2.0 and Whisper with SpeechBrain
+# Using Wav2vec 2.0 and Whisper with SpeechBrain and HuggingFace
 
-## Key Points
-- Integration of HuggingFace pretrained models (Wav2vec 2.0, Whisper, HuBERT, WavLM) with SpeechBrain
-- Models can be used for feature extraction or fine-tuning
-- Implemented as standard PyTorch modules in SpeechBrain lobes
+## Key Concepts
+- Integration of HuggingFace pretrained models (Whisper, wav2vec 2.0, HuBERT, WavLM) with SpeechBrain
+- Focus on using and fine-tuning pretrained models rather than pre-training
+- Models can be connected to SpeechBrain's speech processing pipeline
+
+## Important Architectures
+1. **Wav2Vec 2.0**
+   - Transformer-based encoder for self-supervised speech representation learning
+   - Reference: [wav2vec2 paper](https://arxiv.org/abs/2006.11477)
+
+2. **Whisper**
+   - Full transformer (encoder-decoder) trained on 600k+ hours of speech
+   - Reference: [whisper paper](https://cdn.openai.com/papers/whisper.pdf)
 
 ## Implementation Details
 
 ### Setup
 ```python
 # Install required packages
-!pip install speechbrain
-from speechbrain.lobes.models.huggingface_transformers.wav2vec2 import Wav2Vec2
-from speechbrain.lobes.models.huggingface_transformers.whisper import Whisper
+!git clone https://github.com/speechbrain/speechbrain.git -b develop
+!python -m pip install .
 ```
 
 ### Model Initialization
 ```python
-# Initialize models from HuggingFace hub
-model_w2v2 = Wav2Vec2("facebook/wav2vec2-base-960h", save_path='pretrained/')
-model_whisper = Whisper("openai/whisper-tiny", save_path='pretrained/')
+from speechbrain.lobes.models.huggingface_transformers.wav2vec2 import Wav2Vec2
+from speechbrain.lobes.models.huggingface_transformers.whisper import Whisper
+
+# Initialize models
+model_w2v2 = Wav2Vec2("facebook/wav2vec2-base-960h", save_path='/content/pretrained/')
+model_whisper = Whisper("openai/whisper-tiny", save_path='/content/pretrained/')
 ```
 
-## Important Considerations
+## Important Notes
+1. Models are implemented as lobes in SpeechBrain:
+   - `speechbrain.lobes.models.huggingface_wav2vec.py`
+   - `speechbrain.lobes.models.huggingface_whisper.py`
 
-1. Model Architecture Differences:
-   - Wav2vec 2.0: Transformer encoder only
-   - Whisper: Full transformer (encoder-decoder)
+2. Key Differences:
+   - Wav2vec 2.0: Use encoder output directly
+   - Whisper: Must specifically extract encoder output when using for feature extraction
 
-2. Feature Extraction:
-   - Wav2vec 2.0: Direct output from last layer
-   - Whisper: Must specifically extract encoder outputs
+3. Best Practices:
+   - Models return standard PyTorch Modules
+   - GPU runtime recommended for model loading
+   - Input audio should be properly formatted (unsqueezed for batch processing)
 
-3. Model Locations:
-   - Implementation in `speechbrain.lobes.models.huggingface_wav2vec.py`
-   - Implementation in `speechbrain.lobes.models.huggingface_whisper.py`
-
-## Best Practices
-- Use GPU runtime for model loading and inference
-- Ensure input audio is properly formatted (correct shape and sampling rate)
-- Consider model size and computational requirements when selecting pretrained models
-
-## Limitations
-- Pre-training large SSL models not fully supported in SpeechBrain
-- Resource requirements vary significantly between models
+## Prerequisites
+- SpeechBrain Introduction
+- YAML understanding
+- Brain Class knowledge
+- Data I/O Basics
+- Understanding of pretrained models and fine-tuning
 
 Here's the condensed version focusing on key implementation details and concepts:
 
@@ -66,14 +75,16 @@ fea_whisper = model_whisper(source)
 ```
 
 ### Output Dimensions
-- Wav2Vec 2.0 Base model: 768 features
+- Wav2Vec2 Base model: 768 features
 - Output frequency: 50Hz
 - Shape format: [batch, time, features]
-- Example: For 2.87s audio → ~143 time steps
+- Time dimension calculation: Based on audio length (e.g., 2.87s → 143 time steps)
 
 ## Integration into SpeechBrain Pipeline
 
-### Wav2Vec 2.0 YAML Configuration
+### YAML Configuration
+
+1. Wav2Vec2 Configuration:
 ```yaml
 wav2vec2: !new:speechbrain.lobes.models.huggingface_transformers.wav2vec2.Wav2Vec2
     source: !ref <wav2vec2_hub>
@@ -81,7 +92,7 @@ wav2vec2: !new:speechbrain.lobes.models.huggingface_transformers.wav2vec2.Wav2Ve
     save_path: !ref <save_folder>/wav2vec2_checkpoint
 ```
 
-### Whisper YAML Configuration
+2. Whisper Configuration:
 ```yaml
 whisper: !new:speechbrain.lobes.models.huggingface_transformers.whisper.Whisper
     pretrained_path: !ref <wav2vec2_url>
@@ -92,31 +103,27 @@ whisper: !new:speechbrain.lobes.models.huggingface_transformers.whisper.Whisper
 
 ### Key Parameters
 - `freeze`: Controls model fine-tuning
-  - `True`: Freezes parameters
+  - `True`: Parameters frozen
   - `False`: Enables fine-tuning
 - `encoder_only`: For Whisper, extracts only encoder features
 - Both models can be used as standard PyTorch layers in the pipeline
 
 ### Important Notes
-1. Models can be integrated directly into SpeechBrain pipelines for on-the-fly feature computation
-2. Partial freezing is possible (encoder-only for Whisper, feature extractor for Wav2Vec 2.0)
-3. Basic SpeechBrain knowledge required for implementation
-4. Reference the LibriSpeech ASR (CTC) recipe for complete implementation examples
+- Requires basic SpeechBrain knowledge
+- Can be integrated into existing ASR pipelines
+- Reference implementation available in LibriSpeech ASR (CTC) recipe
+- Supports on-the-fly feature computation and fine-tuning
 
-Here's the condensed tutorial focusing on key implementation details for fine-tuning Whisper or Wav2vec2 models:
+This condensed version maintains all critical implementation details while removing redundant explanations and focusing on practical usage.
 
-# Fine-tuning Pretrained Models Configuration Guide
+Here's the condensed tutorial focusing on key implementation details:
 
-## Architecture Overview
-```
-[wav -> wav2vec2 or whisper -> Dense] = encoder
-```
+# Fine-tuning Pretrained Models (Whisper/Wav2vec2) Configuration Guide
 
-## Key YAML Configurations
+## Key YAML Configuration Components
 
-### 1. Model Configuration
 ```yaml
-# Pretrained model sources
+# Core model configurations
 wav2vec2_hub: "facebook/wav2vec2-large-960h-lv60-self"
 whisper_hub: "openai/whisper-medium"
 freeze_pretrained: False
@@ -134,12 +141,14 @@ whisper: !new:speechbrain.lobes.models.huggingface_transformers.whisper.Whisper
 
 # Encoder configuration
 enc: !new:speechbrain.lobes.models.VanillaNN.VanillaNN
-  input_shape: [null, null, 1024]  # Matches LARGE wav2vec2 and MEDIUM whisper output
+  input_shape: [null, null, 1024]  # Matches output dim of LARGE wav2vec2/MEDIUM whisper
 ```
 
-### 2. Optimizer Configuration
+## Important Implementation Details
+
+### 1. Dual Optimizer Setup
 ```yaml
-# Dual optimizer setup for separate learning rates
+# Separate optimizers for encoder/decoder and pretrained model
 adam_opt_class: !name:torch.optim.AdamW
   lr: !ref <lr>
 
@@ -147,32 +156,18 @@ pretrained_opt_class: !name:torch.optim.AdamW
   lr: !ref <lr_pretrained>
 ```
 
-### 3. Module Management
-```yaml
-modules:
-  wav2vec2: !ref <wav2vec2>
-  whisper: !ref <whisper>
-  enc: !ref <enc>
-  # ... other modules
+### 2. Critical Python Implementation
 
-model: !new:torch.nn.ModuleList
-  - [!ref <enc>, !ref <emb>, !ref <dec>, !ref <ctc_lin>, !ref <seq_lin>]
-```
-
-## Python Implementation
-
-### Key Methods
 ```python
 class ASR(sb.Brain):
     def compute_forward(self, batch, stage):
         # Use either wav2vec2 or whisper
-        feats = self.modules.wav2vec2(wavs)
-        # OR
+        feats = self.modules.wav2vec2(wavs)  # or
         feats = self.modules.whisper(wavs)
         x = self.modules.enc(feats)
 
     def init_optimizers(self):
-        # Separate optimizers for pretrained and other modules
+        # Dual optimizer initialization
         self.pretrained_optimizer = self.hparams.pretrained_opt_class(
             self.modules.whisper.parameters()
         )
@@ -181,7 +176,7 @@ class ASR(sb.Brain):
         )
 
     def fit_batch(self, batch):
-        # Handle both optimizers
+        # Handle both optimizers in training
         loss.backward()
         if self.check_gradients(loss):
             self.pretrained_optimizer.step()
@@ -191,11 +186,12 @@ class ASR(sb.Brain):
         self.adam_optimizer.zero_grad()
 ```
 
-## Important Notes
-- Use separate optimizers only when fine-tuning pretrained models
-- Remove unused model references (wav2vec2/whisper) from configurations
-- Learning rate scheduling is applied to both optimizers independently
-- Model checkpointing includes both pretrained and custom components
+## Best Practices and Warnings
+
+1. Only use dual optimizers when fine-tuning pretrained models; single optimizer suffices for frozen models
+2. Ensure pretrained model output dimension (1024) matches encoder input dimension
+3. Use appropriate learning rates for pretrained model fine-tuning (`lr_pretrained` typically lower than main `lr`)
+4. Include pretrained models in `modules` list for GPU allocation but not in `model` list for separate optimization
 
 Here's the condensed version focusing on key implementation details for using Whisper as a pre-trained encoder-decoder in SpeechBrain:
 
@@ -207,22 +203,22 @@ Here's the condensed version focusing on key implementation details for using Wh
   - Feature extraction
   - Encoder fine-tuning
   - Zero-shot ASR/ST
-  - Full encoder-decoder fine-tuning
+  - Encoder-decoder fine-tuning
   - Greedy and beam search decoding (with/without LM)
 
-## Critical Implementation Details
+## Critical Configurations
 
-### YAML Configuration
 ```yaml
+# Key YAML configurations
 whisper_hub: "openai/whisper-medium"
 freeze_pretrained: False
 lr_pretrained: 0.0001
-
-# Important decoder parameters
 language: english
+
+# Decoding parameters
 timestamp_index: 50363  # First token for decoding
 eos_index: 50257       # End of sequence token
-max_decode_ratio: 0.5  # Controls max decoding steps
+max_decode_ratio: 0.5  # Max decoding steps ratio
 
 # Whisper model configuration
 whisper: !new:speechbrain.lobes.models.huggingface_transformers.whisper.Whisper
@@ -240,7 +236,8 @@ valid_greedy_searcher: !new:speechbrain.decoders.seq2seq.S2SWhisperGreedySearch
   max_decode_ratio: !ref <max_decode_ratio>
 ```
 
-### Python Implementation
+## Implementation Details
+
 ```python
 class ASR(sb.Brain):
     def compute_forward(self, batch, stage):
@@ -263,12 +260,16 @@ class ASR(sb.Brain):
         tokens_eos, tokens_eos_lens = batch.tokens_eos
         
         # NLL loss computation
-        loss = self.hparams.nll_loss(log_probs, tokens_eos, tokens_eos_lens)
+        loss = self.hparams.nll_loss(
+            log_probs, tokens_eos, tokens_eos_lens,
+        )
         
         # Evaluation metrics (WER/CER) during validation/test
         if stage != sb.Stage.TRAIN:
             tokens, tokens_lens = batch.tokens
-            predicted_words = self.tokenizer.batch_decode(hyps, skip_special_tokens=True)
+            predicted_words = self.tokenizer.batch_decode(
+                hyps, skip_special_tokens=True
+            )
             target_words = self.tokenizer.batch_decode(
                 undo_padding(tokens, tokens_lens), 
                 skip_special_tokens=True
@@ -280,21 +281,28 @@ class ASR(sb.Brain):
 ```
 
 ## Important Notes
-- No separate DNN decoder needed (Whisper includes one)
+- No separate DNN decoder needed
 - No CTC loss required (uses negative log-likelihood)
-- Can be improved using:
-  - Beam search instead of greedy search
-  - Larger Whisper models
-  - Language model integration
-
-## Best Practices
-1. Set `encoder_only: False` to maintain decoder functionality
-2. Configure proper token indices (timestamp_index, eos_index)
-3. Adjust max_decode_ratio based on your needs
-4. Consider using beam search for better performance
-5. Monitor WER/CER metrics during validation
+- Language modeling head is automatically created
+- Can be improved using beam search instead of greedy search
+- Scalable to larger Whisper models
 
 Here's the condensed version of the citation information:
+
+## Citing SpeechBrain
+
+When using SpeechBrain in research or business applications, cite using these references:
+
+```bibtex
+# For SpeechBrain 1.0 (Latest)
+@misc{speechbrainV1,
+  title={Open-Source Conversational AI with {SpeechBrain} 1.0},
+  author={Ravanelli et al.},
+  year={2024},
+  eprint={2407.00463},
+  archivePrefix={arXiv},
+  url={https://arxiv.org/abs/2407.00463},
+}
 
 
 ...(truncated)

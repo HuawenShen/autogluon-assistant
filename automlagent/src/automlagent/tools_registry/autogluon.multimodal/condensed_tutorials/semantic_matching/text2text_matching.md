@@ -1,6 +1,6 @@
 # Condensed: Text-to-Text Semantic Matching with AutoMM
 
-Summary: This tutorial demonstrates implementing text-to-text semantic matching using AutoGluon's MultiModalPredictor. It covers techniques for training BERT-based models to compute similarity between text pairs, with specific implementation details for data preparation, model configuration, and prediction workflows. The tutorial helps with tasks like web search, QA, and plagiarism detection by showing how to load datasets, configure the predictor with appropriate parameters (problem_type, query/response columns, labels), train models, make predictions, and extract embeddings. Key features include binary classification setup, sentence embedding generation, ROC AUC evaluation, and flexible text pair processing using the sentence transformers architecture.
+Summary: This tutorial demonstrates implementing text-to-text semantic matching using AutoGluon's MultiModalPredictor. It covers techniques for computing similarity between text pairs using BERT embeddings, specifically useful for tasks like web search, QA, and document deduplication. Key functionalities include data preparation with SNLI dataset, model training configuration with text similarity settings, making predictions on text pairs, and extracting embeddings. The tutorial shows how to set up binary classification for semantic matching, configure match labels, and evaluate model performance using AUC metrics, all through AutoMM's streamlined interface.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -11,7 +11,7 @@ Here's the condensed tutorial focusing on essential implementation details:
 ## Key Concepts
 - Computes similarity between text pairs using semantic matching
 - Uses BERT to project sentences into vectors for classification
-- Suitable for: web search, QA, document deduplication, plagiarism detection
+- Suitable for tasks like web search, QA, document deduplication, etc.
 
 ## Implementation
 
@@ -62,18 +62,19 @@ embeddings_2 = predictor.extract_embedding({"hypothesis": ["There was almost nob
 ```
 
 ## Important Configurations
-- `problem_type`: Must be "text_similarity"
-- `match_label`: Binary label indicating semantic match (typically 1)
+- `problem_type`: Set to "text_similarity"
+- `match_label`: Specify which label represents semantic matching (typically 1)
 - `eval_metric`: Uses 'auc' for evaluation
 
 ## Best Practices
 1. Labels should be binary
 2. Define `match_label` based on specific task context
 3. Use appropriate column names for query and response
-4. Consider time_limit parameter based on dataset size
+4. Consider task-specific requirements when setting evaluation metrics
 
-## Technical Notes
-- Uses BERT for sentence embedding
-- Follows sentence transformers design pattern
-- Supports separate embedding extraction for text pairs
-- Evaluates using ROC AUC score
+## Evaluation
+```python
+score = predictor.evaluate(snli_test)
+```
+
+This implementation provides semantic matching capabilities using BERT-based embeddings through AutoMM's simplified interface.

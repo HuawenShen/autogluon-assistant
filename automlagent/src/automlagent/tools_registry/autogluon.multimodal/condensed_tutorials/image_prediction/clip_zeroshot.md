@@ -1,10 +1,10 @@
 # Condensed: Zero-Shot Image Classification with CLIP
 
-Summary: This tutorial demonstrates implementing zero-shot image classification using CLIP through AutoGluon's MultiModalPredictor. It covers essential code patterns for performing classification without training data, simply by providing image inputs and text descriptions of target classes. Key functionalities include basic classification tasks, novel object detection, and handling arbitrary visual categories. The tutorial explains how to initialize the predictor, structure input data as image-text pairs, and obtain probability distributions across classes. It also addresses important limitations like typographic attacks and provides best practices for robust classification. This implementation knowledge is particularly valuable for tasks requiring flexible image classification without dedicated training data.
+Summary: This tutorial demonstrates implementing zero-shot image classification using CLIP via AutoGluon's MultiModalPredictor. It shows how to perform image classification without training data by matching images against text descriptions. Key implementation knowledge includes the basic predictor initialization and prediction pattern, handling image-text pair inputs, and awareness of typographic attack limitations. The tutorial helps with tasks like building zero-shot classifiers, implementing CLIP-based image classification, and utilizing pre-trained models that achieve ResNet50-level performance. Core features covered include zero-shot classification without training data, flexible category definition through text descriptions, and batch prediction support, all implemented through a straightforward Python API.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the condensed tutorial focusing on essential implementation details and key concepts:
+Here's the condensed tutorial focusing on essential implementation details:
 
 # Zero-Shot Image Classification with CLIP
 
@@ -24,56 +24,45 @@ prob = predictor.predict_proba(
 )
 ```
 
-## Core Concepts & Capabilities
+## Core Functionality
 
-1. **Zero-Shot Classification**: CLIP can classify images without training data by simply providing class names/descriptions
-2. **Performance**: Achieves 76.2% top-1 accuracy on ImageNet without training samples (comparable to supervised ResNet50)
-3. **Flexibility**: Works with arbitrary visual categories by providing text descriptions
+1. **Zero-shot Classification**: CLIP can classify images without training data by providing text descriptions of categories
+2. **Input Format**: 
+   - Images: Provided as file paths
+   - Categories: Provided as text descriptions in list format
 
-## Key Use Cases & Examples
+## Key Features & Capabilities
 
-### 1. Basic Classification
+- Matches supervised ResNet50 performance on ImageNet (76.2% top-1 accuracy) without training
+- Works with arbitrary visual categories by simply providing text descriptions
+- Pre-trained on 400M image-text pairs
+
+## Important Limitations
+
+1. **Vulnerability to Typographic Attacks**
+   - CLIP's predictions can be significantly influenced by text present in images
+   - Example: An apple image labeled as "iPod" can cause CLIP to misclassify it as an iPod
+
+2. **Usage Pattern for Classification**:
 ```python
-# Dog breed classification example
-prob = predictor.predict_proba(
-    {"image": [dog_image]}, 
-    {"text": [
-        'This is a Husky',
-        'This is a Golden Retriever',
-        'This is a German Sheperd',
-        'This is a Samoyed.'
-    ]}
-)
-```
-
-### 2. Novel Object Classification
-```python
-# Uncommon object classification
+# Basic classification
 prob = predictor.predict_proba(
     {"image": [image_path]}, 
-    {"text": ['segway', 'bicycle', 'wheel', 'car']}
+    {"text": ['category1', 'category2', ...]}
 )
 ```
-
-## Important Limitations & Warnings
-
-1. **Typographic Attacks**: CLIP is vulnerable to text in images affecting classifications
-2. **Model Basis**: 
-   - Trained on 400M image-text pairs
-   - Uses contrastive learning to match images with text descriptions
 
 ## Best Practices
 
-1. Provide clear, descriptive text labels for classification
+1. Use clear, descriptive text labels for categories
 2. Be aware of potential text-based vulnerabilities in images
-3. Test with multiple text descriptions for robust classification
-4. Consider CLIP's limitations for critical applications
+3. Provide multiple relevant category options for better classification
 
-## Technical Details
+## Technical Notes
 
-- Model Type: Contrastive Language-Image Pre-training
-- Input Format: Dictionary with 'image' and 'text' keys
-- Output: Probability distribution across provided classes
-- No training required for basic classification tasks
+- No training required - purely inference-based
+- Works with common image formats
+- Supports batch prediction
+- Based on contrastive learning between image and text pairs
 
-This implementation uses AutoGluon's MultiModal framework for simplified CLIP deployment.
+This implementation provides zero-shot image classification capabilities without the need for training data or fine-tuning.

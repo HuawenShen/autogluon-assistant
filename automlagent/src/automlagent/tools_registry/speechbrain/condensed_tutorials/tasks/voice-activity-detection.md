@@ -1,12 +1,12 @@
 # Condensed: <!-- This cell is automatically updated by tools/tutorial-cell-updater.py -->
 
-Summary: This tutorial provides implementation details for Voice Activity Detection (VAD) using a CRDNN architecture in SpeechBrain. It covers techniques for detecting speech segments in audio recordings through a complete processing pipeline including posterior probability computation, threshold application, and post-processing steps. The tutorial helps with tasks like speech segment detection, boundary computation, and VAD signal generation. Key features include handling long recordings, customizable post-processing parameters (merging segments, removing short segments, speech verification), energy-based VAD integration, and visualization utilities. The implementation emphasizes practical aspects like memory management through chunk processing and best practices for threshold selection, making it suitable for real-world applications in noisy and reverberant conditions.
+Summary: This tutorial provides implementation details for Voice Activity Detection (VAD) using a CRDNN architecture in SpeechBrain. It covers techniques for processing audio to detect speech segments through a pipeline of feature extraction, neural network prediction, and post-processing. The tutorial helps with tasks like speech segment detection, boundary identification, and audio preprocessing for speech recognition systems. Key functionalities include frame-level posterior probability computation, threshold-based speech detection, segment boundary processing (merging, removal of short segments), optional energy-based VAD, and visualization utilities. The implementation emphasizes memory-efficient processing of long recordings and offers customizable post-processing parameters for optimizing VAD performance in different scenarios.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
 Here's the condensed tutorial focusing on key implementation details and concepts:
 
-# Voice Activity Detection (VAD) Implementation Guide
+# Voice Activity Detection (VAD) Implementation
 
 ## Core Concepts
 - **Purpose**: Detect speech segments within audio recordings
@@ -18,63 +18,68 @@ Here's the condensed tutorial focusing on key implementation details and concept
 ### Model Structure
 - Uses CRDNN (Convolutional + Recurrent + Dense Neural Network)
 - Input: FBANK features
-- Output: Binary classification through sigmoid activation
+- Output: Binary classification through sigmoid
 - Training: Binary cross-entropy loss
 
 ### Processing Pipeline
-1. Posterior probability computation (frame-level)
-2. Threshold application
-3. Speech segment candidate detection
-4. Post-processing steps:
-   - Energy VAD (optional)
-   - Segment merging
-   - Short segment removal
-   - Speech verification (optional)
+1. Feature extraction (FBANK)
+2. Neural network prediction
+3. Post-processing of predictions
+4. Boundary detection
 
-## Code Implementation
+## Key Implementation Details
 
-```python
-# Basic Usage
-from speechbrain.inference.VAD import VAD
-
-# Initialize VAD model
-vad = VAD.from_hparams(
-    source="speechbrain/vad-crdnn-libriparty", 
-    savedir="pretrained_models/vad-crdnn-libriparty"
-)
-
-# Get speech segments
-boundaries = vad.get_speech_segments(audio_file)
-vad.save_boundaries(boundaries)
-```
-
-## Training Details
-
+### Training Setup
 ```bash
 cd recipes/LibriParty/VAD
 python train.py hparams/train.yaml
 ```
 
-### Training Data
+**Important Training Features**:
 - Uses LibriParty Dataset
-- On-the-fly acoustic scene simulation using:
-  - Musan (speech, noise, music)
-  - CommonLanguage (48 languages)
-  - Open-rir (noise and impulse responses)
+- On-the-fly acoustic scene simulation
+- Combines multiple datasets (Musan, CommonLanguage, open-rir)
+- Heavy use of speech augmentation/contamination
 
-## Key Features
-- Handles long recordings efficiently
-- Supports customizable post-processing
-- Modular pipeline design for easy debugging
-- Works in noisy and reverberant conditions
+### Inference Pipeline
+```python
+from speechbrain.inference.VAD import VAD
+
+# Initialize VAD
+VAD = VAD.from_hparams(
+    source="speechbrain/vad-crdnn-libriparty", 
+    savedir="pretrained_models/vad-crdnn-libriparty"
+)
+
+# Get speech segments
+boundaries = VAD.get_speech_segments(audio_file)
+```
+
+### Processing Steps
+1. Frame-level posterior probability computation
+2. Threshold application
+3. Candidate speech segment identification
+4. Energy VAD application (optional)
+5. Segment merging
+6. Short segment removal
+7. Speech verification (optional)
 
 ## Best Practices
-- Ensure all data dependencies are downloaded before training
-- Customize post-processing parameters based on use case
-- Consider computational resources for long recordings
-- Validate performance in target acoustic conditions
+- Designed to handle very long recordings
+- Modular pipeline allows customization
+- Supports various post-processing techniques
+- Users can access intermediate processing steps for debugging
 
-This implementation is designed for robustness in real-world conditions while maintaining flexibility for different use cases.
+## Critical Configurations
+- Threshold values for speech detection
+- Segment merging parameters
+- Minimum segment length
+- Energy VAD parameters (when used)
+
+## Technical Requirements
+- Requires SpeechBrain installation
+- Supports GPU acceleration
+- Works with standard audio file formats
 
 Here's the condensed tutorial focusing on key implementation details and practices:
 
@@ -82,26 +87,26 @@ Here's the condensed tutorial focusing on key implementation details and practic
 
 ## 1. Posterior Computation
 ```python
-# Get speech probabilities (10ms resolution)
+# Compute speech probabilities (10ms resolution)
 prob_chunks = VAD.get_speech_prob_file(audio_file)
 
-# Key parameters:
-# - large_chunk_size: For memory management (e.g., 30 sec)
-# - small_chunk_size: For parallel processing (e.g., 10 sec)
+# Memory optimization parameters:
+# - large_chunk_size: Process long recordings in chunks (e.g., 30 sec)
+# - small_chunk_size: Parallel processing units (e.g., 10 sec)
 ```
 
-**Best Practice**: Adjust chunk sizes based on available memory. Larger chunks = slightly faster processing.
+**Key Point**: Adjust chunk sizes based on memory constraints. Larger chunks = slightly faster processing.
 
 ## 2. Threshold Application
 ```python
 prob_th = VAD.apply_threshold(
     prob_chunks, 
-    activation_th=0.5,    # Start speech segment
-    deactivation_th=0.25  # End speech segment
+    activation_th=0.5,    # Speech segment start threshold
+    deactivation_th=0.25  # Speech segment end threshold
 )
 ```
 
-**Important**: Set activation_th higher than deactivation_th for better detection.
+**Best Practice**: Set activation_th higher than deactivation_th for better detection.
 
 ## 3. Boundary Detection
 ```python
@@ -111,7 +116,7 @@ VAD.save_boundaries(boundaries, audio_file=audio_file)
 
 ## 4. Energy-based VAD (Optional)
 ```python
-# For finer segmentation within detected speech segments
+# For finer segmentation within detected speech regions
 boundaries = VAD.energy_VAD(
     audio_file,
     boundaries, 
@@ -132,12 +137,12 @@ boundaries = VAD.merge_close_segments(boundaries, close_th=0.250)  # 250ms thres
 boundaries = VAD.remove_short_segments(boundaries, len_th=0.250)  # 250ms threshold
 ```
 
-### Double Check Speech Segments
+### Double-check Speech Segments
 ```python
 boundaries = VAD.double_check_speech_segments(
     boundaries, 
     audio_file,  
-    speech_th=0.5
+    speech_th=0.5  # Average posterior probability threshold
 )
 ```
 
@@ -153,16 +158,16 @@ plt.plot(time, upsampled_boundaries.squeeze())
 
 # Include VAD scores
 upsampled_vad_scores = VAD.upsample_VAD(prob_chunks, audio_file)
+plt.plot(time, upsampled_vad_scores.squeeze())
 ```
 
-**Important Processing Order**:
-1. Apply neural VAD
-2. Apply energy-based VAD (if needed)
-3. Merge close segments
-4. Remove short segments
-5. Double-check speech segments
+**Important Note**: When using energy-based VAD, the order of post-processing operations matters:
+1. Apply energy VAD
+2. Merge close segments
+3. Remove short segments
+4. Double-check speech segments
 
-**Warning**: The order of post-processing operations matters, especially when using energy-based VAD. Incorrect ordering can lead to dropped speech frames.
+This sequence ensures optimal segmentation without dropping valid speech frames.
 
 Here's the condensed version focusing on the key implementation details and code:
 
@@ -175,12 +180,12 @@ Here's the condensed version focusing on the key implementation details and code
 # Merge segments that are close to each other
 boundaries = VAD.merge_close_segments(boundaries_energy, close_th=0.250)
 ```
-- Combines voice segments that are separated by less than 250ms
-- Helps reduce fragmentation in detection
+- Merges voice segments that are within 250ms of each other
+- Helps eliminate false segmentation due to brief pauses
 
-### 3b. Short Segment Removal and Verification
+### 3b. Short Segment Removal and Validation
 ```python
-# Remove short segments and verify speech segments
+# Remove short segments and validate speech segments
 boundaries = VAD.remove_short_segments(boundaries, len_th=0.250)
 boundaries = VAD.double_check_speech_segments(
     boundaries, 
@@ -190,8 +195,8 @@ boundaries = VAD.double_check_speech_segments(
 ```
 
 Key Parameters:
-- `len_th`: Minimum segment length threshold (250ms)
-- `speech_th`: Speech confidence threshold (0.5)
+- `len_th`: Minimum segment length (250ms)
+- `speech_th`: Speech probability threshold (0.5)
 
 ## Citation Information
 For academic use, cite SpeechBrain using:
@@ -199,7 +204,7 @@ For academic use, cite SpeechBrain using:
 ```bibtex
 @misc{speechbrainV1,
   title={Open-Source Conversational AI with {SpeechBrain} 1.0},
-  author={Mirco Ravanelli and Titouan Parcollet and et al.},
+  author={Mirco Ravanelli and others},
   year={2024},
   eprint={2407.00463},
   archivePrefix={arXiv}
@@ -209,6 +214,6 @@ For academic use, cite SpeechBrain using:
 Best Practices:
 1. Adjust thresholds based on your specific use case
 2. Consider the trade-off between merging segments and maintaining accuracy
-3. Always verify the final boundaries against the original audio
+3. Always validate the final boundaries against the original audio
 
-Note: The code includes visualization components using matplotlib, but these are optional for the core functionality.
+Note: The complete implementation includes visualization code using matplotlib, which was omitted for brevity but can be important for debugging and validation.

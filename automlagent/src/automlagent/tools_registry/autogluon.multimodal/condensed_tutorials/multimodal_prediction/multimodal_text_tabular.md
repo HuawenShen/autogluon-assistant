@@ -1,6 +1,6 @@
 # Condensed: AutoMM for Text + Tabular - Quick Start
 
-Summary: This tutorial demonstrates implementing AutoGluon's MultiModalPredictor for combined text and tabular data processing. It covers essential techniques for data preprocessing (including numeric conversions and log transformations), model configuration, training, and prediction workflows. The tutorial helps with tasks like mixed-data type handling, price prediction, and feature embedding extraction. Key functionalities include automatic data type inference, neural network architecture generation, multi-modal feature fusion, and evaluation methods. It's particularly useful for implementing machine learning systems that need to process both textual and structured data simultaneously while maintaining a simple API interface.
+Summary: This tutorial demonstrates implementing multimodal machine learning using AutoGluon's MultiModalPredictor for combined text and tabular data analysis. It covers essential techniques for data preprocessing (including numeric conversions and log transformations), model configuration, training, prediction, and embedding extraction. The tutorial helps with tasks like automated feature fusion, mixed-type data handling, and neural network generation. Key functionalities include automatic architecture selection based on data types, joint training across modalities, embedding extraction for downstream tasks, and flexible model customization options. The implementation focuses on practical aspects like proper numerical preprocessing, time limit setting, and model artifact management.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -12,12 +12,10 @@ Here's the condensed tutorial focusing on essential implementation details:
 
 ### Setup
 ```python
-!pip install autogluon.multimodal
+!pip install autogluon.multimodal openpyxl
 import numpy as np
 import pandas as pd
-import warnings
-warnings.filterwarnings('ignore')
-np.random.seed(123)
+from autogluon.multimodal import MultiModalPredictor
 ```
 
 ### Data Preprocessing
@@ -34,48 +32,45 @@ def preprocess(df):
 
 ### Training Configuration
 ```python
-from autogluon.multimodal import MultiModalPredictor
-import uuid
+# Create predictor
+predictor = MultiModalPredictor(
+    label='Price',
+    path=model_path
+)
 
-# Critical parameters
-time_limit = 3 * 60  # training time in seconds
-model_path = f"./tmp/{uuid.uuid4().hex}-automm_text_book_price_prediction"
-
-# Initialize and train predictor
-predictor = MultiModalPredictor(label='Price', path=model_path)
-predictor.fit(train_data, time_limit=time_limit)
+# Train model
+predictor.fit(
+    train_data,
+    time_limit=180  # 3 minutes
+)
 ```
 
-### Prediction and Evaluation
+### Prediction and Embedding Extraction
 ```python
 # Get predictions
 predictions = predictor.predict(test_data)
 
-# Evaluate model performance
+# Evaluate model
 performance = predictor.evaluate(test_data)
 
 # Extract embeddings
 embeddings = predictor.extract_embedding(test_data)
 ```
 
+## Key Concepts
+- MultiModalPredictor automatically handles mixed data types (text, categorical, numerical)
+- Neural network architecture is auto-generated based on feature column types
+- Supports joint training across multiple modalities
+- Can extract embeddings for downstream tasks
+
+## Best Practices
+1. Preprocess numerical features appropriately (e.g., log transform for prices)
+2. Set adequate time_limit based on dataset size and complexity
+3. Use path parameter to save model artifacts
+4. Consider data subsampling for initial experiments
+
 ## Important Notes
-
-1. **Data Handling**:
-   - Supports mixed data types (text, categorical, numerical)
-   - Automatically infers data types and generates appropriate neural network architecture
-
-2. **Model Architecture**:
-   - Single neural network that jointly processes multiple feature types
-   - Embeds text, categorical, and numeric fields separately
-   - Fuses features across modalities
-
-3. **Best Practices**:
-   - Increase `time_limit` for better model performance in production
-   - Use larger training samples when possible (demo uses subsample for speed)
-   - Log-transform price values for better prediction accuracy
-
-4. **Customization**:
-   - Refer to "Customize AutoMM" documentation for advanced configurations
-   - Additional examples available in AutoMM Examples repository
-
-This implementation allows for seamless handling of mixed data types while maintaining simplicity in the API interface.
+- Default configuration works well for most cases
+- For customization options, refer to "Customize AutoMM" documentation
+- Model automatically handles feature fusion across different modalities
+- Supports both training and inference on mixed data types

@@ -1,6 +1,6 @@
 # Condensed: AutoMM for Named Entity Recognition in Chinese - Quick Start
 
-Summary: This tutorial demonstrates implementing Named Entity Recognition (NER) for Chinese text using AutoGluon's MultiModalPredictor. It covers essential techniques for loading preprocessed datasets, configuring and training NER models with Chinese pretrained transformers (specifically 'hfl/chinese-lert-small'), and performing predictions with visualization. The tutorial helps with tasks like setting up NER pipelines, model training configuration, and entity prediction/visualization. Key features include custom entity label support (brand, product, pattern, misc), evaluation methods, and visualization utilities, making it valuable for both Chinese and English NER implementations with minimal workflow adjustments.
+Summary: This tutorial demonstrates implementing Chinese Named Entity Recognition using AutoGluon's MultiModalPredictor. It covers essential techniques for setting up NER models with Chinese pretrained transformers (specifically 'hfl/chinese-lert-small'), loading preprocessed datasets, and configuring model training with specific entity labels (brand, product, pattern, misc). The tutorial helps with tasks like training NER models, making predictions, and visualizing results using AutoGluon's built-in functions. Key features include simplified model configuration, integration with Chinese language models, evaluation methods, and visualization tools for NER results, making it valuable for implementing Chinese text entity extraction systems.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -23,7 +23,7 @@ train_data = load_pd.load('https://automl-mm-bench.s3.amazonaws.com/ner/taobao-n
 dev_data = load_pd.load('https://automl-mm-bench.s3.amazonaws.com/ner/taobao-ner/chinese_ner_dev.csv')
 ```
 
-### Model Training
+### Model Training Configuration
 ```python
 # Critical configurations
 label_col = "entity_annotations"
@@ -70,8 +70,8 @@ visualize_ner(text, predictions[0])
 ## Best Practices
 
 1. Ensure data is properly preprocessed before training
-2. Adjust time_limit based on dataset size and requirements
-3. Use visualize_ner() to verify predictions
-4. Store model_path in a persistent location for reuse
+2. Use appropriate pretrained models for the target language
+3. Adjust time_limit based on dataset size and requirements
+4. Use visualize_ner() for result inspection and debugging
 
-The implementation supports both Chinese and English NER with the same workflow - only the pretrained model selection needs to be adjusted accordingly.
+The implementation supports both training and inference for Chinese NER tasks with minimal configuration required.

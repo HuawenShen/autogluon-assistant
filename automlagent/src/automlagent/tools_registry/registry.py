@@ -191,12 +191,6 @@ class ToolsRegistry:
                 first_line = content.split('\n')[0]
                 title = first_line.lstrip('#').strip()
 
-            # Copy original content without modification if not condensing
-            if not condense:
-                with open(destination, "w", encoding="utf-8") as f:
-                    f.write(content)
-                continue
-
             # Create LLM instance for this tutorial with multi_turn enabled
             tutorial_config = llm_config.copy()
             tutorial_config.multi_turn = True  # Always enable multi-turn for tutorial processing
@@ -257,6 +251,12 @@ Provide the summary in a single paragraph starting with "Summary: "."""
                         truncate_point = max_length
                 
                 condensed_content = condensed_content[:truncate_point] + "\n\n...(truncated)"
+
+
+            # Write original content with summary
+            with open(destination, "w", encoding="utf-8") as f:
+                f.write(f"{tutorial_summary}\n\n")
+                f.write(content)
 
             # Write condensed version with summary
             condensed_dir = tool_path / "condensed_tutorials"

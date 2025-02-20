@@ -1,6 +1,6 @@
 # Condensed: AutoMM for Named Entity Recognition - Quick Start
 
-Summary: This tutorial demonstrates implementing Named Entity Recognition (NER) using AutoGluon's MultiModalPredictor. It covers essential techniques for training NER models with structured JSON annotations, including data preparation with specific entity formatting, model initialization, training configuration with customizable BERT-based backbones, and prediction workflows. Key functionalities include flexible model selection (with ELECTRA as a lightweight option), evaluation using seqeval metrics, handling BIO format, model persistence, and continuous training capabilities. The tutorial helps with tasks like setting up NER training pipelines, configuring hyperparameters, performing model evaluation, and making predictions with probability scores.
+Summary: This tutorial demonstrates implementing Named Entity Recognition (NER) using AutoGluon's MultiModalPredictor. It covers essential techniques for data preparation with specific JSON annotation formats, model training configuration using BERT-based or ELECTRA models, and prediction workflows. The tutorial helps with tasks like setting up NER training pipelines, model evaluation using seqeval metrics, and making predictions with probability scores. Key features include flexible model selection, customizable training parameters, support for continuous training, built-in visualization tools, and comprehensive evaluation metrics including entity-specific measurements. The implementation focuses on practical aspects like proper data formatting, model persistence, and best practices for production deployment.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -70,7 +70,7 @@ predictions = predictor.predict({'text_snippet': [text]})
 prob_predictions = predictor.predict_proba({'text_snippet': [text]})
 ```
 
-## Key Configurations and Best Practices
+## Key Configurations & Best Practices
 
 1. Model Selection:
 - Default: BERT-based models
@@ -87,15 +87,20 @@ prob_predictions = predictor.predict_proba({'text_snippet': [text]})
 
 ## Important Notes
 
-- BIO format (Beginning-Inside-Outside) is supported but optional
-- Model automatically saves during training
-- Continuous training possible with loaded models
-- Visualization available through `visualize_ner` utility
-- JSON annotation format must use exact keys: entity_group, start, end
+1. Data Format:
+- Must use exact keys: "entity_group", "start", "end"
+- BIO format supported but not required
 
-## Model Reloading
+2. Model Management:
+- Models auto-save during training
+- Can reload models using:
 ```python
-loaded_predictor = MultiModalPredictor.load("model_path")
-# Continue training if needed
-loaded_predictor.fit(new_data, time_limit=60, save_path="new_model_path")
+new_predictor = MultiModalPredictor.load(model_path)
+```
+- Supports continuous training on new data
+
+3. Visualization:
+```python
+from autogluon.multimodal.utils import visualize_ner
+visualize_ner(text, annotations)  # Works in Jupyter notebooks
 ```

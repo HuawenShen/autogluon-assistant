@@ -1,6 +1,6 @@
 # Condensed: Training models with GPU support
 
-Summary: This tutorial demonstrates GPU-enabled model training in AutoGluon, focusing on resource allocation at multiple levels (predictor, bagged model, and base model). It covers implementation techniques for configuring GPU usage through the TabularPredictor API, including basic single-GPU allocation and model-specific GPU assignments. Key functionalities include hierarchical resource management, CUDA toolkit integration, special LightGBM GPU installation requirements, and advanced configurations for distributed training. The tutorial helps with tasks like optimizing GPU resource allocation, setting up parallel training processes, and managing computational resources across different model components in AutoGluon's machine learning pipeline.
+Summary: This tutorial demonstrates GPU integration in AutoGluon's TabularPredictor, covering implementation techniques for multi-level resource allocation (predictor, bagged model, and base model levels). It helps with tasks involving GPU-accelerated model training, particularly for LightGBM and neural networks. Key features include configuring single/multiple GPU usage, model-specific GPU allocation, proper CUDA toolkit setup, and hierarchical resource management with specific allocation rules. The tutorial provides practical code examples for both basic and advanced GPU configurations, making it valuable for optimizing machine learning workflows with GPU acceleration.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -13,7 +13,7 @@ Here's the condensed tutorial focusing on essential implementation details:
 # Basic GPU allocation
 predictor = TabularPredictor(label=label).fit(
     train_data,
-    num_gpus=1  # Allocate 1 GPU for Tabular Predictor
+    num_gpus=1  # Allocate 1 GPU for TabularPredictor
 )
 
 # Model-specific GPU allocation
@@ -32,15 +32,16 @@ predictor = TabularPredictor(label=label).fit(
 
 ## Important Notes
 - CUDA toolkit required for GPU training
-- LightGBM requires special installation for GPU support:
+- LightGBM requires special GPU installation:
   ```bash
   pip uninstall lightgbm -y
   pip install lightgbm --install-option=--gpu
   ```
+  If above fails, follow [official guide](https://lightgbm.readthedocs.io/en/latest/GPU-Tutorial.html)
 
 ## Advanced Resource Allocation
 Three levels of resource control:
-1. Predictor level: `num_cpus`, `num_gpus`
+1. TabularPredictor level: `num_cpus`, `num_gpus`
 2. Bagged model level: `ag_args_ensemble: ag_args_fit`
 3. Base model level: `ag_args_fit`
 
@@ -70,6 +71,6 @@ predictor.fit(
 ```
 
 ### Resource Allocation Rules
-- Bagged model resources must be ≤ total predictor resources
-- Base model resources must be ≤ bagged model resources
-- Resources are divided among parallel training processes
+- Bagged model resources must be ≤ total TabularPredictor resources
+- Base model resources must be ≤ bagged model resources (if applicable)
+- Base model resources must be ≤ total TabularPredictor resources

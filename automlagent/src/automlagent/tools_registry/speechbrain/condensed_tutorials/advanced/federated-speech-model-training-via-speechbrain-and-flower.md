@@ -1,21 +1,21 @@
 # Condensed: <!-- This cell is automatically updated by tools/tutorial-cell-updater.py -->
 
-Summary: This tutorial demonstrates implementing federated learning for Automatic Speech Recognition (ASR) using SpeechBrain and Flower frameworks. It covers the implementation of a custom ASR Brain class with federation support, training loop mechanics, and three different aggregation strategies (FedAvg, loss-based, and WER-based). Key technical components include weight management functions, client-server architecture setup, model/dataset initialization, and a custom TrainAfterAggregateStrategy class that enables post-aggregation server-side training. The tutorial helps with tasks like implementing federated ASR systems, managing distributed training loops, and handling model weight aggregation. Notable features include GPU optimization, checkpoint management, progress tracking, and support for pre-trained models with flexible configuration options.
+Summary: This tutorial demonstrates implementing federated learning for speech recognition by combining SpeechBrain and Flower frameworks. It covers the implementation of a custom Brain class extending SpeechBrain's core functionality, a federated learning client (SpeechBrainClient), and a custom aggregation strategy (TrainAfterAggregateStrategy). Key technical features include three aggregation strategies (standard FedAvg, loss-based, and WER-based), post-aggregation server-side training, weight management functions for model parameter handling, and integration with pre-trained models. The tutorial provides code for essential components like data preparation, model initialization, training loops, and evaluation processes, making it particularly useful for implementing distributed speech recognition systems with federated learning capabilities.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
 Here's the condensed version focusing on the key implementation details:
 
-### ASR Brain Class Implementation
+### Brain Class Implementation for Federated Learning
 
 ```python
 class ASR(sb.core.Brain):
-    """Custom Brain class for ASR with Flower federation support"""
+    """Custom Brain class extending SpeechBrain for Federated Learning"""
     
-    # Key methods that must be implemented:
+    # Required core methods with their essential signatures:
     def compute_forward(self, batch, stage):
         """Forward pass computation
-        Returns: model output tensors"""
+        Returns: model predictions"""
         pass
 
     def compute_objectives(self, predictions, batch, stage):
@@ -33,34 +33,41 @@ class ASR(sb.core.Brain):
         Returns: detached loss"""
         pass
 
-    def fit(self, epoch_counter, train_set, valid_set=None, 
-            progressbar=None, train_loader_kwargs={}, 
-            valid_loader_kwargs={}):
+    def fit(
+        self,
+        epoch_counter,
+        train_set,
+        valid_set=None,
+        progressbar=None,
+        train_loader_kwargs={},
+        valid_loader_kwargs={},
+    ):
         """Training loop implementation
         Returns: processed samples count, avg loss, avg WER"""
         pass
 
-    def evaluate(self, test_set, progressbar=None, 
-                test_loader_kwargs={}):
-        """Evaluation loop implementation
+    def evaluate(
+        self,
+        test_set,
+        progressbar=None,
+        test_loader_kwargs={},
+    ):
+        """Evaluation implementation
         Returns: average test loss"""
         pass
 ```
 
 **Key Points:**
-1. Extends SpeechBrain's base Brain class
-2. Override required for Flower federation to track processed samples
-3. Core methods remain similar to standard SpeechBrain implementation
-4. `fit()` method modified to return:
+1. Extends SpeechBrain's core Brain class
+2. Override required for Flower's federated learning to track processed samples
+3. Main modification is in `fit()` method to return:
    - Number of processed samples
    - Average training loss
    - Average Word Error Rate (WER)
+4. Other methods maintain standard SpeechBrain implementation
 
 **Important Note:**
-- The implementation closely follows SpeechBrain's standard pattern
-- Main modification is in the `fit()` method to support federated learning metrics
-
-This class serves as the foundation for implementing federated ASR training with Flower integration.
+The implementation is largely identical to standard SpeechBrain, with the key difference being the return of processed sample counts for federated aggregation.
 
 Here's the condensed version of the training loop implementation focusing on key details:
 
@@ -79,28 +86,30 @@ def fit(self, epoch_counter, train_set, valid_set=None, progressbar=None,
 1. **Data Loading Setup**
 ```python
 # Convert datasets to DataLoader if needed
-if not isinstance(train_set, (DataLoader, LoopedLoader)):
-    train_set = self.make_dataloader(
-        train_set, 
-        stage=sb.Stage.TRAIN, 
-        **train_loader_kwargs
-    )
+train_set = self.make_dataloader(
+    train_set, 
+    stage=sb.Stage.TRAIN, 
+    **train_loader_kwargs
+)
 ```
 
 2. **Training Loop Structure**
 ```python
 for epoch in epoch_counter:
     # Training phase
-    self.on_stage_start(sb.Stage.TRAIN, epoch)
     self.modules.train()
+    avg_wer = 0.0
+    self.nonfinite_count = 0
     
-    for batch in tqdm(train_set, initial=self.step, dynamic_ncols=True):
-        self.step += 1
-        loss, wer = self.fit_batch(batch)
-        self.avg_train_loss = self.update_average(loss, self.avg_train_loss)
+    # Main training loop
+    with tqdm(train_set, initial=self.step, dynamic_ncols=True) as t:
+        for batch in t:
+            loss, wer = self.fit_batch(batch)
+            self.avg_train_loss = self.update_average(loss, self.avg_train_loss)
+            avg_wer = self.update_average_wer(wer, avg_wer)
 ```
 
-3. **Validation Loop**
+3. **Validation Phase**
 ```python
 if valid_set is not None:
     self.modules.eval()
@@ -114,48 +123,34 @@ if valid_set is not None:
 
 - **Checkpoint Management**: Supports intra-epoch checkpointing based on time intervals
 - **Progress Tracking**: Uses tqdm for progress visualization
-- **Distributed Training**: Supports distributed training with sampler epoch updates
-- **Debug Mode**: Includes debug options to limit batches and epochs
-
-## Best Practices
-
-1. Reset nonfinite count at each epoch start
-2. Proper handling of train/eval modes
-3. Gradient handling with `torch.no_grad()` during validation
-4. Progress bar management for distributed training
+- **Distributed Training**: Handles distributed training scenarios with sampler epoch updates
+- **Debug Mode**: Supports limited batches/epochs for debugging
 
 ## Key Parameters
 
 - `epoch_counter`: Controls training duration
-- `train_set/valid_set`: Training and validation datasets
-- `progressbar`: Toggle progress visualization
-- `train_loader_kwargs/valid_loader_kwargs`: DataLoader configurations
+- `train_set`: Training dataset
+- `valid_set`: Validation dataset (optional)
+- `progressbar`: Toggle progress display
+- `train_loader_kwargs`: Training DataLoader configuration
+- `valid_loader_kwargs`: Validation DataLoader configuration
 
-## Return Values
-Returns tuple of:
-- Total batch count
-- Final average training loss
-- Final validation WER (if validation performed)
+## Returns
+- `batch_count`: Total processed batches
+- `avg_loss`: Final training loss
+- `valid_wer_last`: Final validation WER (if validation performed)
+
+## Best Practices
+1. Use appropriate DataLoader configurations for training and validation
+2. Enable checkpointing for long training sessions
+3. Monitor both training and validation metrics
+4. Use debug mode for initial testing
 
 Here's the condensed version of Chunk 3/6, focusing on key implementation details and concepts:
 
-# Federated Speech Model Training via Flower and SpeechBrain
+# Federated Speech Model Training with Flower and SpeechBrain
 
 ## Key Components & Setup
-
-### Prerequisites
-- GPU recommended
-- Familiarity with SpeechBrain and Flower frameworks
-- Uses ASR (Automatic Speech Recognition) as example task
-- Demo uses small dataset (100 recordings)
-
-### Key Features
-1. Pre-loaded centralized initial model
-2. Three aggregation strategies:
-   - Standard FedAvg
-   - Loss-based
-   - WER-based aggregation
-3. Additional server-side training with held-out dataset
 
 ### Installation
 ```python
@@ -167,47 +162,63 @@ Here's the condensed version of Chunk 3/6, focusing on key implementation detail
 !pip install tqdm==4.50.2
 ```
 
+### Core Features
+1. Pre-trained model loading capability
+2. Three aggregation strategies:
+   - Standard FedAvg
+   - Loss-based
+   - WER-based aggregation
+3. Server-side training with held-out dataset post-aggregation
+
 ## Implementation Steps
 
 ### 1. Data Preparation
-- Create TSV format data manifest files
+- Create TSV format data manifest files for SpeechBrain
 - Files contain speech data locations and text annotations
-- Template dataset provided for simulation
-
-### 2. Server & Client Configuration
-```bash
-# Server configuration (server.sh)
-python3 server.py \
-  --data_path="/content/Flower-SpeechBrain/temp_dataset/" \
-  --config_path="/content/Flower-SpeechBrain/configs/" \
-  --tr_path="temp_dataset.tsv" \
-  --config_file="template.yaml" \
-  --min_fit_clients=1 \
-  --rounds=1 \
-  --local_epochs=1 \
-  --server_address="localhost:24338"
-
-# Client configuration (clients.sh)
-python3 client.py \
-  --cid=$i \
-  --data_path="/content/Flower-SpeechBrain/temp_dataset/" \
-  --config_path="/content/Flower-SpeechBrain/configs/" \
-  --config_file="template.yaml" \
-  --eval_device="cuda:0" \
-  --server_address="localhost:24338"
+- Example using template dataset:
+```python
+%cd /content/Flower-SpeechBrain/temp_dataset/
+# Unzip and prepare data
+un_zip("temp_dataset.zip")
+%cp temp_dataset.tsv train_0.tsv
 ```
 
-### 3. Integration Steps
+### 2. Server Configuration
+```bash
+# Key server parameters
+--min_fit_clients=1
+--min_available_clients=1
+--rounds=1
+--local_epochs=1
+--server_address="localhost:24338"
+```
+
+### 3. Client Configuration
+```bash
+# Key client parameters
+--cid=$i
+--eval_device="cuda:0"
+--server_address="localhost:24338"
+```
+
+### 4. Integration Steps
 1. Define Brain class (SpeechBrain)
 2. Initialize Brain class and dataset
 3. Define SpeechBrain Client (Flower client)
 4. Define Flower Strategy (server-side)
 
-### Best Practices
-- Use GPU for faster processing
-- Ensure proper data partitioning in production
-- Allow sufficient initialization time between server and client startup
-- Real applications require significantly more training data (100+ hours)
+## Best Practices
+- Use GPU for faster execution
+- Ensure familiarity with both SpeechBrain and Flower before implementation
+- For production use, use larger datasets (100+ hours) for acceptable performance
+- Allow proper initialization time between server and client startup (5s delay recommended)
+
+## Technical Requirements
+- GPU runtime recommended
+- Compatible versions of tqdm and other dependencies
+- Proper network configuration for server-client communication
+
+This implementation uses ASR as an example but can be adapted for other speech-related tasks following the same pattern.
 
 Here's the condensed version focusing on key implementation details:
 
@@ -215,46 +226,55 @@ Here's the condensed version focusing on key implementation details:
 
 ## Key Implementation Details
 
-The `int_model` function handles model and dataset initialization for federated learning:
+The `int_model` function handles model and dataset initialization for federated learning with SpeechBrain:
 
 ```python
-def int_model(flower_path, tr_path, dev_path, test_path, save_path, data_path, 
-              config_file="CRDNN.yaml", tokenizer_path=None, eval_device="cuda:0",
-              evaluate=False, add_train=False):
-    # Load hyperparameters with overrides
-    params_file = flower_path + config_file
-    
-    # Configure overrides based on mode
-    overrides = {
-        "output_folder": save_path,
-        "number_of_epochs": 1 if evaluate else None,
-        "test_batch_size": 4 if evaluate else None,
-        "device": eval_device if evaluate else None,
-        "lr": 0.01 if add_train else None
-    }
-
-    # Load and update parameters
-    with open(params_file) as fin:
-        params = load_hyperpyyaml(fin, overrides)
-    
-    # Set data paths
-    params.update({
-        "data_folder": data_path,
-        "train_tsv_file": tr_path,
-        "dev_tsv_file": dev_path,
-        "test_tsv_file": test_path,
-        "save_folder": f"{params['output_folder']}/save",
-    })
+def int_model(
+    flower_path,
+    tr_path,
+    dev_path,
+    test_path,
+    save_path,
+    data_path,
+    config_file="CRDNN.yaml",
+    tokenizer_path=None,
+    eval_device="cuda:0",
+    evaluate=False,
+    add_train=False):
 ```
 
-## Critical Components
+### Critical Components
 
-1. **Dataset Preparation**:
-   - Uses CommonVoice dataset preparation
-   - Creates experiment directory
-   - Runs preparation on main process only using `run_on_main`
+1. **Hyperparameter Loading**:
+```python
+# Load and override hyperparameters
+params_file = flower_path + config_file
+overrides = {
+    "output_folder": save_path,
+    "number_of_epochs": 1,
+    "test_batch_size": 4,
+    "device": eval_device,
+} if evaluate else {"output_folder": save_path}
+```
 
-2. **Tokenizer Setup**:
+2. **Dataset Preparation**:
+```python
+# Dataset setup
+run_on_main(
+    prepare_common_voice,
+    kwargs={
+        "data_folder": params["data_folder"],
+        "save_folder": params["save_folder"],
+        "train_tsv_file": params["train_tsv_file"],
+        "dev_tsv_file": params["dev_tsv_file"],
+        "test_tsv_file": params["test_tsv_file"],
+        "accented_letters": params["accented_letters"],
+        "language": params["language"],
+    },
+)
+```
+
+3. **Tokenizer Initialization**:
 ```python
 tokenizer = SentencePiece(
     model_dir=params["save_folder"],
@@ -266,7 +286,7 @@ tokenizer = SentencePiece(
 )
 ```
 
-3. **Model Initialization**:
+4. **ASR Brain Setup**:
 ```python
 asr_brain = ASR(
     modules=params["modules"],
@@ -278,18 +298,20 @@ asr_brain = ASR(
 asr_brain.tokenizer = tokenizer
 ```
 
-## Best Practices
+## Important Notes
+- Function is designed for Flower's federated learning setup
+- Supports different configurations for evaluation and training modes
+- Allows hyperparameter overrides through YAML configuration
+- Returns initialized ASR brain and dataset objects
 
-- Parameters can be overridden via YAML file or through function arguments
-- Different configurations for evaluation and training modes
-- Tokenizer is attached to the ASR brain instance
-- Dataset preparation is handled on the main process only to avoid conflicts
+## Usage
+```python
+asr_brain, dataset = int_model(...)
+```
 
-The function returns both the initialized ASR brain and dataset: `return asr_brain, [train_data, valid_data, test_data]`
+Here's the condensed tutorial section focusing on key implementation details:
 
-Here's the condensed version focusing on key implementation details:
-
-# SpeechBrain Federated Learning Client Implementation
+# SpeechBrain Client Implementation
 
 ## Core Weight Management Functions
 

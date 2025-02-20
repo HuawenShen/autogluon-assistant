@@ -1,76 +1,82 @@
 # Condensed: AutoMM for Text - Multilingual Problems
 
-Summary: This tutorial demonstrates implementing multilingual text classification using AutoGluon's MultiModalPredictor, covering both monolingual and cross-lingual approaches. It provides code for dataset handling, model configuration, and fine-tuning using language-specific BERT models (e.g., German BERT) and multilingual models (XLM-R/DeBERTa-V3). Key functionalities include zero-shot cross-lingual transfer without translation, support for 7,100+ languages, and flexible model selection between language-specific and multilingual presets. The tutorial helps with tasks like setting up multilingual datasets, configuring appropriate models, and implementing cross-lingual transfer learning, with specific focus on optimization parameters and best practices for model selection.
+Summary: This tutorial demonstrates implementing multilingual text classification using AutoMM, focusing on cross-lingual sentiment analysis of Amazon product reviews. It provides code for setting up datasets across multiple languages (English, German, French, Japanese), implementing German BERT fine-tuning, and achieving zero-shot cross-lingual transfer using DeBERTa-V3. Key functionalities include multilingual preset configuration, parameter-efficient fine-tuning, and direct multilingual processing without translation services. The tutorial helps with tasks involving multilingual text classification, model fine-tuning, and cross-lingual transfer learning, particularly useful for developers working with multi-language sentiment analysis applications.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the condensed tutorial focusing on essential implementation details and key concepts:
+Here's the condensed tutorial focusing on key implementation details and concepts:
 
 # AutoMM for Multilingual Text Classification
 
 ## Key Implementation Details
 
 ### 1. Dataset Setup
-```python
-import pandas as pd
-from autogluon.multimodal import MultiModalPredictor
+- Uses Cross-Lingual Amazon Product Review Sentiment dataset
+- Contains reviews in English, German, French, and Japanese
+- Binary sentiment classification (0=negative, 1=positive)
 
-# Load multilingual data (German/English/Japanese Amazon reviews)
-train_de_df = pd.read_csv('de_train.tsv', sep='\t', 
-                         header=None, names=['label', 'text'])
-test_de_df = pd.read_csv('de_test.tsv', sep='\t', 
-                        header=None, names=['label', 'text'])
+```python
+# Load and prepare data
+train_de_df = pd.read_csv('amazon_review_sentiment_cross_lingual/de_train.tsv',
+                          sep='\t', 
+                          header=None, 
+                          names=['label', 'text'])
+test_de_df = pd.read_csv('amazon_review_sentiment_cross_lingual/de_test.tsv',
+                          sep='\t', 
+                          header=None, 
+                          names=['label', 'text'])
 ```
 
 ### 2. German BERT Finetuning
+
 ```python
-# Finetune German BERT
 predictor = MultiModalPredictor(label='label')
 predictor.fit(train_de_df,
-             hyperparameters={
-                 'model.hf_text.checkpoint_name': 'bert-base-german-cased',
-                 'optimization.max_epochs': 2
-             })
+              hyperparameters={
+                  'model.hf_text.checkpoint_name': 'bert-base-german-cased',
+                  'optimization.max_epochs': 2
+              })
 ```
+
+**Important Note**: Model performs well on German but poorly on English data.
 
 ### 3. Cross-lingual Transfer
+
 ```python
-# Enable multilingual support using XLM-R/DeBERTa-V3
 predictor = MultiModalPredictor(label='label')
 predictor.fit(train_en_df,
-             presets='multilingual',
-             hyperparameters={
-                 'optimization.max_epochs': 2
-             })
+              presets='multilingual',
+              hyperparameters={
+                  'optimization.max_epochs': 2
+              })
 ```
 
-## Critical Configurations
-
-1. **Monolingual Setup**:
-   - Use specific language model (e.g., 'bert-base-german-cased')
-   - Suitable for single language tasks
-
-2. **Multilingual Setup**:
-   - Enable with `presets='multilingual'`
-   - Automatically uses advanced models like DeBERTa-V3
-   - Supports zero-shot cross-lingual transfer
+**Key Features**:
+- Uses `presets="multilingual"` to enable zero-shot transfer
+- Automatically uses DeBERTa-V3 for state-of-the-art performance
+- Works across multiple languages (English, German, Japanese) without additional training
 
 ## Best Practices
 
-1. **Model Selection**:
-   - Use language-specific models for single language tasks
-   - Use multilingual preset for cross-lingual transfer
+1. Use `presets='multilingual'` for cross-lingual applications
+2. Consider parameter-efficient finetuning for better performance
+3. Model can perform zero-shot transfer to unseen languages
+4. No need for translation services - direct multilingual processing
 
-2. **Cross-lingual Transfer**:
-   - Train on source language (e.g., English)
-   - Model can be applied directly to other languages
-   - No translation needed for inference
+## Critical Configurations
 
-## Important Notes
+```python
+# Basic configuration
+hyperparameters = {
+    'model.hf_text.checkpoint_name': 'bert-base-german-cased',  # For German-specific
+    'optimization.max_epochs': 2
+}
 
-- Multilingual models support zero-shot transfer across languages
-- Performance may vary across different languages
-- Check [Single GPU Billion-scale Model Training](../advanced_topics/efficient_finetuning_basic.ipynb) for better performance
-- For customization options, refer to [Customize AutoMM](../advanced_topics/customization.ipynb)
+# Multilingual configuration
+hyperparameters = {
+    'optimization.max_epochs': 2
+}
+presets = 'multilingual'
+```
 
-This implementation supports over 7,100 languages through multilingual models and demonstrates effective cross-lingual transfer without the need for translation services.
+**Note**: For advanced use cases, refer to the Parameter-Efficient Finetuning tutorial for better performance.

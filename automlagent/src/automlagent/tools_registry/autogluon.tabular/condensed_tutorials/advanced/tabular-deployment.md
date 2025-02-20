@@ -1,6 +1,6 @@
 # Condensed: Predicting Columns in a Table - Deployment Optimization
 
-Summary: This tutorial demonstrates AutoGluon model deployment optimization techniques, focusing on efficient model serving and performance enhancement. It covers implementation details for model cloning (standard and deployment-optimized), memory persistence, and experimental model compilation. Key functionalities include creating minimal deployment versions with reduced artifact size, maintaining models in memory for faster predictions, and compiling models for improved inference speed. The tutorial helps with tasks like optimizing AutoGluon models for production deployment, managing memory efficiently, and ensuring version compatibility. It's particularly useful for developers looking to streamline their AutoGluon model deployment pipeline while maintaining prediction accuracy.
+Summary: This tutorial demonstrates AutoGluon model deployment optimization techniques, focusing on efficient model cloning and performance enhancement for production environments. It covers implementation of basic model training, two types of predictor cloning (standard and deployment-optimized), and experimental model compilation for faster inference. Key functionalities include using clone_for_deployment() to minimize artifact size, persist() for memory-based acceleration, and model compilation for specific model types. The tutorial helps with tasks like optimizing model deployment size, improving prediction speed, and managing version compatibility, while highlighting important considerations for storage management and functionality trade-offs in production settings.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -42,35 +42,34 @@ predictor_clone_opt.persist()
 
 ### 3. Model Compilation (Experimental)
 ```python
-# Compile for improved inference speed
-predictor_clone_opt.compile()  # Requires skl2onnx and onnxruntime packages
+# Compile for faster inference (requires skl2onnx and onnxruntime)
+predictor_clone_opt.compile()
 ```
 
 ## Critical Configurations & Best Practices
 
-1. **Deployment Optimization**
+1. **Deployment Optimization**:
    - Use `clone_for_deployment()` for production to minimize artifact size
-   - Only prediction functionality remains in optimized version
-   - Significant disk usage reduction (typically >50%)
+   - Call `persist()` to keep model in memory for faster predictions
 
-2. **Memory Management**
-   - Use `persist()` to keep model in memory for faster predictions
-   - Beneficial for repeated predictions
-
-3. **Version Compatibility**
+2. **Version Compatibility**:
    - Use same Python version for training and inference
    - Maintain consistent AutoGluon versions
 
-4. **Model Compilation**
-   - Currently supports RandomForest and TabularNeuralNetwork
-   - Install required packages: `pip install autogluon.tabular[skl2onnx]`
-   - Slight variations in predictions may occur after compilation
+3. **Model Compilation**:
+   - Only works with RandomForest and TabularNeuralNetwork models
+   - Requires additional packages: `autogluon.tabular[skl2onnx]`
+   - Clone before compilation as compiled models can't be retrained
 
-## Important Warnings
+4. **Storage Considerations**:
+   - Standard clone doubles disk usage
+   - Deployment-optimized clone significantly reduces size
+   - Store deployment artifacts in centralized storage (e.g., S3)
 
-1. Optimized clones have limited functionality (predict/predict_proba only)
-2. Compilation is experimental and affects model modification capabilities
-3. Original predictor should be preserved before optimization/compilation
-4. Compiled models may show slight prediction variations
+## Important Notes
 
-This condensed version maintains all critical implementation details while removing redundant examples and explanatory text.
+- Optimized clones have limited functionality (mainly prediction)
+- Compilation may slightly affect prediction results
+- Always maintain original predictor as backup before modifications
+- Use `predictor.disk_usage()` to monitor storage requirements
+- Compiled models provide faster inference but lose training capability

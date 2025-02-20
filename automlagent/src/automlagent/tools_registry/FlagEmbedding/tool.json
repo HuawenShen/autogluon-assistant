@@ -1,0 +1,10 @@
+{
+  "name": "FlagEmbedding",
+  "version": "1.3.4",
+  "description": "Retrieval and Retrieval-augmented LLMs",
+  "features": [
+    "retrieval"
+  ],
+  "requirements": [],
+  "prompt_template": []
+}

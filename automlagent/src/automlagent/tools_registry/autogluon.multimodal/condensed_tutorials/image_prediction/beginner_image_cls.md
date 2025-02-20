@@ -1,6 +1,6 @@
 # Condensed: AutoMM for Image Classification - Quick Start
 
-Summary: This tutorial demonstrates the implementation of AutoGluon's MultiModalPredictor for image classification tasks, covering essential techniques for model training, evaluation, and deployment. It shows how to load image data using both file paths and bytearrays, train models with customizable time limits, perform predictions, extract embeddings, and handle model persistence. Key functionalities include flexible data input formats, automatic model training, evaluation metrics calculation, probability predictions, and feature extraction. The tutorial is particularly useful for tasks involving quick setup of image classification pipelines, model evaluation, and production deployment with proper model saving/loading mechanisms.
+Summary: This tutorial demonstrates AutoGluon's MultiModalPredictor implementation for image classification tasks, covering essential techniques for model training, evaluation, and deployment. It provides code examples for data preparation (supporting both image paths and bytearrays), model training configuration, prediction generation, feature extraction, and model persistence. Key functionalities include accuracy evaluation, probability predictions, embedding extraction (512-2048 dimensional vectors), and flexible input handling. The tutorial is particularly useful for implementing automated image classification pipelines, with specific focus on practical aspects like model saving/loading, security considerations, and input format compatibility.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -10,7 +10,7 @@ Here's the condensed tutorial focusing on essential implementation details:
 
 ## Key Implementation Details
 
-### Setup and Data Loading
+### Setup and Data Preparation
 ```python
 from autogluon.multimodal import MultiModalPredictor
 from autogluon.multimodal.utils.misc import shopee_dataset
@@ -56,30 +56,22 @@ features = predictor.extract_embedding({'image': [image_path]})
 loaded_predictor = MultiModalPredictor.load(model_path)
 ```
 
-## Important Notes
+## Critical Configurations
+- Required columns: 'image' and 'label'
+- Supports both image paths and bytearrays as input
+- Model path must be specified for saving/loading
 
-1. Data Format:
-   - Requires Pandas DataFrame with image paths or bytearrays
-   - Must have columns for image data and labels
+## Important Notes and Best Practices
+1. ⚠️ Security Warning: Use `MultiModalPredictor.load()` only with trusted data sources due to pickle security risks
+2. Compatible with both image paths and bytearrays for training/inference
+3. Same model can be used interchangeably with paths or bytearrays
+4. Default embeddings are typically 512-2048 dimensional vectors
 
-2. Input Flexibility:
-   - Supports both image paths and bytearrays
-   - Can mix formats between training and inference
+## Supported Operations
+- Image classification
+- Probability prediction
+- Feature extraction
+- Model evaluation
+- Model persistence
 
-3. Security Warning:
-   - `MultiModalPredictor.load()` uses pickle
-   - Only load models from trusted sources
-
-4. Model Output Options:
-   - Class predictions
-   - Class probabilities
-   - Feature embeddings (N-dimensional vectors)
-
-## Best Practices
-
-1. Adjust `time_limit` parameter based on dataset size and requirements
-2. Use consistent data formats throughout the pipeline
-3. Save model checkpoints in a dedicated directory
-4. Validate model performance on test data before deployment
-
-For advanced customization, refer to the AutoMM customization documentation.
+For advanced customization options, refer to the AutoMM customization documentation.

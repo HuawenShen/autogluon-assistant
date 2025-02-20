@@ -1,18 +1,18 @@
 # Condensed: <!-- This cell is automatically updated by tools/tutorial-cell-updater.py -->
 
-Summary: This tutorial provides implementation details for various Recurrent Neural Network (RNN) architectures in SpeechBrain, including vanilla RNN, LSTM, GRU, and LiGRU. It covers specific coding patterns for initializing and using these networks with PyTorch tensors in [batch, time, features] format. Key functionalities include bidirectional processing, multi-layer stacking, and parameter configuration. The tutorial is particularly valuable for tasks involving sequence processing, especially speech recognition, highlighting LiGRU's optimized architecture with BatchNorm integration and parameter sharing in bidirectional mode. Implementation examples demonstrate parameter structures, core equations, and best practices for handling common challenges like vanishing gradients.
+Summary: This tutorial provides implementation details for various RNN architectures in SpeechBrain, including Vanilla RNN, LSTM, GRU, and LiGRU. It covers code examples for handling sequential data with shape [batch, time, features], demonstrating how to configure bidirectional and multi-layer architectures. The tutorial specifically helps with implementing memory-efficient LiGRU networks, which feature single multiplicative gates and BatchNorm integration. Key functionalities include gradient handling techniques, parameter sharing in bidirectional modes, and architectural variations for different sequence modeling tasks. The implementation knowledge spans from basic RNN setup to advanced optimization strategies for speech processing and general sequence modeling applications.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the condensed tutorial focusing on key implementation details and concepts:
+Here's the condensed tutorial focusing on essential implementation details and key concepts:
 
 # Recurrent Neural Networks in SpeechBrain
 
 ## Key Concepts
 - RNNs process sequences using feedback connections and memory
-- Core equation: $h_t = f(x_t, h_{t−1}, θ)$
+- Core equation: `hₜ = f(xₜ, hₜ₋₁, θ)`
+- Training requires network unfolding over time axis
 - Parameters are shared across time steps
-- Input format: `[batch, time, features]`
 
 ## 1. Vanilla RNN
 
@@ -20,32 +20,33 @@ Here's the condensed tutorial focusing on key implementation details and concept
 ```python
 from speechbrain.nnet.RNN import RNN
 
-# Basic RNN usage
+# Basic usage
 inp_tensor = torch.rand([4, 10, 20])  # [batch, time, features]
 net = RNN(hidden_size=5, input_shape=inp_tensor.shape)
 out_tensor, _ = net(inp_tensor)
 ```
 
 ### Key Parameters
-- `hidden_size`: Dimension of hidden state
-- `bidirectional`: Enable bidirectional processing (doubles output features)
-- `num_layers`: Stack multiple RNN layers
+- Input format: `[batch, time, features]`
+- Parameters:
+  - W: input-to-hidden matrix `[hidden_size, input_dim]`
+  - U: hidden-to-hidden matrix `[hidden_size, hidden_size]`
+  - b: bias vectors
 
-### Parameter Structure
-- W: Input-to-hidden weights `[hidden_size, input_size]`
-- U: Hidden-to-hidden weights `[hidden_size, hidden_size]`
-- b: Bias terms (split into input and recurrent)
+### Important Features
+```python
+# Bidirectional RNN
+net = RNN(hidden_size=5,
+          input_shape=inp_tensor.shape,
+          bidirectional=True)  # Output features double
+
+# Multi-layer RNN
+net = RNN(hidden_size=5,
+          input_shape=inp_tensor.shape,
+          num_layers=3)
+```
 
 ## 2. LSTM (Long-Short Term Memory)
-
-### Core Equations
-```
-f_t = σ(Wf*xt + Uf*h(t-1) + bf)  # Forget gate
-i_t = σ(Wi*xt + Ui*h(t-1) + bi)  # Input gate
-o_t = σ(Wo*xt + Uo*h(t-1) + bo)  # Output gate
-c_t = ft*c(t-1) + it*tanh(Wc*xt + Uc*h(t-1) + bc)  # Cell state
-h_t = ot*tanh(ct)  # Hidden state
-```
 
 ### Implementation
 ```python
@@ -56,123 +57,137 @@ net = LSTM(hidden_size=5, input_shape=inp_tensor.shape)
 out_tensor, _ = net(inp_tensor)
 ```
 
-## Important Notes
-- RNNs can suffer from vanishing/exploding gradients
-- Exploding gradients can be handled with gradient clipping
-- Vanishing gradients can be mitigated with skip connections
-- LSTMs better handle long-term dependencies through gating mechanisms
-- Parameters are concatenated in implementation (e.g., all gate weights combined)
+### Architecture
+- Uses memory cells with three gates:
+  - Forget gate (f)
+  - Input gate (i)
+  - Output gate (o)
+- Cell state equations provided in mathematical notation
+- Better suited for learning long-term dependencies
 
-## Best Practices
-- Use bidirectional RNNs when full sequence context is available
-- Consider multiple layers for deeper feature extraction
-- LSTM is generally more robust than vanilla RNN for long sequences
-- Match input tensor dimensions: `[batch, time, features]`
+### Parameter Organization
+- Parameters grouped in consolidated tensors:
+  - `rnn.weight_ih_l0`: All input-to-hidden matrices
+  - `rnn.weight_hh_l0`: All hidden-to-hidden matrices
+  - Corresponding bias terms
 
-Here's the condensed tutorial focusing on essential implementation details and key concepts:
+## Best Practices & Warnings
+1. Handle gradient issues:
+   - Use gradient clipping for exploding gradients
+   - Consider gradient shortcuts for vanishing gradients
+2. Follow input tensor format: `[batch, time, features]`
+3. Consider bidirectional architecture for better context modeling
+4. Stack layers for deeper feature extraction
 
-# RNN Variants: GRU and LiGRU Implementation
+Here's the condensed tutorial focusing on key implementation details and concepts:
 
-## Gated Recurrent Units (GRU)
-A simplified version of LSTM using only two multiplicative gates:
+# Gated Recurrent Units (GRUs) and Light GRUs
 
-### Key Equations
+## GRU Implementation
+GRUs simplify LSTM architecture using only two multiplicative gates:
+
+Key equations:
 ```
-zt = σ(Wzxt + Uzht-1 + bz)      # update gate
-rt = σ(Wrxt + Urht-1 + br)      # reset gate
+zt = σ(Wzxt + Uzht-1 + bz)
+rt = σ(Wrxt + Urht-1 + br)
 h̃t = tanh(Whxt + Uh(ht-1 ⊙ rt) + bh)
 ht = zt ⊙ ht-1 + (1-zt) ⊙ h̃t
 ```
 
-### Implementation
+### Basic GRU Implementation in SpeechBrain
 ```python
 from speechbrain.nnet.RNN import GRU
 
-# Basic GRU usage
-inp_tensor = torch.rand([4, 10, 20])  # [batch, time, features]
+# Input shape: [batch, time, features]
+inp_tensor = torch.rand([4, 10, 20]) 
 net = GRU(hidden_size=5, input_shape=inp_tensor.shape)
 out_tensor, _ = net(inp_tensor)
 ```
 
-## Light Gated Recurrent Units (LiGRU)
-Optimized version of GRU with single gate and improved efficiency.
-
-### Key Modifications
-1. Removes reset gate
+## Light GRU (LiGRU)
+Key improvements over standard GRU:
+1. Single multiplicative gate (removes reset gate)
 2. Uses ReLU + BatchNorm instead of tanh
-3. Shares parameters in bidirectional mode
+3. Shared parameters in bidirectional mode
 
-### Key Equations
+Key equations:
 ```
 zt = σ(BN(Wzxt) + Uzht-1)
 h̃t = ReLU(BN(Whxt) + Uhht-1)
 ht = zt ⊙ ht-1 + (1-zt) ⊙ h̃t
 ```
 
-### Implementation
+### LiGRU Implementation
 ```python
 from speechbrain.nnet.RNN import LiGRU
 
-# Basic LiGRU
+# Basic usage
 net = LiGRU(hidden_size=5, input_shape=inp_tensor.shape)
 
-# Bidirectional LiGRU (parameters shared between directions)
-net_bi = LiGRU(hidden_size=5,
-               input_shape=inp_tensor.shape,
-               bidirectional=True)
+# Bidirectional implementation
+net_bi = LiGRU(
+    hidden_size=5,
+    input_shape=inp_tensor.shape,
+    bidirectional=True
+)
 ```
 
-### Parameter Comparison Example
+## Performance Comparison
 ```python
 # Configuration for comparison
 hidden_size = 512
 num_layers = 4
 bidirectional = True
+inp_tensor = torch.rand([4, 10, 80])
 
-# Model initialization
-rnn = RNN(hidden_size=hidden_size, input_shape=inp_tensor.shape, 
-          bidirectional=bidirectional, num_layers=num_layers)
-lstm = LSTM(...)  # Similar parameters
-gru = GRU(...)    # Similar parameters
-ligru = LiGRU(...) # Similar parameters
+# Model parameter counts (example)
+RNN: ~X.XX M
+LSTM: ~X.XX M
+GRU: ~X.XX M
+LiGRU: ~X.XX M
 ```
 
-### Key Benefits of LiGRU
+### Key Benefits of LiGRU:
 - Parameter efficient (comparable to vanilla RNN)
 - Maintains long-term dependency learning
 - Better numerical stability through BatchNorm
-- Improved performance in speech processing tasks
+- Shared parameters in bidirectional mode reduces memory footprint
 
-### Best Practices
-1. Use BatchNorm with LiGRU to prevent numerical instabilities
-2. Consider LiGRU for speech processing tasks where parameter efficiency is important
-3. Leverage bidirectional mode in LiGRU for parameter sharing between directions
+### Best Practices:
+1. Use LiGRU when parameter efficiency is crucial
+2. Consider bidirectional LiGRU for sequence tasks
+3. BatchNorm is essential for LiGRU stability
+4. Monitor gradient flow in deep architectures
 
-Here's the condensed version of the citation information:
+This implementation focuses on speech processing tasks but can be adapted for other sequence modeling problems.
+
+Here's the condensed version of the citation section:
 
 ## Citing SpeechBrain
 
-When using SpeechBrain in research or business applications, include these citations:
+When using SpeechBrain in research or commercial applications, cite the following papers:
 
+1. For SpeechBrain 1.0 (2024):
 ```bibtex
-# For SpeechBrain 1.0
 @misc{speechbrainV1,
   title={Open-Source Conversational AI with {SpeechBrain} 1.0},
-  author={Ravanelli, M. and others},
+  author={Ravanelli et al.},
   year={2024},
   eprint={2407.00463},
   archivePrefix={arXiv},
-  url={https://arxiv.org/abs/2407.00463},
-}
-
-# For original SpeechBrain
-@misc{speechbrain,
-  title={{SpeechBrain}: A General-Purpose Speech Toolkit},
-  author={Ravanelli, M. and others},
-  year={2021},
-  eprint={2106.04624},
-  archivePrefix={arXiv},
+  url={https://arxiv.org/abs/2407.00463}
 }
 ```
 
-**Key Point**: Include both citations when using SpeechBrain 1.0, as they reference both the original toolkit and its latest version.
+2. For the original SpeechBrain toolkit (2021):
+```bibtex
+@misc{speechbrain,
+  title={{SpeechBrain}: A General-Purpose Speech Toolkit},
+  author={Ravanelli et al.},
+  year={2021},
+  eprint={2106.04624},
+  archivePrefix={arXiv}
+}
+```
+
+Note: Author lists have been abbreviated for brevity. Use full citations in actual references.

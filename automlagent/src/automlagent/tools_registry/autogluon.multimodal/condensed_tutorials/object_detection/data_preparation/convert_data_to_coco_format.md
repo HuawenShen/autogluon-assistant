@@ -1,6 +1,6 @@
 # Condensed: Converting Data to COCO Format for Object Detection
 
-Summary: This tutorial provides implementation guidance for converting object detection datasets to COCO format, specifically detailing the required JSON structure with three main components: images, annotations, and categories. It covers essential techniques for handling bounding box coordinates, ID management, and dataset organization. The tutorial helps with tasks like converting VOC datasets to COCO format using AutoGluon CLI commands and implementing custom conversion scripts. Key features include the specific directory structure requirements, mandatory field specifications, bounding box format [x,y,w,h], and best practices for maintaining data integrity across dataset splits.
+Summary: This tutorial provides implementation details for converting object detection datasets to COCO format, essential for training deep learning models. It covers the specific JSON structure requirements for COCO format, including mandatory fields (images, annotations, categories) and their detailed specifications. The tutorial demonstrates how to organize directory structures, handle VOC to COCO conversion using AutoGluon's CLI tools, and mentions alternative conversion options using FiftyOne for CVAT, YOLO, and KITTI formats. Key features include bounding box coordinate formatting, image metadata specifications, and annotation requirements, making it valuable for data preprocessing in object detection tasks.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -20,45 +20,50 @@ Here's the condensed tutorial focusing on essential implementation details:
         test_labels.json
 ```
 
-## Essential COCO JSON Structure
+## COCO JSON Format Requirements
+
+### Required Components
 ```javascript
 {
-    "images": [                    // Required
-        {
-            "id": int,            // Unique image ID
-            "width": int,         
-            "height": int,
-            "file_name": str      // Image filename
-        }
-    ],
-    "annotations": [               // Required
-        {
-            "id": int,            // Unique annotation ID
-            "image_id": int,      // Reference to image
-            "category_id": int,    // Reference to category
-            "bbox": [x,y,w,h],    // Bounding box coordinates
-            "area": float,        // Object area in pixels
-            "iscrowd": int        // 0 or 1
-        }
-    ],
-    "categories": [               // Required
-        {
-            "id": int,           // Unique category ID
-            "name": str,         // Category name
-            "supercategory": str // Parent category
-        }
-    ]
+    "images": [image],              // List of image metadata
+    "annotations": [annotation],     // List of object annotations
+    "categories": [category]         // List of object categories
 }
 ```
 
-## Key Implementation Notes
-1. **Required Fields**: Only "images", "categories", and "annotations" are mandatory
-2. **Prediction**: Only "images" field needed for inference
-3. **Bounding Box Format**: [x, y, width, height] where (x,y) is top-left corner
+### Key Object Structures
+```javascript
+image = {
+    "id": int,                      // Unique image identifier
+    "width": int,                   // Image width in pixels
+    "height": int,                  // Image height in pixels
+    "file_name": str                // Image file name
+}
 
-## Converting VOC to COCO
+category = {
+    "id": int,                      // Unique category identifier
+    "name": str,                    // Category name
+    "supercategory": str           // Parent category name
+}
 
-### VOC Directory Structure
+annotation = {
+    "id": int,                      // Unique annotation identifier
+    "image_id": int,                // Reference to image
+    "category_id": int,             // Reference to category
+    "bbox": [x,y,width,height],     // Bounding box coordinates
+    "area": float,                  // Object area in pixels
+    "iscrowd": int                  // Instance vs group flag (0 or 1)
+}
+```
+
+## Important Notes
+- Only "images", "categories", and "annotations" fields are mandatory
+- For prediction, only the "images" field is required
+- Bounding box format: [x, y, width, height]
+
+## VOC to COCO Conversion
+
+### Required VOC Structure
 ```
 <path_to_VOCdevkit>/
     VOC2007/
@@ -71,21 +76,15 @@ Here's the condensed tutorial focusing on essential implementation details:
 ### Conversion Commands
 ```python
 # Custom splits
-python3 -m autogluon.multimodal.cli.voc2coco \
-    --root_dir <root_dir> \
-    --train_ratio <train_ratio> \
-    --val_ratio <val_ratio>
+python3 -m autogluon.multimodal.cli.voc2coco --root_dir <root_dir> --train_ratio <train_ratio> --val_ratio <val_ratio>
 
 # Predefined splits
 python3 -m autogluon.multimodal.cli.voc2coco --root_dir <root_dir>
 ```
 
-## Best Practices
-1. Ensure unique IDs for images, annotations, and categories
-2. Verify all referenced IDs exist (image_id, category_id)
-3. Validate bounding box coordinates are within image dimensions
-4. Use consistent category names across dataset splits
-
-## Alternative Conversion Options
-- Write custom conversion scripts following COCO specification
-- Use FiftyOne for converting from CVAT, YOLO, KITTI formats
+## Converting Other Formats
+1. Create custom conversion scripts following COCO specification
+2. Use FiftyOne for converting from:
+   - CVAT
+   - YOLO
+   - KITTI

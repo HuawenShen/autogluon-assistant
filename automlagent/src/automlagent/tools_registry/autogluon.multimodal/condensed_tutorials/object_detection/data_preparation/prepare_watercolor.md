@@ -1,6 +1,6 @@
 # Condensed: AutoMM Detection - Prepare Watercolor Dataset
 
-Summary: This tutorial provides implementation guidance for preparing the Watercolor dataset for object detection tasks using AutoMM. It covers two installation methods (Python CLI and Bash script), focusing on dataset structure and format requirements. The tutorial helps with tasks related to dataset preparation, format conversion, and proper directory setup for object detection. Key features include cross-platform installation options, COCO/VOC format handling, and dataset organization with 2,000 watercolor images. It's particularly useful for understanding proper data structuring and format recommendations when working with AutoMM MultiModalPredictor for detection tasks.
+Summary: This tutorial provides implementation guidance for preparing the Watercolor dataset for object detection tasks using AutoMM. It covers two installation methods (Python CLI and Bash script), dataset structure, and format requirements. The tutorial helps with dataset setup tasks, including downloading and organizing 2,000 watercolor images (1,000 each for training/testing) in the correct directory structure. Key features include cross-platform installation options, COCO format conversion recommendations, and system requirements specification (7.5GB disk space, SSD preferred). It's particularly useful for developers setting up object detection pipelines with AutoMM MultiModalPredictor and those needing to handle VOC to COCO format conversions.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -10,8 +10,8 @@ Here's the condensed tutorial focusing on essential implementation details:
 
 ## Key Requirements
 - Disk space: 7.5 GB
-- Preferred storage: SSD
-- Estimated preparation time: ~8 min (on AWS EC2 with EBS)
+- SSD preferred over HDD for better performance
+- Estimated preparation time: ~8 min on AWS EC2 with EBS
 
 ## Dataset Installation Methods
 
@@ -47,7 +47,7 @@ watercolor/
 2. **Dataset Details**:
    - 1,000 training images
    - 1,000 testing images
-   - Domain: Watercolor images
+   - Domain: watercolor images
 
 ## Best Practices
 1. Use COCO format when possible
@@ -55,6 +55,6 @@ watercolor/
 3. For VOC format usage, ensure root path contains required directories (Annotations, ImageSets, JPEGImages)
 
 ## References
-- [Official Dataset Page](https://naoto0804.github.io/cross_domain_detection/)
+- [Official Project Page](https://naoto0804.github.io/cross_domain_detection/)
 - [AutoMM Examples](https://github.com/autogluon/autogluon/tree/master/examples/automm)
 - For customization: Refer to "Customize AutoMM" tutorial

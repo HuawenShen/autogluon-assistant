@@ -6,5 +6,8 @@
     "audio"
   ],
   "requirements": [],
-  "prompt_template": []
+  "prompt_template": [
+    "Try to write simple code without using advanced features.",
+    "Use mean_var_norm for normalization."
+  ]
 }

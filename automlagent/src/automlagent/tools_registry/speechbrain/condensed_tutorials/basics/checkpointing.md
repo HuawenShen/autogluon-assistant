@@ -1,6 +1,6 @@
 # Condensed: <!-- This cell is automatically updated by tools/tutorial-cell-updater.py -->
 
-Summary: This tutorial covers the implementation of checkpointing in SpeechBrain, focusing on model state persistence and recovery. It demonstrates how to save and load model parameters, optimizer states, and training progress using the Checkpointer class. Key functionalities include basic checkpoint management, metadata handling for performance tracking, selective checkpoint retention, and parameter transfer between models. The tutorial helps with tasks like implementing training recovery mechanisms, managing model checkpoints efficiently, and setting up early stopping based on validation metrics. Essential techniques covered include checkpoint creation, recovery procedures, metadata management, and custom checkpoint hooks for special objects.
+Summary: This tutorial covers SpeechBrain's checkpointing system implementation, focusing on model state persistence and recovery. It demonstrates how to implement checkpoint management for PyTorch models, optimizers, and training states using the Checkpointer class. Key functionalities include basic checkpoint saving/loading, metadata management, selective checkpoint retention, and parameter transfer between models. The tutorial helps with tasks like implementing training recovery, managing model versions, and handling early stopping based on validation metrics. Essential features covered include checkpoint structure definition, metadata handling, storage management with predicates, and custom checkpoint hooks for specialized objects.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -9,12 +9,12 @@ Here's the condensed tutorial focusing on essential implementation details and k
 # Checkpointing in SpeechBrain
 
 ## Key Concepts
-- **Checkpointing**: Saves model state, optimizer parameters, epoch count, and other state information
-- **Main purposes**: 
+- **Purpose**: Save model state, optimizer parameters, epoch info for:
   1. Recovery from interruptions
   2. Early stopping based on validation performance
+  3. Model parameter persistence
 
-## Implementation Details
+## Core Implementation
 
 ### Basic Usage
 ```python
@@ -27,7 +27,7 @@ model = torch.nn.Linear(1, 1, False)
 optimizer = torch.optim.Adam(model.parameters(), lr=1.0)
 epoch_counter = sb.utils.epoch_loop.EpochCounter(10)
 
-# Create checkpointer
+# Setup checkpointer
 checkpointer = Checkpointer(
     "checkpoint_dir",
     recoverables={
@@ -37,10 +37,10 @@ checkpointer = Checkpointer(
     }
 )
 
-# Recovery and training loop
-checkpointer.recover_if_possible()
+# Training loop with checkpointing
+checkpointer.recover_if_possible()  # Load latest checkpoint if available
 for epoch in epoch_counter:
-    # Training code here
+    # Training code...
     checkpointer.save_and_keep_only(meta={"loss": loss.item()})
 ```
 
@@ -56,13 +56,11 @@ checkpointer.add_recoverables({"opt": optimizer, "epoch": epoch_counter})
 2. **Meta Information**
 ```python
 # Save with metadata
-checkpointer.save_checkpoint(
-    meta={
-        "loss": 15.5,
-        "validation-type": "fast",
-        "num-examples": 3
-    }
-)
+checkpointer.save_checkpoint(meta={
+    "loss": 15.5,
+    "validation-type": "fast",
+    "num-examples": 3
+})
 
 # Recover best checkpoint
 checkpointer.recover_if_possible(min_key="loss")
@@ -92,13 +90,13 @@ sb.utils.checkpoints.torch_parameter_transfer(new_model, best_ckpt.paramfiles["m
 ```
 
 ## Best Practices
-1. Always implement recovery mechanism using `recover_if_possible()`
+1. Always implement recovery at start of training
 2. Save metadata for tracking performance metrics
-3. Use `save_and_keep_only()` to manage disk space
-4. Implement custom save/load hooks for special objects using `@sb.utils.checkpoints.register_checkpoint_hooks`
+3. Use `save_and_keep_only()` to manage storage efficiently
+4. Implement custom save/load hooks for custom objects using `@sb.utils.checkpoints.register_checkpoint_hooks`
 
-## Important Warnings
-- Ensure sufficient disk space for checkpoints
-- Use appropriate filters when managing multiple checkpoints
-- Consider validation metrics when implementing early stopping
-- Custom objects need registered checkpoint hooks for proper saving/loading
+## Important Notes
+- Checkpointer automatically handles saving/loading for torch Modules and Optimizers
+- Custom objects can register their own save/load hooks
+- Use predicates and filters for selective checkpoint management
+- Parameter transfer requires careful handling of model architectures

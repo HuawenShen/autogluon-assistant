@@ -1,10 +1,10 @@
 # Condensed: <!-- This cell is automatically updated by tools/tutorial-cell-updater.py -->
 
-Summary: This tutorial demonstrates how to work with SpeechBrain's pretrained models via HuggingFace Hub, covering implementation techniques for Automatic Speech Recognition (ASR), Speaker Recognition, and Source Separation tasks. It provides code examples for loading and using pretrained models, extracting speaker embeddings, performing speaker verification, and implementing source separation using the SepFormer model. The tutorial also details fine-tuning procedures, including creating custom brain classes, setting up data pipelines, and managing model parameters. Key functionalities include transcription, speaker embedding visualization, signal separation, and model adaptation, with specific focus on maintaining compatibility with pretrained models and proper configuration of hyperparameters.
+Summary: This tutorial demonstrates implementing speech processing tasks using SpeechBrain and HuggingFace, covering ASR (Automatic Speech Recognition), speaker recognition, and source separation. It provides code for loading pre-trained models, performing inference, and fine-tuning models with custom data. Key implementations include transcription using CRDNN-based ASR, speaker embedding extraction with ECAPA-TDNN, audio source separation using SepFormer, and detailed fine-tuning procedures with the EncDecFineTune brain class. The tutorial showcases essential techniques like gradient management, module configuration, hyperparameter setup, and proper data pipeline construction, making it valuable for tasks involving speech processing model adaptation and deployment.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the condensed version focusing on key implementation details and concepts:
+Here's the condensed version focusing on key implementation details and code samples:
 
 # Pretrained Models and Fine-Tuning with HuggingFace
 
@@ -15,20 +15,20 @@ Here's the condensed version focusing on key implementation details and concepts
 
 ## Implementation Details
 
-### 1. Basic Setup
+### Setup
 ```python
 # Install SpeechBrain
 !python -m pip install git+https://github.com/speechbrain/speechbrain.git@develop
 ```
 
-### 2. ASR Implementation
+### ASR Implementation
 ```python
 from speechbrain.inference.ASR import EncoderDecoderASR
 
 # Load pretrained ASR model
 asr_model = EncoderDecoderASR.from_hparams(
-    source="speechbrain/asr-crdnn-rnnlm-librispeech",
-    savedir="./pretrained_ASR",
+    source="speechbrain/asr-crdnn-rnnlm-librispeech", 
+    savedir="./pretrained_ASR", 
     hparams_file="hyperparams_develop.yaml"
 )
 
@@ -36,59 +36,53 @@ asr_model = EncoderDecoderASR.from_hparams(
 transcription = asr_model.transcribe_file("path/to/audio.flac")
 ```
 
-### 3. Speaker Recognition Implementation
+### Speaker Recognition Implementation
 ```python
 from speechbrain.inference.speaker import SpeakerRecognition
 import torchaudio
 
-# Initialize speaker recognition model
+# Load speaker recognition model
 verification = SpeakerRecognition.from_hparams(
     source="speechbrain/spkrec-ecapa-voxceleb", 
     savedir="./pretrained_ecapa"
 )
 
 # Extract embeddings
-signal, fs = torchaudio.load('audio_file.flac')
+signal, fs = torchaudio.load('audio.flac')
 embedding = verification.encode_batch(signal)
 ```
 
-### 4. Visualization of Speaker Embeddings
-```python
-from sklearn.decomposition import PCA
-import numpy as np
-
-# Extract embeddings for multiple utterances
-embeddings = []
-labels = []
-for utterance in utterances:
-    signal, fs = torchaudio.load(utterance)
-    embedding = verification.encode_batch(signal)
-    embeddings.append(embedding[0, 0].numpy())
-    labels.append(speaker_id)
-
-# PCA visualization
-pca = PCA(n_components=2)
-components = pca.fit_transform(np.array(embeddings))
-```
-
 ## Important Notes
-- Models are downloaded once and cached in the specified `savedir`
-- Can load models from local filesystem using the same syntax
-- ECAPA TDNN model is trained on Voxceleb 2 dataset
-- Speaker embeddings can be used for verification, recognition, or diarization tasks
+1. Models are downloaded once and cached in the specified `savedir`
+2. Same syntax works for both remote and local models
+3. The ASR pipeline includes:
+   - CRDNN-based seq2seq E2E ASR model
+   - RNN-based Language Model
+   - SentencePiece Tokenizer
 
 ## Best Practices
-- Verify model compatibility with your data
-- Check model documentation for specific requirements
-- Use appropriate preprocessing for each model
-- Consider computational resources when selecting models
+- Browse available models on HuggingFace Hub before implementation
+- Validate transcriptions against oracle data when available
+- Use PCA for visualizing speaker embeddings when working with speaker recognition
 
-Here's the condensed tutorial content focusing on key implementation details and concepts:
+## Visualization Example
+```python
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
 
-# Speaker Verification and Source Separation Tutorial
+# Reduce embedding dimensions for visualization
+pca = PCA(n_components=2)
+principalComponents = pca.fit_transform(embeddings)
 
-## Speaker Verification Testing
+# Plot results
+plt.scatter(principalComponents[:, 0], principalComponents[:, 1])
+plt.xlabel("Principal Component 1")
+plt.ylabel("Principal Component 2")
+```
 
+Here's the condensed version focusing on key implementation details and concepts:
+
+### Speaker Verification Testing
 ```python
 # Test files from same/different speakers
 file1 = './LibriSpeech/dev-clean-2/1272/135031/1272-135031-0000.flac' # Same speaker
@@ -100,22 +94,19 @@ score, prediction = verification.verify_files(file1, file2)  # Same speaker
 score, prediction = verification.verify_files(file1, file3)  # Different speakers
 ```
 
-**Key Note**: The ECAPA model achieves 0.69% Equal Error Rate on VoxCeleb dataset and works well on 16kHz audio.
-
-## Source Separation Implementation
-
+### Source Separation Implementation
 ```python
 # Create artificial mixture
 import torchaudio
 s1, fs = torchaudio.load('./LibriSpeech/dev-clean-2/1272/135031/1272-135031-0003.flac')
 s2, fs = torchaudio.load('./LibriSpeech/dev-clean-2/1462/170142/1462-170142-0001.flac')
 
-# Resample to 8kHz (required for pretrained model)
+# Resample to 8KHz (model requirement)
 resampler = torchaudio.transforms.Resample(fs, 8000)
 s1, s2 = resampler(s1), resampler(s2)
 fs = 8000
 
-# Mix signals
+# Create mixture
 min_len = min(s1.shape[-1], s2.shape[-1])
 s1, s2 = s1[:, :min_len], s2[:, :min_len]
 mix = s1 + s2
@@ -129,10 +120,9 @@ separator = SepformerSeparation.from_hparams(
 est_sources = separator.separate_batch(mix)[0]  # Remove batch dimension
 ```
 
-## Fine-tuning Pretrained Models
-
-### Key Components Access
+### Fine-tuning Pretrained Models
 ```python
+# Load pretrained ASR model
 from speechbrain.inference.ASR import EncoderDecoderASR
 asr_model = EncoderDecoderASR.from_hparams(
     source="speechbrain/asr-crdnn-rnnlm-librispeech",
@@ -140,15 +130,8 @@ asr_model = EncoderDecoderASR.from_hparams(
     hparams_file="hyperparams_develop.yaml"
 )
 
-# Access model components
-asr_model.mods.keys()  # Shows available modules
-asr_model.mods.encoder  # Access encoder
-asr_model.hparams  # Access hyperparameters
-```
-
-### Data Pipeline Setup
-```python
-# Create dataset
+# Data Pipeline Setup
+from speechbrain.dataio.dataset import DynamicItemDataset
 dataset = DynamicItemDataset.from_json("data.json")
 dataset = dataset.filtered_sorted(sort_key="length", select_n=100)
 
@@ -173,12 +156,12 @@ def text_pipeline(words):
     yield tokens
 ```
 
-**Important Notes**:
-- Use same sampling rate (16kHz) for speaker verification
-- SepFormer requires 8kHz audio input
-- When fine-tuning, reuse original model's tokenizer and special tokens (BOS/EOS)
-- Sort dataset by length for efficient training
-- Maintain compatibility with pretrained model parameters
+Key Points:
+1. SepFormer model requires 8KHz sampling rate
+2. When fine-tuning, reuse pretrained model's tokenizer and special tokens (BOS/EOS)
+3. Dataset is sorted by length for training efficiency
+4. Access pretrained model components via `asr_model.mods.keys()`
+5. Training hyperparameters accessible through `asr_model.hparams`
 
 Here's the condensed version focusing on key implementation details and concepts:
 
@@ -197,6 +180,7 @@ class EncDecFineTune(sb.Brain):
 
     def compute_forward(self, batch, stage):
         # Forward pass implementation
+        batch = batch.to(self.device)
         wavs, wav_lens = batch.signal
         tokens_bos, _ = batch.tokens_bos
         
@@ -216,9 +200,9 @@ class EncDecFineTune(sb.Brain):
         return self.hparams.seq_cost(p_seq, tokens_eos, tokens_eos_lens)
 ```
 
-## Key Configuration
+## Module Configuration
 ```python
-# Module configuration
+# Configure modules from pretrained model
 modules = {
     "enc": asr_model.mods.encoder.model,
     "emb": asr_model.hparams.emb,
@@ -228,16 +212,19 @@ modules = {
     "seq_lin": asr_model.hparams.seq_lin,
 }
 
-# Hyperparameter configuration
+# Configure hyperparameters
 hparams = {
     "seq_cost": lambda x, y, z: sb.nnet.losses.nll_loss(
         x, y, z, label_smoothing=0.1),
     "log_softmax": sb.nnet.activations.Softmax(apply_log=True)
 }
 
-# Initialize and train
-brain = EncDecFineTune(modules, hparams=hparams, 
-                      opt_class=lambda x: torch.optim.SGD(x, 1e-5))
+# Initialize brain with SGD optimizer
+brain = EncDecFineTune(
+    modules, 
+    hparams=hparams, 
+    opt_class=lambda x: torch.optim.SGD(x, 1e-5)
+)
 brain.tokenizer = asr_model.tokenizer
 ```
 
@@ -248,19 +235,21 @@ pretrain = Pretrainer(
     loadables={'model': model},
     paths={'model': 'speechbrain/spkrec-ecapa-voxceleb/embedding_model.ckpt'}
 )
-
-# Load pretrained model
 pretrain.collect_files()
 pretrain.load_collected()
 ```
 
-### Important Notes:
-- The Pretrainer class supports loading from:
-  - Local paths
-  - Web URLs
-  - HuggingFace repositories
-- Use `collect_in` parameter to specify where pretrained models are stored
-- Model parameters are sourced from the pretrained model's `modules` and `hparams`
-- Configuration details can be found in the model's `hyperparams.yaml` file on HuggingFace
+### Key Points:
+1. The `EncDecFineTune` class handles the fine-tuning process with forward pass and loss computation
+2. Modules are transferred from pretrained model using dictionary mapping
+3. Hyperparameters include loss function with label smoothing and softmax activation
+4. Pretrainer class provides structured parameter transfer with support for:
+   - Local paths
+   - Web URLs
+   - HuggingFace repositories
 
-This implementation provides a structured approach to fine-tuning pretrained models while maintaining SpeechBrain's modular architecture.
+### Best Practices:
+- Enable gradients only for modules that need fine-tuning
+- Use appropriate learning rate for fine-tuning (1e-5 in example)
+- Maintain proper batch handling and device placement
+- Use structured parameter transfer through Pretrainer for better reproducibility

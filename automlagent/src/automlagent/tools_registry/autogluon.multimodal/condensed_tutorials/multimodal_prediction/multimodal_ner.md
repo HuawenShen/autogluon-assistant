@@ -1,6 +1,6 @@
 # Condensed: AutoMM for Entity Extraction with Text and Image - Quick Start
 
-Summary: This tutorial demonstrates implementing multimodal entity extraction using AutoGluon's MultiModalPredictor, specifically focusing on processing text and image data from tweets. It covers essential techniques for dataset preparation (image path handling), model configuration for NER tasks, and training workflows. The tutorial helps with tasks like setting up multimodal NER models, handling image-text data preprocessing, and implementing transfer learning. Key features include automatic modality detection, model selection from multimodal pools, late-fusion model implementation, model persistence, and continuous training capabilities. It provides practical code examples for model training, evaluation, prediction, and best practices for handling NER-specific configurations.
+Summary: This tutorial demonstrates implementing multimodal entity extraction using AutoGluon's MultiModalPredictor, specifically focusing on processing combined text and image data. It covers essential techniques for dataset preparation (including image path handling), model configuration for NER tasks, and automated modality fusion. Key functionalities include proper column type specification for NER, model training with time limits, evaluation using standard metrics (recall, precision, F1), prediction capabilities, and model persistence. The tutorial helps with tasks involving entity extraction from multimodal sources, model saving/loading, and continuous training workflows. It emphasizes best practices for NER configuration and handling multiple text columns while showcasing AutoMM's automatic modality detection and fusion features.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -12,11 +12,12 @@ Here's the condensed tutorial focusing on essential implementation details:
 ```python
 !pip install autogluon.multimodal
 from autogluon.multimodal import MultiModalPredictor
+import pandas as pd
 ```
 
 ## Dataset Preparation
 1. Dataset contains tweets with text and images
-2. Critical preprocessing steps:
+2. Key data preprocessing:
 
 ```python
 # Expand image paths
@@ -31,37 +32,38 @@ train_data[image_col] = train_data[image_col].apply(lambda ele: path_expander(el
 
 ## Model Training
 
-### Essential Configuration
+### Critical Configurations
 ```python
 predictor = MultiModalPredictor(
     problem_type="ner",  # Specify NER task
-    label=label_col,
+    label="entity_annotations",
     path=model_path
 )
 
-# Training with critical parameters
+# Training with essential parameters
 predictor.fit(
     train_data=train_data,
-    column_types={"text_snippet":"text_ner"},  # Important: Specify text_ner column type
+    column_types={"text_snippet": "text_ner"},  # Important: Specify text_ner column
     time_limit=300  # Training time in seconds
 )
 ```
 
-### Key Features
-- Automatic modality detection
-- Automatic model selection from multimodal pools
-- Late-fusion model implementation for multiple backbones
+### Key Implementation Notes:
+- AutoMM automatically:
+  - Detects data modalities
+  - Selects models from multimodal pools
+  - Implements late-fusion for multiple backbones
 
-## Evaluation and Prediction
+## Evaluation & Prediction
 ```python
 # Evaluate
-predictor.evaluate(test_data, metrics=['overall_recall', "overall_precision", "overall_f1"])
+metrics = predictor.evaluate(test_data, metrics=['overall_recall', "overall_precision", "overall_f1"])
 
 # Predict
 predictions = predictor.predict(prediction_input)
 ```
 
-## Model Persistence and Transfer Learning
+## Model Persistence & Continuous Training
 ```python
 # Load saved model
 new_predictor = MultiModalPredictor.load(model_path)
@@ -74,14 +76,14 @@ new_predictor.fit(
 )
 ```
 
-## Important Notes
-1. Set `problem_type="ner"` for entity extraction tasks
-2. Use `column_types={"text_snippet":"text_ner"}` to specify NER text columns
-3. Model automatically saves during training
-4. Supports continuous training on loaded models
-
 ## Best Practices
-1. Ensure correct image path expansion for training
-2. Specify appropriate time limits based on dataset size
-3. Use evaluation metrics suitable for NER tasks
-4. Consider continuous training for model improvement
+1. Always specify `problem_type="ner"` for entity extraction
+2. Use `column_types={"text_snippet":"text_ner"}` when multiple text columns exist
+3. Ensure image paths are properly expanded before training
+4. Consider continuous training for improving model performance
+
+## Important Notes
+- Supports multimodal data (text + images)
+- Automatically handles modality fusion
+- Saves models for later use
+- Allows continuous training on new data

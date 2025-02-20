@@ -1,6 +1,6 @@
 # Condensed: Faster Prediction with TensorRT
 
-Summary: This tutorial demonstrates how to optimize AutoGluon models using TensorRT for faster inference, specifically covering the implementation of mixed-precision optimization and model conversion. It helps with tasks like configuring TensorRT integration, optimizing trained models for inference, and validating prediction accuracy post-optimization. Key features include FP16 precision optimization, execution provider configuration, batch size tuning, and performance benchmarking techniques. The tutorial provides essential code patterns for model optimization, accuracy verification, and performance evaluation while highlighting critical considerations for maintaining prediction accuracy during the optimization process.
+Summary: This tutorial demonstrates how to optimize AutoGluon models using TensorRT for faster inference while maintaining accuracy. It covers implementation techniques for model optimization using optimize_for_inference(), including proper setup with CUDA providers, batch size considerations, and precision settings (FP16). The tutorial helps with tasks like converting trained MultiModalPredictor models to TensorRT-optimized versions, validating optimization results, and handling post-optimization workflows. Key features include seamless TensorRT integration, performance validation methods, mixed precision support, and important warnings about model modification constraints and retraining procedures.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -8,17 +8,16 @@ Here's the condensed tutorial focusing on essential implementation details:
 
 # Faster Prediction with TensorRT in AutoGluon
 
-## Key Setup
+## Key Implementation Details
+
+### Setup and Requirements
 ```python
 # Required packages
-import tensorrt, onnx, onnxruntime
 !pip install autogluon.multimodal[tests]
 !pip install -U "tensorrt>=10.0.0b0,<11.0"
 ```
 
-## Implementation Details
-
-### 1. Training Configuration
+### Training Configuration
 ```python
 hyperparameters = {
     "optimization.max_epochs": 2,
@@ -30,57 +29,60 @@ hyperparameters = {
 predictor = MultiModalPredictor(label=label_col).fit(
     train_data=train_data,
     hyperparameters=hyperparameters,
-    time_limit=120
+    time_limit=120,
 )
 ```
 
-### 2. TensorRT Optimization
+### TensorRT Optimization
 ```python
-# Load and optimize predictor
+# Load and optimize model for inference
 model_path = predictor.path
 trt_predictor = MultiModalPredictor.load(path=model_path)
 trt_predictor.optimize_for_inference()
 ```
 
-⚠️ **Important Warning**: `optimize_for_inference()` modifies internal model definition for inference only. Don't call `predictor.fit()` after optimization.
+## Critical Configurations
 
-### 3. Key Configuration Options
-
-- Default: Uses TensorRT with FP16 precision
-- Alternative provider configuration:
+1. **Provider Options**:
 ```python
+# Use CUDA execution provider for better precision
 predictor.optimize_for_inference(providers=["CUDAExecutionProvider"])
 ```
 
-## Best Practices
+2. **Batch Size Impact**:
+- Affects inference speed
+- Demonstrated with batch_size=2 in examples
 
-1. **Initialization**: Always run first prediction separately for memory allocation
-```python
-y_pred_trt = trt_predictor.predict_proba(sample)  # Initial run
-```
+## Important Warnings and Best Practices
 
-2. **Accuracy Verification**: Check prediction consistency
+1. **Model Modification Warning**:
+- `optimize_for_inference()` modifies internal model for inference only
+- Don't call `predictor.fit()` after optimization
+- Reload model with `MultiModalPredictor.load` for retraining
+
+2. **Precision Considerations**:
+- Default uses FP16 mixed precision
+- May have slight accuracy impact
+- Use `assert_allclose` with appropriate tolerance:
 ```python
 np.testing.assert_allclose(y_pred, y_pred_trt, atol=0.01)
 ```
 
-3. **Performance Evaluation**: 
-- Benchmark with multiple trials
-- Compare metrics between PyTorch and TensorRT versions
-- Monitor accuracy loss with mixed precision
+3. **Performance Validation**:
+- Always verify both speed improvement and accuracy maintenance
+- Test with full dataset for accurate metrics
+- Compare evaluation metrics between PyTorch and TensorRT versions
 
-## Critical Parameters
+## Key Benefits
 
-- `batch_size`: Affects inference speed
-- `atol`: Tolerance for accuracy comparison (default: 0.01)
-- `providers`: Execution provider selection for optimization
+1. **Speed Improvements**:
+- Significant inference speed increase
+- Maintains similar accuracy levels
+- Optimized for deployment environments
 
-## Performance Considerations
+2. **Integration**:
+- Seamless integration with existing AutoGluon workflows
+- Drop-in replacement for standard prediction
+- Compatible with existing model evaluation methods
 
-1. Mixed precision (FP16) is used by default for better performance
-2. If accuracy loss is significant:
-   - Switch to CUDA execution provider
-   - Adjust precision settings
-3. Evaluate trade-off between speed improvement and accuracy loss
-
-This implementation enables significant inference speed improvements while maintaining accuracy within acceptable tolerances.
+This condensed version maintains all critical implementation details while removing unnecessary explanatory text and setup steps.

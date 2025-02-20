@@ -1,34 +1,29 @@
 # Condensed: <!-- This cell is automatically updated by tools/tutorial-cell-updater.py -->
 
-Summary: This tutorial covers implementation techniques for inference with SpeechBrain models, focusing on three main approaches: custom functions in training scripts, pre-built interfaces (like EncoderDecoderASR), and custom interfaces. It provides code examples for model loading, transcription functions, and configuration setup using YAML files. The tutorial demonstrates how to implement ASR model inference with specific decoder parameters, feature processing, and model architecture components. Key functionalities include audio transcription, custom interface creation inheriting from Pretrained class, and using foreign class interfaces for external implementations. It covers essential configurations for encoders, decoders, scoring components, and proper model checkpoint loading, with emphasis on best practices for efficient inference using torch.no_grad() and proper module naming conventions.
+Summary: This tutorial covers implementation techniques for inference with SpeechBrain models, focusing on three main approaches: custom functions in training scripts, pre-built interfaces like EncoderDecoderASR, and custom interfaces. It provides code examples and configurations for model initialization, inference loops, and decoder parameters. Key functionalities include audio transcription, feature processing, and integration with external interfaces via foreign_class. The tutorial details essential components like encoders, decoders, scoring mechanisms, and YAML configurations, while emphasizing best practices such as using torch.no_grad() during inference and proper model evaluation mode. It's particularly useful for tasks involving ASR model deployment, custom inference pipeline development, and integrating SpeechBrain models into external applications.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the condensed tutorial focusing on essential implementation details:
+Here's the condensed tutorial focusing on key implementation details for inferring on trained SpeechBrain models:
 
 # Inferring on Trained SpeechBrain Models
 
-## Key Options for Inference
+## Key Implementation Options
 
-Three main approaches are available:
+There are three main approaches for inference:
 
-1. **Custom Function in Training Script**
-   - Simple but tightly coupled with training recipe
-   - Good for prototyping, not recommended for deployment
+1. **Custom Function in Training Script** - Simple but tightly coupled
+2. **Pre-built Interfaces** (e.g., `EncoderDecoderASR`) - Elegant but requires model compatibility
+3. **Custom Interface** - Most flexible, tailored to your model
 
-2. **Pre-built Interfaces** (e.g., `EncoderDecoderASR`)
-   - Most elegant solution
-   - Requires model compliance with interface constraints
+## Implementation Details
 
-3. **Custom Interface**
-   - Maximum flexibility
-   - Tailored to specific model architecture
+### 1. Custom Function Approach
 
-## Implementation Example: Custom Function Approach
-
-### 1. Basic Setup and Model Loading
+Key code for setup and inference:
 
 ```python
+# Initialize and train
 asr_brain = ASR(
     modules=hparams["modules"],
     opt_class=hparams["opt_class"],
@@ -37,7 +32,7 @@ asr_brain = ASR(
     checkpointer=hparams["checkpointer"],
 )
 
-# Load and transcribe
+# Inference call
 transcripts = asr_brain.transcribe_dataset(
     dataset=datasets["your_dataset"],
     min_key="WER",
@@ -45,7 +40,7 @@ transcripts = asr_brain.transcribe_dataset(
 )
 ```
 
-### 2. Transcription Function Implementation
+Example implementation of transcribe_dataset():
 
 ```python
 def transcribe_dataset(self, dataset, min_key, loader_kwargs):
@@ -66,7 +61,7 @@ def transcribe_dataset(self, dataset, min_key, loader_kwargs):
             out = self.compute_forward(batch, stage=sb.Stage.TEST)
             p_seq, wav_lens, predicted_tokens = out
             
-            # Token to word conversion
+            # Decode tokens to words
             predicted_words = self.tokenizer(
                 predicted_tokens, task="decode_from_list"
             )
@@ -75,13 +70,19 @@ def transcribe_dataset(self, dataset, min_key, loader_kwargs):
     return transcripts
 ```
 
+## Best Practices
+
+1. Always use `torch.no_grad()` during inference
+2. Set model to eval mode using `modules.eval()`
+3. Load best checkpoint before inference
+4. Implement proper error handling (not shown in example)
+
 ## Important Notes
 
-- The transcription function must be adapted to specific model architecture
-- `compute_forward()` should return predictions during test stage
-- Ensure proper model checkpoint loading before inference
-- Use `torch.no_grad()` for efficient inference
-- Implementation shown is template-based and needs customization
+- Custom functions need adaptation to specific model architectures
+- The example assumes specific model output format
+- Consider using pre-built interfaces for standard architectures
+- Implementation needs to match training recipe structure
 
 Here's the condensed version focusing on key implementation details and best practices:
 
@@ -111,7 +112,7 @@ asr_model.transcribe_file('your_file.wav')
 
 1. **YAML Configuration Structure**
 ```yaml
-# Core components
+# Core Components
 encoder: !new:speechbrain.nnet.containers.LengthsCapableSequential
     input_shape: [null, null, !ref <n_mels>]
     compute_features: !ref <compute_features>
@@ -166,8 +167,7 @@ output_neurons: 1000  # index(blank/eos/bos) = 0
 #### Important Notes
 - The interface requires specific module names for compatibility
 - Proper pretrainer configuration is essential for loading checkpoints
-- All required modules must be explicitly declared in the YAML configuration
-- The encoder can be customized but must follow the specified interface structure
+- Module structure must match the interface expectations for encoding and decoding
 
 Here's the condensed version focusing on key implementation details and concepts:
 
@@ -183,9 +183,10 @@ max_attn_shift: 240
 lm_weight: 0.50
 coverage_penalty: 1.5
 temperature: 1.25
+temperature_lm: 1.25
 ```
 
-## Core Components Configuration
+## Critical Components
 
 ### Feature Processing
 ```yaml
@@ -197,28 +198,31 @@ compute_features: !new:speechbrain.lobes.features.Fbank
     n_mels: !ref <n_mels>
 ```
 
-### Model Architecture
+### Core Model Components
 ```yaml
-# Encoder (CRDNN)
+# Encoder
 enc: !new:speechbrain.lobes.models.CRDNN.CRDNN
     input_shape: [null, null, !ref <n_mels>]
-    cnn_blocks: !ref <cnn_blocks>
-    rnn_layers: !ref <rnn_layers>
-    dnn_blocks: !ref <dnn_blocks>
+    dropout: !ref <dropout>
+    
+# Embedding
+emb: !new:speechbrain.nnet.embedding.Embedding
+    num_embeddings: !ref <output_neurons>
+    embedding_dim: !ref <emb_size>
 
 # Decoder
 dec: !new:speechbrain.nnet.RNN.AttentionalRNNDecoder
     enc_dim: !ref <dnn_neurons>
+    input_size: !ref <emb_size>
     rnn_type: gru
     attn_type: location
-    hidden_size: !ref <dec_neurons>
 ```
 
-### Scoring Components
+### Scoring and Language Model
 ```yaml
 ctc_scorer: !new:speechbrain.decoders.scorer.CTCScorer
-rnnlm_scorer: !new:speechbrain.decoders.scorer.RNNLMScorer
 coverage_scorer: !new:speechbrain.decoders.scorer.CoverageScorer
+rnnlm_scorer: !new:speechbrain.decoders.scorer.RNNLMScorer
 
 scorer: !new:speechbrain.decoders.scorer.ScorerBuilder
     weights:
@@ -259,9 +263,9 @@ encoded = my_model.encode_file('your_file.wav')
 
 ## Important Notes
 - The YAML configuration file for inference is similar to training but excludes training-specific parameters
-- Custom interfaces should inherit from `Pretrained` class for access to utility functions
-- The interface design is flexible and can be customized based on specific needs
-- Pre-built interfaces are available for common tasks like E2E ASR, speaker recognition, and source separation
+- Custom interfaces should inherit from `Pretrained` class
+- The `Pretrained` class provides utility functions like `.from_hparams()` and `load_audio()`
+- Generic interfaces are available for E2E ASR, speaker recognition, source separation, and speech enhancement
 
 Here's the condensed version focusing on the key implementation details:
 
@@ -293,7 +297,7 @@ out_prob, score, index, text_lab = classifier.classify_file(
 - Custom interfaces can be added to `speechbrain.pretrained.interfaces` if desired
 
 ## Citation
-When using SpeechBrain, cite using the following BibTeX entries:
+For academic use, cite SpeechBrain using the following BibTeX entries:
 
 ```bibtex
 @misc{speechbrainV1,
@@ -302,8 +306,7 @@ When using SpeechBrain, cite using the following BibTeX entries:
   year={2024},
   eprint={2407.00463},
   archivePrefix={arXiv},
-  primaryClass={cs.LG},
-  url={https://arxiv.org/abs/2407.00463},
+  primaryClass={cs.LG}
 }
 
 @misc{speechbrain,
@@ -312,7 +315,8 @@ When using SpeechBrain, cite using the following BibTeX entries:
   year={2021},
   eprint={2106.04624},
   archivePrefix={arXiv},
-  primaryClass={eess.AS},
-  note={arXiv:2106.04624}
+  primaryClass={eess.AS}
 }
 ```
+
+The condensed version maintains all critical implementation details while removing redundant information and simplifying the citation format for brevity.

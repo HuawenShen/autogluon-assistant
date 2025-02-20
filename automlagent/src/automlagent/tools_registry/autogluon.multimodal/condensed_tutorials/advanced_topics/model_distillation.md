@@ -1,6 +1,6 @@
 # Condensed: Knowledge Distillation in AutoMM
 
-Summary: This tutorial demonstrates knowledge distillation implementation in AutoMM, specifically showing how to transfer knowledge from a large BERT teacher model (12 layers) to a smaller BERT student model (6 layers). It covers practical implementation techniques including dataset preparation using QNLI data, teacher model setup, and student model training with knowledge distillation. Key functionalities include configuring model checkpoints, optimization parameters, and evaluation methods. The tutorial is particularly useful for tasks involving model compression while maintaining performance, especially in resource-constrained deployment scenarios. It provides code examples for the complete distillation pipeline using the MultiModalPredictor framework.
+Summary: This tutorial demonstrates knowledge distillation implementation in AutoMM, specifically focusing on transferring knowledge from large BERT teacher models to smaller student models. It covers essential techniques for model compression using the AutoGluon framework, including data preparation with QNLI dataset, teacher model setup, and student model training configuration. Key functionalities include working with MultiModalPredictor, handling train/valid/test splits, and configuring model architectures (12-layer BERT teacher to 6-layer BERT student). The tutorial is particularly useful for tasks involving model compression, deployment optimization, and maintaining performance while reducing model size through distillation techniques.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -38,12 +38,9 @@ from autogluon.multimodal import MultiModalPredictor
 teacher_predictor = MultiModalPredictor.load("ag_distillation_sample_teacher/")
 ```
 
-### 3. Knowledge Distillation Implementation
+### 3. Student Model Training
 ```python
-# Initialize student model
 student_predictor = MultiModalPredictor(label="label")
-
-# Train student with knowledge distillation
 student_predictor.fit(
     train_df,
     tuning_data=valid_df,
@@ -53,9 +50,6 @@ student_predictor.fit(
         "optimization.max_epochs": 2,
     }
 )
-
-# Evaluate student model
-print(student_predictor.evaluate(data=test_df))
 ```
 
 ## Important Configurations
@@ -63,12 +57,11 @@ print(student_predictor.evaluate(data=test_df))
 - Student model: BERT (6 layers) - `google/bert_uncased_L-6_H-768_A-12`
 
 ## Best Practices
-1. Use a well-trained teacher model
-2. Choose an appropriate student model size based on deployment constraints
-3. Validate performance on test data
-4. For more complex scenarios, refer to the [AutoMM Distillation Examples](https://github.com/autogluon/autogluon/tree/master/examples/automm/distillation)
+1. Use validation data during training to monitor performance
+2. Adjust hyperparameters based on your specific use case
+3. Consider model size vs. performance tradeoffs when selecting student architecture
 
 ## Additional Resources
-- Detailed customization: See [Customize AutoMM](customization.ipynb)
-- More examples: [AutoMM Examples](https://github.com/autogluon/autogluon/tree/master/examples/automm)
-- Advanced multilingual distillation: [PAWS-X example](https://github.com/autogluon/autogluon/tree/master/examples/automm/distillation/automm_distillation_pawsx.py)
+- Detailed examples: [AutoMM Distillation Examples](https://github.com/autogluon/autogluon/tree/master/examples/automm/distillation)
+- Multilingual distillation: [PAWS-X example](https://github.com/autogluon/autogluon/tree/master/examples/automm/distillation/automm_distillation_pawsx.py)
+- Customization guide: Refer to customization.ipynb

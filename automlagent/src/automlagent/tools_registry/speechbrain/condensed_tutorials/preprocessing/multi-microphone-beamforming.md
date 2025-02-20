@@ -1,88 +1,93 @@
 # Condensed: <!-- This cell is automatically updated by tools/tutorial-cell-updater.py -->
 
-Summary: This tutorial provides implementation details for multi-microphone beamforming using SpeechBrain, covering three main beamforming techniques: SRP-PHAT, MUSIC, and Delay-and-Sum. It demonstrates how to implement signal processing pipelines for audio processing, direction of arrival (DOA) estimation, and beamforming in the frequency domain. Key functionalities include covariance matrix estimation, time difference of arrival calculations using GCC-PHAT, and various beamforming methods (Delay-Sum, MVDR, GEV). The tutorial helps with tasks like noise reduction, speech enhancement, and source localization, providing practical code examples for microphone array setup, STFT processing, and implementing different beamforming algorithms with specific considerations for both diffuse and directive noise scenarios.
+Summary: This tutorial provides implementation guidance for multi-microphone beamforming techniques in audio processing. It covers three main beamforming methods: Delay-and-Sum, MVDR (Minimum Variance Distortionless Response), and GEV (Generalized Eigenvalue) beamforming, along with DOA (Direction of Arrival) estimation using SRP-PHAT and MUSIC algorithms. The tutorial helps with tasks like speech enhancement, noise reduction, and sound source localization. Key features include signal propagation modeling, covariance matrix estimation, STFT-based frequency domain processing, and practical implementations using the SpeechBrain toolkit. It provides code examples for handling different noise scenarios (diffuse and directive) and includes essential mathematical formulations for each technique.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the condensed tutorial focusing on essential implementation details:
+Here's the condensed tutorial focusing on key implementation details and concepts:
 
-# Multi-microphone Beamforming - Key Implementation Details
+# Multi-microphone Beamforming - Essential Implementation Guide
 
 ## Core Concepts
 
-### Propagation Model
-- Time domain: `x_m[n] = h_m[n] * s[n] + b_m[n]`
-- Frequency domain: `X_m(t,jω) = H_m(jω)S(t,jω) + B_m(t,jω)`
-- Vector form: `X(t,jω) = H(jω)S(t,jω) + B(t,jω)`
-
-### Critical Formulas
-
-1. **Covariance Matrices**:
+### Signal Propagation Model
 ```
-R_XX(jω) = (1/T)∑[X(t,jω)X^H(t,jω)]
+x_m[n] = h_m[n] * s[n] + b_m[n]
+```
+Where:
+- m: microphone index
+- n: sample index
+- h_m: room impulse response
+- s[n]: speech source signal
+- b_m[n]: additive noise
+- x_m[n]: captured signal at microphone m
+
+Frequency domain representation:
+```
+X_m(t,jω) = H_m(jω)S(t,jω) + B_m(t,jω)
+```
+
+### Key Covariance Matrices
+```python
+# Speech covariance matrix estimation using time-frequency mask
 R_SS(jω) ≈ (1/T)∑[M_S(t,jω)X(t,jω)X^H(t,jω)]
-R_NN(jω) ≈ (1/T)∑[M_N(t,jω)X(t,jω)X^H(t,jω)]
-```
 
-2. **Time Difference of Arrival (GCC-PHAT)**:
-```
-τ_m = argmax_τ ∫[X_1(jω)X_m(jω)*/|X_1(jω)||X_m(jω)|]e^(jωτ)dω
+# Noise covariance matrix estimation
+R_NN(jω) ≈ (1/T)∑[M_N(t,jω)X(t,jω)X^H(t,jω)]
 ```
 
 ## Direction of Arrival (DOA) Methods
 
-### SRP-PHAT
+### 1. SRP-PHAT
 - Scans potential directions on unit sphere
-- Power calculation:
-```
-E(u) = ∑∑∫[X_p(jω)X_q(jω)*/|X_p(jω)||X_q(jω)|]A_p(jω,u)A_q(jω,u)*dω
+- Computes power for each direction
+- Selects maximum power direction as DOA
+```python
+u_max = argmax_u{E(u)}
 ```
 
-### MUSIC Algorithm
+### 2. MUSIC Algorithm
+- Uses eigendecomposition of covariance matrix
+- Scans potential directions
 - Power calculation:
-```
-E(u) = A(jω,u)^H A(jω,u) / sqrt(A(jω,u)^H U(jω)U(jω)^H A(jω,u))
+```python
+E(u) = A^H(jω,u)A(jω,u) / sqrt(A^H(jω,u)U(jω)U^H(jω)A(jω,u))
 ```
 
 ## Beamforming Techniques
 
-### Implementation in Frequency Domain
+### 1. Delay and Sum
 ```python
-Y(jω) = W^H(jω)X(jω)
-```
-
-### Key Methods:
-
-1. **Delay and Sum**
-```
 W(jω) = (1/M)A(jω)
 ```
 
-2. **MVDR**
-```
-W(jω) = R_XX^(-1)(jω)A(jω) / [A^H(jω)R_XX^(-1)(jω)A(jω)]
+### 2. MVDR
+```python
+W(jω) = R_XX^(-1)(jω)A(jω) / (A^H(jω)R_XX^(-1)(jω)A(jω))
 ```
 
-3. **GEV**
-```
+### 3. GEV
+- Based on generalized eigenvalue decomposition
+```python
 R_SS(jω)W(jω) = λR_NN(jω)W(jω)
 ```
 
-## Best Practices
-- Use time-frequency masks for covariance matrix estimation
-- Consider array geometry for DOA estimation
-- Select appropriate beamforming technique based on acoustic conditions
+## Important Notes
+- All beamforming is applied in frequency domain: Y(jω) = W^H(jω)X(jω)
+- Time-frequency masks are commonly used for practical covariance matrix estimation
+- TDOA estimation typically uses GCC-PHAT method
 
-## Installation
+## Setup
 ```python
+# Install SpeechBrain
 !python -m pip install git+https://github.com/speechbrain/speechbrain.git@develop
 ```
 
-Here's the condensed version of the tutorial chunk, focusing on key implementation details and concepts:
+Here's the condensed tutorial focusing on key implementation details and concepts:
 
 # Audio Preparation and Beamforming Implementation
 
-## Audio Setup and Processing
+## Audio Setup and Preprocessing
 
 ```python
 # Load audio samples
@@ -93,8 +98,8 @@ fs = 16000  # sampling rate
 
 # Create noisy mixtures
 ss = xs_speech
-nn_diff = 0.05 * xs_noise_diff  # diffuse noise
-nn_loc = 0.05 * xs_noise_loc    # localized noise
+nn_diff = 0.05 * xs_noise_diff
+nn_loc = 0.05 * xs_noise_loc
 xs_diffused_noise = ss + nn_diff
 xs_localized_noise = ss + nn_loc
 ```
@@ -102,15 +107,16 @@ xs_localized_noise = ss + nn_loc
 ## Key Beamforming Implementations
 
 ### 1. SRP-PHAT (Steered-Response Power with Phase Transform)
+
 ```python
-# Setup microphone array geometry
+# Define microphone array geometry
 mics = torch.zeros((4,3), dtype=torch.float)
 mics[0,:] = torch.FloatTensor([-0.05, -0.05, +0.00])
 mics[1,:] = torch.FloatTensor([-0.05, +0.05, +0.00])
 mics[2,:] = torch.FloatTensor([+0.05, +0.05, +0.00])
 mics[3,:] = torch.FloatTensor([+0.05, +0.05, +0.00])
 
-# Processing pipeline
+# Process pipeline
 stft = STFT(sample_rate=fs)
 cov = Covariance()
 srpphat = SrpPhat(mics=mics)
@@ -121,12 +127,14 @@ doas = srpphat(XXs)
 ```
 
 ### 2. MUSIC (Multiple Signal Classification)
+
 ```python
 music = Music(mics=mics)
-doas = music(XXs)  # Uses same STFT and covariance as SRP-PHAT
+doas = music(XXs)  # Using same STFT and covariance as SRP-PHAT
 ```
 
 ### 3. Delay-and-Sum Beamforming
+
 ```python
 stft = STFT(sample_rate=fs)
 cov = Covariance()
@@ -143,104 +151,115 @@ ys_ds = istft(Ys_ds)
 ```
 
 ## Important Notes:
-1. The microphone array is configured as a circular array with 4 mics (diameter 0.1m)
-2. All microphones lie on the xy-plane, making z-axis distinction impossible
-3. The system estimates DOA for each STFT frame
-4. Slight direction differences may occur due to sphere discretization
 
-## Key Parameters:
-- Sampling rate: 16000 Hz
-- Noise scaling factor: 0.05
-- Microphone spacing: 0.1m diameter circular array
-- Array configuration: 4-microphone uniform circular array
+1. **Microphone Array Configuration**:
+   - Circular array with 4 microphones
+   - Diameter: 0.1m
+   - Uniform spacing
+   - All microphones lie on xy-plane
 
-This implementation demonstrates three different beamforming techniques: SRP-PHAT, MUSIC, and Delay-and-Sum, each suitable for different acoustic scenarios and requirements.
+2. **Limitations**:
+   - Cannot distinguish between positive and negative z-axis due to planar array configuration
+   - Slight direction inaccuracies due to sphere discretization
+
+3. **Signal Processing Flow**:
+   1. STFT conversion to frequency domain
+   2. Covariance matrix computation per frequency bin
+   3. DOA estimation or beamforming
+   4. ISTFT for time-domain conversion (in Delay-and-Sum)
+
+4. **Input Signal Types**:
+   - Clean speech
+   - Diffuse noise (omnidirectional)
+   - Directive noise (point source)
+   - Mixing ratio: 0.05 for noise signals
+
+This implementation provides methods for both DOA estimation (SRP-PHAT, MUSIC) and speech enhancement (Delay-and-Sum beamforming) in multichannel audio processing.
 
 Here's the condensed tutorial focusing on key implementation details and techniques:
 
 # Multi-Channel Speech Processing Implementation Guide
 
-## Key Components and Techniques
+## Key Beamforming Techniques
 
-### 1. Speech with Directive Noise
-- GCC-PHAT can capture TDOAs from both speech and noise sources
-- Ideal binary mask recommended to differentiate speech TDOAs from noise TDOAs
-- Implementation requires careful TDOA handling
+### 1. Delay-and-Sum Beamforming with Directive Noise
 
-### 2. Core Processing Pipeline
 ```python
-from speechbrain.processing.features import STFT, ISTFT
-from speechbrain.processing.multi_mic import Covariance, GccPhat, DelaySum, Mvdr, Gev
-
-# Initialize components
+# Core components
 stft = STFT(sample_rate=fs)
 cov = Covariance()
 gccphat = GccPhat()
-delaysum = DelaySum()  # or mvdr = Mvdr() or gev = Gev()
+delaysum = DelaySum()
 istft = ISTFT(sample_rate=fs)
 
-# Basic processing flow
-Xs = stft(input_signal)
+# Implementation flow
+Xs = stft(xs_diffused_noise)  # Convert to frequency domain
+XXs = cov(Xs)                 # Compute covariance matrix
+tdoas = gccphat(XXs)         # Estimate TDOAs
+Ys_ds = delaysum(Xs, tdoas)  # Apply beamforming
+ys_ds = istft(Ys_ds)         # Convert back to time domain
+```
+
+**Important Note**: With directive noise, GCC-PHAT may capture TDOAs from noise sources. Consider using ideal binary masks to differentiate speech TDOAs from noise TDOAs.
+
+### 2. Minimum Variance Distortionless Response (MVDR)
+
+```python
+# Additional component
+mvdr = Mvdr()
+
+# For diffuse noise
+Xs = stft(xs_diffused_noise)
+Nn = stft(nn_diff)
+NNs = cov(Nn)                # Noise covariance
 XXs = cov(Xs)
 tdoas = gccphat(XXs)
-```
-
-### 3. Beamforming Techniques
-
-#### Delay-Sum Beamforming
-```python
-# After STFT and TDOA estimation
-Ys_ds = delaysum(Xs, tdoas)
-ys_ds = istft(Ys_ds)
-```
-
-#### MVDR Beamforming
-```python
-# Additional noise processing
-Nn = stft(noise_signal)
-NNs = cov(Nn)
 Ys_mvdr = mvdr(Xs, NNs, tdoas)
 ys_mvdr = istft(Ys_mvdr)
 ```
 
-#### GEV Beamforming
+### 3. Generalized Eigenvalue Beamforming (GEV)
+
 ```python
-# Requires speech and noise covariance
-Ss = stft(speech_signal)
-Nn = stft(noise_signal)
-SSs = cov(Ss)
-NNs = cov(Nn)
+# Setup
+gev = Gev()
+
+# Implementation
+Xs = stft(xs_diffused_noise)
+Ss = stft(ss)                # Clean speech
+Nn = stft(nn_diff)          # Noise
+SSs = cov(Ss)               # Speech covariance
+NNs = cov(Nn)               # Noise covariance
 Ys_gev = gev(Xs, SSs, NNs)
 ys_gev = istft(Ys_gev)
 ```
 
-## Important Considerations
+## Key Technical Points
 
-1. **TDOA Handling**:
-   - Critical for directive noise scenarios
-   - Consider using binary masks for TDOA differentiation
+1. All methods require STFT for frequency domain conversion
+2. Covariance matrices are computed per frequency bin
+3. GCC-PHAT estimates Time Difference of Arrival (TDOA) between microphones
+4. MVDR and GEV require noise covariance estimation
+5. GEV additionally needs speech covariance estimation
 
-2. **Covariance Estimation**:
-   - Computed per frequency bin
-   - Essential for MVDR and GEV beamforming
+## Best Practices
 
-3. **Signal Processing Flow**:
-   - STFT → Covariance → TDOA estimation → Beamforming → ISTFT
-
-4. **Visualization**:
-   - Use spectrograms and waveforms to verify processing
-   - Monitor both time and frequency domain representations
-
-This implementation supports processing of both diffuse and directive noise scenarios, with different beamforming techniques offering varying levels of noise reduction effectiveness.
+- Consider using ideal binary masks for directive noise scenarios
+- Validate TDOA estimates when dealing with multiple sound sources
+- Monitor covariance matrix quality for optimal beamforming performance
+- Choose appropriate beamforming method based on noise characteristics:
+  - Delay-and-Sum: Simple scenarios
+  - MVDR: Known noise conditions
+  - GEV: When both speech and noise statistics are available
 
 Here's the condensed version of the citation information:
 
-## Citations
+## Citing SpeechBrain
 
-When using SpeechBrain in research or commercial applications, include these citations:
+When using SpeechBrain in research or commercial applications, cite both of these papers:
 
+1. For SpeechBrain 1.0 (2024):
 ```bibtex
-# For SpeechBrain 1.0 (Latest)
 @misc{speechbrainV1,
   title={Open-Source Conversational AI with {SpeechBrain} 1.0},
   author={Ravanelli et al.},
@@ -249,8 +268,10 @@ When using SpeechBrain in research or commercial applications, include these cit
   archivePrefix={arXiv},
   url={https://arxiv.org/abs/2407.00463},
 }
+```
 
-# For Original SpeechBrain
+2. For the original SpeechBrain toolkit (2021):
+```bibtex
 @misc{speechbrain,
   title={{SpeechBrain}: A General-Purpose Speech Toolkit},
   author={Ravanelli et al.},
@@ -260,4 +281,4 @@ When using SpeechBrain in research or commercial applications, include these cit
 }
 ```
 
-**Key Point**: Always cite both papers when using SpeechBrain in academic or research contexts, as they represent different versions and contributions to the toolkit.
+Note: Author lists have been abbreviated for brevity. Use complete author lists from the original citations in your work.

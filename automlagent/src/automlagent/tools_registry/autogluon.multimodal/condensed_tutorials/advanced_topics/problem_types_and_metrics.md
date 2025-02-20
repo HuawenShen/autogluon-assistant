@@ -1,6 +1,6 @@
 # Condensed: AutoMM Problem Types And Metrics
 
-Summary: This tutorial covers AutoMM's implementation of seven core machine learning problem types: classification (binary/multiclass), regression, computer vision (object detection/segmentation), similarity matching, NER, feature extraction, and few-shot classification. It helps with tasks requiring multi-modal input handling and metric selection, detailing supported input types (text, image, numerical, categorical) and relevant evaluation metrics for each problem type. Key features include zero-shot capabilities for specific tasks (similarity matching, feature extraction), default metric configurations, and comprehensive modality support across problem types, with special focus on vision-specific tasks and multi-modal applications.
+Summary: This tutorial provides implementation guidance for AutoMM's diverse problem types and metrics, covering classification (binary/multiclass), regression, computer vision (object detection, semantic segmentation), similarity matching, NLP tasks (NER), and feature extraction. It helps with tasks involving metric selection, modality support checking, and zero-shot prediction implementation. Key features include detailed metric configurations for each problem type, modality support specifications (text, image, numerical, categorical), zero-shot capability identification, and access to the PROBLEM_TYPES_REG registry for customization. The tutorial is particularly valuable for implementing multi-modal machine learning solutions and understanding which metrics and modalities are supported for different problem types.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -27,77 +27,71 @@ Here's the condensed tutorial focusing on essential implementation details and k
 - Key metrics: mae, mse, r2, pearsonr, spearmanr
 
 ### 3. Computer Vision Tasks
-**Object Detection**
-```python
-# Supported modalities
-- image only
+- **Object Detection**
+  ```python
+  # Input modality: image only
+  # Default metric: map (mean average precision)
+  # Supports zero-shot prediction
+  ```
 
-# Key metrics
-- map (default)
-- map_50, map_75
-- map_large/medium/small
-```
-
-**Semantic Segmentation**
-```python
-# Supported modalities
-- image only
-
-# Key metrics
-- iou (default)
-- ber
-- sm
-```
+- **Semantic Segmentation**
+  ```python
+  # Input modality: image only
+  # Default metric: iou
+  # Supports zero-shot prediction
+  ```
 
 ### 4. Similarity Matching
 ```python
 # Three types:
-1. Text-to-Text
-2. Image-to-Image 
-3. Image-to-Text
+- Text-to-Text Similarity
+- Image-to-Image Similarity 
+- Image-to-Text Similarity
 
-# Features
-- All support zero-shot prediction
-- No training required
+# All support zero-shot prediction
 ```
 
-### 5. NER (Named Entity Recognition)
-```python
-# Supported modalities
-- text_ner
-- text
-- categorical
-- numerical
-- image
-
-# Key metrics
-- overall_f1 (default)
-- ner_token_f1
-```
+### 5. NLP Tasks
+- **Named Entity Recognition (NER)**
+  - Input: text, text_ner, categorical, numerical, image
+  - Default metric: overall_f1
+  - Additional metric: ner_token_f1
 
 ### 6. Feature Extraction
-- Supports image and text
-- Zero-shot capable
-- No training required
+```python
+# Supported modalities:
+- image
+- text
+
+# Key characteristics:
+- Supports zero-shot prediction
+- No training support (inference only)
+```
 
 ### 7. Few-shot Classification
-- Supports image and text
-- Same metrics as multiclass classification
-- Requires training
+- Supports image and text modalities
+- Default metric: accuracy
+- Same evaluation metrics as multiclass classification
 
-## Important Notes
+## Important Implementation Notes
 
-1. **Zero-shot Capabilities**:
+1. Helper function for checking problem type details:
+```python
+from autogluon.multimodal.constants import *
+from autogluon.multimodal.problem_types import PROBLEM_TYPES_REG
+
+def print_problem_type_info(name: str, props):
+    # Access supported modalities, metrics, and capabilities
+    print(f"\nSupported Input Modalities:")
+    for modality in sorted(list(props.supported_modality_type)):
+        print(f"- {modality}")
+    # ... additional property checks
+```
+
+2. Zero-shot capabilities vary by problem type:
    - Supported: Object Detection, Segmentation, Similarity Matching, Feature Extraction
    - Not supported: Classification, Regression, NER, Few-shot Classification
 
-2. **Default Configurations**:
-   - Each problem type has predefined default metrics
-   - Multiple evaluation metrics available for most tasks
+3. For customization options, refer to the Customize AutoMM documentation
 
-3. **Modality Support**:
-   - Most tasks support multiple input types
-   - Vision tasks are image-only
-   - Similarity matching requires specific modality pairs
-
-For implementation examples, refer to [AutoMM Examples](https://github.com/autogluon/autogluon/tree/master/examples/automm).
+4. All metrics and configurations can be accessed through the PROBLEM_TYPES_REG registry

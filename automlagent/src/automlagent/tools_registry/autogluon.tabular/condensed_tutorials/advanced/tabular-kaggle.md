@@ -1,6 +1,6 @@
 # Condensed: How to use AutoGluon for Kaggle competitions
 
-Summary: This tutorial demonstrates how to use AutoGluon for Kaggle competitions, focusing on automated machine learning workflows. It covers implementation techniques for data preparation, model training with TabularPredictor, and submission generation. Key functionalities include merging multiple datasets, configuring model training with competition-specific metrics, handling probability predictions, and managing submissions via Kaggle API. The tutorial helps with tasks like automated model training, competition-specific evaluation metrics setup, and proper submission formatting. Notable features include best practices for model performance optimization, handling classification tasks, and important warnings about data consistency and prediction formats.
+Summary: This tutorial demonstrates how to use AutoGluon for Kaggle competitions, focusing on automated machine learning workflows. It covers implementation techniques for data preparation, model training with TabularPredictor, and submission generation. Key functionalities include merging multiple datasets, configuring competition-specific metrics, optimizing model performance through presets and advanced parameters, and handling predictions for competition submissions. The tutorial helps with tasks like automated model training, probability-based predictions, and proper submission formatting for Kaggle competitions, while emphasizing best practices for competition-specific requirements and model optimization strategies.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -73,30 +73,29 @@ submission.to_csv('my_submission.csv', index=False)
 kaggle competitions submit -c [COMPETITION] -f my_submission.csv -m "submission message"
 ```
 
-## Critical Best Practices
+## Key Best Practices
 
-1. **Evaluation Metrics**:
-- Always specify competition's evaluation metric in `TabularPredictor`
-- Verify correct probability class for classification tasks using `predictor.positive_class` or `predictor.class_labels`
+1. **Competition Metrics**:
+- Always specify the competition's evaluation metric in `TabularPredictor`
+- Verify correct probability class for `predict_proba` using `predictor.positive_class`
 
-2. **Model Performance**:
+2. **Model Optimization**:
 - Use `presets='best_quality'` for maximum accuracy
-- Increase `time_limit` for better results
-- For time-series data, use recent data as validation set
+- Consider time-based validation for temporal data
+- Focus on feature engineering over hyperparameter tuning
 
-3. **Advanced Configurations**:
+3. **Advanced Parameters**:
 ```python
 predictor.fit(
     train_data,
-    presets='best_quality',
-    num_bag_folds=5,  # optional
-    num_stack_levels=3,  # optional
-    num_bag_sets=1  # optional
+    num_bag_folds=5,
+    num_stack_levels=2,
+    num_bag_sets=1
 )
 ```
 
 ## Important Warnings
 - Ensure consistent data merging strategy between train and test
 - Verify prediction format matches competition requirements
-- For classification tasks, confirm probability predictions correspond to correct class
-- Focus on feature engineering over hyperparameter tuning
+- Check class labels match competition expectations for classification tasks
+- Allow sufficient training time when using `best_quality` preset

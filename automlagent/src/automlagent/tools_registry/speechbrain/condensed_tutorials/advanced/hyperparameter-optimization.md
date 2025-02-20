@@ -1,50 +1,43 @@
 # Condensed: <!-- This cell is automatically updated by tools/tutorial-cell-updater.py -->
 
-Summary: This tutorial demonstrates implementing hyperparameter optimization in SpeechBrain using Orion, covering essential techniques for automated parameter tuning in speech processing models. It helps with tasks like configuring and executing hyperparameter searches, integrating optimization contexts into existing training code, and managing experiment results. Key features include YAML-based configuration setup, optimization context implementation, result reporting mechanisms, checkpointing strategies, and distributed training support. The tutorial provides practical code snippets for dependency installation, recipe modifications, configuration file setup, and experiment monitoring, making it valuable for implementing systematic hyperparameter optimization in speech processing applications.
+Summary: This tutorial demonstrates implementing hyperparameter optimization in SpeechBrain using the hpopt utility. It covers integrating optimization contexts into existing training code, configuring search spaces through YAML files, and managing optimization trials with Orion. Key implementations include wrapping main training code in hyperparameter optimization contexts, reporting results for optimization, and defining search spaces for parameters like embedding dimensions and TDNN channels. The tutorial helps with tasks like setting up distributed hyperparameter optimization, managing checkpointing during trials, and scaling optimization across multiple GPUs. Essential features include Orion integration, parallel optimization capabilities, and proper handling of hyperparameter configurations in YAML files.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the condensed tutorial focusing on essential implementation details:
+Here's the condensed tutorial focusing on essential implementation details and key concepts:
 
 # Hyperparameter Optimization in SpeechBrain
 
 ## Key Implementation Steps
 
-1. **Install Dependencies**
-```bash
-pip install orion[profet]
-pip install pyyaml==5.4.1
-```
-
-2. **Recipe Modifications**
-
-Import required module:
+1. **Required Imports**
 ```python
 from speechbrain.utils import hpopt as hp
 ```
 
-Wrap main code with optimization context:
+2. **Recipe Modifications**
+
+a. Wrap main code in hyperparameter optimization context:
 ```python
 with hp.hyperparameter_optimization(objective_key="error") as hp_ctx:
     hparams_file, run_opts, overrides = hp_ctx.parse_arguments(sys.argv[1:])
     # ... existing training code ...
 ```
 
-3. **Report Results**
+b. Add result reporting in `on_stage_end`:
 ```python
-# Add in on_stage_end when stage == sb.Stage.VALID
-hp.report_result(stage_stats)
+hp.report_result(stage_stats)  # Last reported result used for optimization
 ```
 
-4. **YAML Configuration**
+3. **YAML Configuration**
 
-Add to train.yaml:
+Add to main `train.yaml`:
 ```yaml
 hpopt_mode: null
 hpopt: null
 ```
 
-Optional hpopt.yaml for optimization-specific settings:
+Optional `hpopt.yaml` for optimization-specific settings:
 ```yaml
 number_of_epochs: 1
 ckpt_enable: false
@@ -54,7 +47,7 @@ output_folder: !ref ./results/speaker_id/<trial_id>
 
 ## Critical Configurations
 
-1. **Orion Configuration File**
+1. **Orion Configuration Example**
 ```yaml
 experiment:
     max_trials: 1000
@@ -65,7 +58,7 @@ experiment:
             n_initial_points: 5
 ```
 
-2. **Launch Command**
+2. **Search Space Definition**
 ```bash
 orion hunt -n $EXPERIMENT_NAME -c $CONFIG_FILE python train.py train.yaml \
     --hpopt hpopt.yaml \
@@ -89,17 +82,16 @@ if self.hparams.ckpt_enable:
 - Use references (!ref) to maintain structure
 
 3. **Scaling Options**
-- Supports multi-GPU training via DP/DDP
+- Supports multi-GPU training (DP/DDP)
 - Parallel optimization with `--n-workers` flag
 - Distributed optimization across nodes available
 
-## Monitoring Results
+## Viewing Results
 ```bash
 orion info --name experiment_name
 ```
 
-This shows:
-- Completed trials
-- Best objective value
-- Optimal hyperparameter values
-- Experiment duration
+## Warning Notes
+- Ensure hyperparameters are at top level in YAML
+- Handle checkpointing carefully to avoid architecture conflicts
+- Consider using separate directories for different optimization trials

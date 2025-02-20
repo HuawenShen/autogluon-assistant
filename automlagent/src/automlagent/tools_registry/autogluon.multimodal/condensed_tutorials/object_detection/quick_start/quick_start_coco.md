@@ -1,6 +1,6 @@
 # Condensed: AutoMM Detection - Quick Start on a Tiny COCO Format Dataset
 
-Summary: This tutorial provides implementation guidance for object detection using AutoGluon's MultiModalPredictor, specifically covering YOLOX and DINO model configurations. It demonstrates how to set up, train, and perform inference with object detection models using different quality presets (medium, high, best). Key functionalities include model initialization, training with COCO-format data, inference with confidence thresholds, and result visualization. The tutorial helps with tasks like configuring GPU usage, handling model I/O, and managing different prediction output formats. It emphasizes critical dependencies (MMCV, MMDet) and version compatibility requirements, making it valuable for both prototyping and production deployment of object detection systems.
+Summary: This tutorial demonstrates implementing object detection using AutoGluon's MultiModalPredictor, covering setup requirements, model configuration, and inference workflows. It provides implementation details for training and evaluating models with different quality presets (YOLOX-large, DINO-Resnet50, DINO-SwinL), handling COCO-format datasets, and performing predictions with confidence thresholds. Key functionalities include model saving/loading, GPU configuration, visualization tools, and working with both single images and COCO-format data. The tutorial is particularly useful for tasks involving object detection model setup, training pipelines, and inference optimization with AutoGluon's framework.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -9,100 +9,94 @@ Here's the condensed tutorial focusing on key implementation details and practic
 # AutoMM Detection Quick Start Guide
 
 ## Key Setup Requirements
-
-```bash
-# Critical installations
+```python
+# Essential installations
 pip install autogluon.multimodal
-pip install -U pip setuptools wheel
-# Install MMCV and dependencies
 python3 -m mim install "mmcv==2.1.0"
 python3 -m pip install "mmdet==3.2.0"
 python3 -m pip install "mmengine>=0.10.6"
+
+# Core imports
+from autogluon.multimodal import MultiModalPredictor
 ```
 
-**Important:** MMDet requires MMCV 2.1.0 and is CUDA-version sensitive. Best results with CUDA 12.4 + PyTorch 2.5.
+## Important Notes
+- MMDet requires MMCV 2.1.0
+- Best compatibility: CUDA 12.4 + PyTorch 2.5
+- Install build dependencies before MMCV: `pip install -U pip setuptools wheel`
 
-## Implementation Details
+## Dataset Requirements
+- COCO format JSON files:
+  - `trainval_cocoformat.json`: training/validation data
+  - `test_cocoformat.json`: test data
 
-### 1. Basic Setup
+## Model Configuration
+
 ```python
-from autogluon.multimodal import MultiModalPredictor
-import os
-
-# Initialize predictor
 predictor = MultiModalPredictor(
     problem_type="object_detection",
     sample_data_path=train_path,
-    presets="medium_quality",
-    path=model_path
+    presets="medium_quality",  # Options: medium_quality, high_quality, best_quality
+    path=model_path  # Optional save location
 )
 ```
 
-### 2. Model Configuration Options
+### Preset Options
+- `medium_quality`: YOLOX-large (fast, efficient)
+- `high_quality`: DINO-Resnet50 (better accuracy)
+- `best_quality`: DINO-SwinL (highest accuracy, slower)
 
-- **medium_quality**: YOLOX-large (default, balanced speed/accuracy)
-- **high_quality**: DINO-Resnet50 (better accuracy)
-- **best_quality**: DINO-SwinL (highest accuracy, slower)
-
-### 3. Training and Evaluation
+## Training and Evaluation
 ```python
-# Train model
+# Training
 predictor.fit(train_path)
 
-# Evaluate
+# Evaluation
 predictor.evaluate(test_path)
+
+# Load saved model
+new_predictor = MultiModalPredictor.load(model_path)
+new_predictor.set_num_gpus(1)  # Adjust GPU usage
 ```
 
-### 4. Inference
+## Inference
 ```python
 # Predict with confidence threshold
 pred = predictor.predict(test_path, save_results=True, as_coco=False)
 
 # Visualization
 from autogluon.multimodal.utils import ObjectDetectionVisualizer
+
 visualizer = ObjectDetectionVisualizer(img_path)
 out = visualizer.draw_instance_predictions(image_result, conf_threshold=0.4)
 ```
 
-## Critical Configurations
-
-1. **Data Format Requirements**:
-   - COCO format JSON files
-   - Required files: `trainval_cocoformat.json`, `test_cocoformat.json`
-
-2. **Model Output Format**:
-   ```python
-   {
-       "class": "class_name",
-       "bbox": [x1, y1, x2, y2],  # Corner coordinates
-       "score": confidence_score
-   }
-   ```
+## Output Format
+Predictions returned as DataFrame with:
+- `image`: Image path
+- `bboxes`: List of detections
+  ```python
+  {
+      "class": "class_name",
+      "bbox": [x1, y1, x2, y2],
+      "score": confidence_score
+  }
+  ```
 
 ## Best Practices
+1. Use `medium_quality` preset for quick prototyping
+2. Switch to `high_quality` or `best_quality` for better accuracy
+3. Save predictions with `save_results=True`
+4. Set confidence threshold for visualization
+5. Restart kernel after MMCV installation
 
-1. **Model Selection**:
-   - Use `medium_quality` for quick prototyping
-   - Use `high_quality` or `best_quality` for production
+## Custom Data Inference
+```python
+# Single image
+predictor.predict([image_path])
 
-2. **GPU Usage**:
-   ```python
-   predictor.set_num_gpus(1)  # Adjust based on availability
-   ```
+# COCO format
+predictor.predict(json_annotation_file)
+```
 
-3. **Save/Load Models**:
-   ```python
-   # Load saved model
-   new_predictor = MultiModalPredictor.load(model_path)
-   ```
-
-4. **Inference Options**:
-   - Support for single images, image lists, or COCO format files
-   - Can save predictions in CSV or COCO JSON formats
-
-## Important Warnings
-
-- MMDet compatibility issues with newer CUDA versions
-- Restart kernel after MMCV installation
-- Ensure proper CUDA/PyTorch version matching
-- Monitor GPU memory usage with higher quality models
+This condensed version maintains all critical implementation details while removing explanatory text and redundant examples.

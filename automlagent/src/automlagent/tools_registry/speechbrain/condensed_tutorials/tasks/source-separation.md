@@ -1,54 +1,42 @@
 # Condensed: <!-- This cell is automatically updated by tools/tutorial-cell-updater.py -->
 
-Summary: This tutorial provides implementation details for audio source separation using deep learning, specifically focusing on a PyTorch-based solution with SpeechBrain. It demonstrates how to build a source separation model using bidirectional LSTM and convolutional layers, including code for data generation, model architecture, and training pipeline. The tutorial covers key techniques like STFT processing, mask-based separation, and SI-SNR loss implementation. It helps with tasks such as separating mixed audio signals, implementing custom audio processing models, and visualizing spectrograms. Notable features include a complete model architecture with encoder-decoder structure, data loading utilities, training configurations, and best practices for parameter tuning and performance optimization.
+Summary: This tutorial demonstrates the implementation of an audio source separation system using PyTorch and SpeechBrain. It covers techniques for building a neural network-based separator that combines STFT processing (or learned convolutions), bidirectional LSTM, and mask-based separation. The tutorial helps with tasks like creating custom audio datasets, implementing a source separation model architecture, and setting up training pipelines with appropriate loss functions (L1 or SI-SNR). Key features include time-frequency domain conversion, mask generation for source isolation, phase reconstruction, and handling time dimension mismatches. The implementation provides practical code for data generation, model architecture (featuring LSTM and convolutional layers), and training configuration with specific hyperparameters for optimal separation performance.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
 Here's the condensed tutorial focusing on key implementation details:
 
-# Source Separation Implementation Guide
+# Source Separation Tutorial - Essential Implementation
 
 ## Key Components
 
-### 1. Basic Setup & Data Generation
+### 1. Data Generation
 ```python
 # Generate synthetic data
 N = 100
 f_th = 200  # Frequency threshold
 fs = 8000   # Sampling rate
-T = 10000   # Time samples
+T = 10000   # Signal length
 
 # Create sources with different frequency ranges
-source1 = torch.sin(2*np.pi*(f1/fs)*t)  # freq < f_th
-source2 = torch.sin(2*np.pi*(f2/fs)*t)  # freq > f_th
+source1 = torch.sin(2*np.pi*(f1/fs)*t)  # f1 < f_th
+source2 = torch.sin(2*np.pi*(f2/fs)*t)  # f2 > f_th
 mixture = source1 + source2
+
+# Create datasets
+train_dataset = data_utils.TensorDataset(source1[:N_train], source2[:N_train], mixture[:N_train])
+test_dataset = data_utils.TensorDataset(source1[N_train:], source2[N_train:], mixture[N_train:])
 ```
 
-### 2. Data Loading
-```python
-# Create train/test splits
-N_train = 90
-train_dataset = data_utils.TensorDataset(source1[:N_train], 
-                                       source2[:N_train], 
-                                       mixture[:N_train])
-test_dataset = data_utils.TensorDataset(source1[N_train:], 
-                                      source2[N_train:], 
-                                      mixture[N_train:])
-
-# DataLoaders
-train_loader = data_utils.DataLoader(train_dataset, batch_size=batch_size)
-test_loader = data_utils.DataLoader(test_dataset, batch_size=batch_size)
-```
-
-### 3. Model Architecture
+### 2. Model Architecture
 ```python
 class simpleseparator(nn.Module):
     def __init__(self, fft_size, hidden_size, num_sources=2):
         super().__init__()
         self.masking = nn.LSTM(
-            input_size=fft_size//2 + 1,
-            hidden_size=hidden_size,
-            batch_first=True,
+            input_size=fft_size//2 + 1, 
+            hidden_size=hidden_size, 
+            batch_first=True, 
             bidirectional=True
         )
         self.output_layer = nn.Linear(
@@ -59,39 +47,47 @@ class simpleseparator(nn.Module):
         self.num_sources = num_sources
 ```
 
-## Important Implementation Details
+### 3. Key Processing Steps
+1. Convert input to frequency domain using STFT
+2. Calculate magnitude and phase
+3. Process through bidirectional LSTM
+4. Generate source masks
+5. Reconstruct sources using inverse STFT
 
-1. **Signal Processing**:
-   - Uses STFT for time-frequency domain conversion
-   - Applies magnitude and phase separation
-   - Implements mask-based source separation
-
-2. **Model Architecture**:
-   - Bidirectional LSTM for temporal modeling
-   - Linear layer for mask generation
-   - Source reconstruction using inverse STFT
-
-3. **Key Parameters**:
-   - `fft_size`: FFT window size
-   - `hidden_size`: LSTM hidden dimensions
-   - `num_sources`: Number of sources to separate (default=2)
-
-## Best Practices
-
-1. Choose appropriate FFT size based on signal characteristics
-2. Ensure proper normalization of input signals
-3. Use bidirectional LSTM for better temporal context
-4. Apply ReLU activation for mask generation
-
-## Critical Configurations
 ```python
-# Recommended parameters
-fft_size = 200
-batch_size = 10
-hidden_size = [128, 256]  # Depending on complexity
+def forward(self, inp):
+    # STFT
+    y = torch.view_as_real(torch.stft(inp, n_fft=self.fft_size, return_complex=True))
+    
+    # Magnitude and phase
+    mag = torch.sqrt((y ** 2).sum(-1))
+    phase = torch.atan2(y[:, :, :, 1], y[:, :, :, 0])
+    
+    # LSTM processing
+    rnn_out = self.masking(mag.permute(0, 2, 1))[0]
+    
+    # Generate masks and reconstruct
+    sources = []
+    for n in range(self.num_sources):
+        mask = lin_out[:, :, :, n]
+        sourcehat_dft = (mask * mag).permute(0, 2, 1) * torch.exp(1j * phase)
+        sourcehat = torch.istft(sourcehat_dft, n_fft=self.fft_size)
+        sources.append(sourcehat)
 ```
 
-This implementation provides a basic framework for source separation using deep learning, suitable for signals with distinct frequency characteristics.
+## Important Notes
+- Uses STFT for time-frequency domain conversion
+- Employs mask-based separation using bidirectional LSTM
+- Reconstructs sources using phase information from mixture
+- Model outputs separated sources and their masks
+
+## Configuration Parameters
+- `fft_size`: Size of FFT window
+- `hidden_size`: LSTM hidden dimension
+- `num_sources`: Number of sources to separate (default=2)
+- `batch_size`: Training batch size (10 in example)
+
+This implementation uses SpeechBrain framework and PyTorch for source separation tasks.
 
 Here's the condensed version focusing on key implementation details and concepts:
 
@@ -105,7 +101,7 @@ class SeparationBrain(sb.Brain):
     def __init__(self, train_loss, modules, opt_class):
         super(SeparationBrain, self).__init__(modules=modules, opt_class=opt_class)
         self.train_loss = train_loss
-    
+        
     def compute_forward(self, mix):
         # Get source estimates
         est_sources, _, _ = self.modules.mdl(mix)
@@ -124,8 +120,8 @@ class SeparationBrain(sb.Brain):
 ### Key Components:
 
 1. **Loss Functions**:
-   - L1 loss: `(est_sources - targets).abs().mean()`
-   - SI-SNR loss: Uses `sb.nnet.losses.get_si_snr_with_pitwrapper()`
+   - Supports L1 loss and SI-SNR loss
+   - SI-SNR implemented using permutation invariant training
 
 2. **Training Configuration**:
 ```python
@@ -133,36 +129,42 @@ optimizer = lambda x: torch.optim.Adam(x, lr=0.0001)
 N_epochs = 10
 ```
 
+3. **Model Initialization**:
+```python
+separator = SeparationBrain(
+    train_loss='l1',
+    modules={'mdl': model},
+    opt_class=optimizer
+)
+```
+
 ## Visualization and Analysis
 
-### Important Visualization Components:
+### Key Visualization Components:
 - Mixture spectrogram
 - Estimated source masks
 - Masked spectrograms
 - Ground truth spectrograms
 
-```python
-# Key visualization parameters
-plt.figure(figsize=[20, 10], dpi=80)
-# Use librosa.display.specshow() for spectrogram visualization
-```
+### Important Observations:
+- Masks act as band-stop filters
+- Each mask attempts to remove interference from other sources
 
-### Best Practices:
-1. Always check time dimension matching between input and output
-2. Visualize masks and spectrograms to verify separation quality
-3. Compare estimated sources with ground truth
+## Best Practices and Tips:
 
-## Exercise Suggestions:
-1. Experiment with SI-SNR loss for potential performance improvements
-2. Replace STFT/ISTFT with convolutional layers:
-   - Use conv layers for front-end
-   - Use transposed conv for reconstruction
-   - Compare learned filters with DFT bases
+1. **Time Dimension Handling**:
+   - Always check and handle potential time dimension mismatches after convolution operations
 
-## Important Notes:
-- Model requires proper handling of time dimensions due to convolution operations
-- Masks act as band-stop filters to remove interference
-- Visualization is crucial for understanding separation quality
+2. **Loss Function Selection**:
+   - L1 loss for basic training
+   - SI-SNR for potentially better separation quality
+
+3. **Suggested Experiments**:
+   - Compare performance between L1 and SI-SNR losses
+   - Try replacing STFT/ISTFT with learned convolutional layers
+   - Analyze learned filter characteristics vs. DFT bases
+
+This implementation provides a complete framework for training and evaluating source separation models using either traditional STFT-based or learned convolutional approaches.
 
 Here's the condensed version focusing on key implementation details and code samples:
 
@@ -181,10 +183,7 @@ class source_separation_dataset(Dataset):
     def __getitem__(self, idx):
         return self.mixs[idx], self.train_source1s[idx], self.train_source2s[idx]
 
-    def __len__(self):
-        return len(self.mixs)
-
-# Create data loaders
+# Setup data loaders
 train_loader_audio = DataLoader(train_dataset_audio, batch_size=1)
 valid_loader_audio = DataLoader(valid_dataset_audio, batch_size=1)
 ```
@@ -195,29 +194,30 @@ class audioseparator(nn.Module):
     def __init__(self, fft_size, hidden_size, num_sources=2, kernel_size=16):
         super(audioseparator, self).__init__()
         # Encoder
-        self.encoder = nn.Conv1d(1, fft_size, kernel_size=16, stride=kernel_size//2)
+        self.encoder = nn.Conv1d(1, fft_size, kernel_size, stride=kernel_size//2)
         
         # MaskNet
         self.rnn = nn.LSTM(fft_size, hidden_size, batch_first=True, bidirectional=True)
         self.output_layer = nn.Linear(hidden_size*2, num_sources*(fft_size))
         
         # Decoder
-        self.decoder = nn.ConvTranspose1d(fft_size, 1, kernel_size=kernel_size, 
-                                        stride=kernel_size//2)
+        self.decoder = nn.ConvTranspose1d(fft_size, 1, kernel_size, stride=kernel_size//2)
 
     def forward(self, inp):
         y = nn.functional.relu(self.encoder(inp.unsqueeze(0)))
-        rnn_out = self.rnn(y.permute(0, 2, 1))[0]
+        y = y.permute(0, 2, 1)
+        rnn_out = self.rnn(y)[0]
         lin_out = self.output_layer(rnn_out)
+        lin_out = lin_out.reshape(lin_out.size(0), lin_out.size(1), -1, self.num_sources)
         
-        # Source separation processing
+        # Source separation
         sources = []
         for n in range(self.num_sources):
             sourcehat_mask = nn.functional.relu(lin_out[:, :, :, n])
             sourcehat_latent = (sourcehat_mask * y[:, :T, :]).permute(0, 2, 1)
             sourcehat = self.decoder(sourcehat_latent).squeeze(0)
             sources.append(sourcehat)
-            
+        
         return sources, all_masks, y
 ```
 
@@ -230,7 +230,7 @@ model_audio = audioseparator(fft_size=1024, hidden_size=300, kernel_size=256)
 optimizer = lambda x: torch.optim.Adam(x, lr=0.0002)
 N_epochs = 200
 
-# SpeechBrain separator setup
+# SpeechBrain trainer setup
 separator = SeparationBrain(
     train_loss='si-snr',
     modules={'mdl': model_audio},
@@ -242,19 +242,21 @@ separator.fit(epoch_counter, train_loader_audio, valid_loader_audio)
 ```
 
 ## Important Notes
-- The model uses a combination of CNN, LSTM, and mask-based separation
-- Training parameters:
+- The model uses a combination of CNN, LSTM, and transposed convolution for source separation
+- Key hyperparameters:
   - FFT size: 1024
   - Hidden size: 300
+  - Kernel size: 256
   - Learning rate: 0.0002
-  - Epochs: 200
+  - Number of epochs: 200
 - The implementation may introduce some artifacts in the separated audio
 - Uses SI-SNR (Scale-Invariant Signal-to-Noise Ratio) as the training loss
 
-## Best Practices
-1. Use appropriate batch sizes based on available memory
-2. Adjust kernel_size and FFT parameters based on audio characteristics
-3. Monitor training loss to prevent overfitting
-4. Consider preprocessing audio data for better separation results
-
-This implementation provides a basic framework for audio source separation using SpeechBrain, though results may vary depending on the complexity of the input mixtures.
+## Usage Example
+```python
+# Inference
+estimated_sources_test, all_masks, mag = model_audio.forward(mixture.unsqueeze(0))
+# Access separated sources
+source1 = estimated_sources_test[0].squeeze().detach()
+source2 = estimated_sources_test[1].squeeze().detach()
+```

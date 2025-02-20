@@ -1,6 +1,6 @@
 # Condensed: <!-- This cell is automatically updated by tools/tutorial-cell-updater.py -->
 
-Summary: This tutorial demonstrates the implementation of a speech enhancement system using SpeechBrain, focusing on spectral masking techniques. It provides code for forward computation with signal approximation masking, loss calculation using MSE and STOI metrics, and feature computation with STFT transforms. The implementation includes essential components like data pipeline setup, model training workflow, and evaluation procedures. Key functionalities covered include batch processing, augmentation, spectrogram manipulation, waveform resynthesis, and metric tracking across different training stages. The tutorial is particularly useful for tasks involving audio signal processing, specifically speech enhancement, and provides practical knowledge about handling audio data, implementing custom loss functions, and managing training workflows with proper checkpointing and logging mechanisms.
+Summary: This tutorial demonstrates the implementation of a speech enhancement system using SpeechBrain, focusing on spectral masking techniques. It provides implementation details for forward pass computation, loss calculation, feature extraction, and data handling in PyTorch. The tutorial covers key functionalities including STFT-based spectral analysis, MSE loss computation, checkpoint management, and STOI metric evaluation. Developers can use this tutorial to implement speech enhancement models with proper data loading, training loops, validation procedures, and model evaluation. Notable technical features include spectral masking for noise reduction, dynamic noise generation during training, efficient data pipeline creation using DynamicItemDatasets, and structured logging for experiment tracking.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -9,8 +9,8 @@ Here's the condensed tutorial focusing on key implementation details:
 ```markdown
 # Speech Enhancement Recipe Implementation
 
-## Core Structure (train.py)
-Main execution flow:
+## Core Structure
+Main training flow in `Train.py`:
 1. Load hyperparameters
 2. Prepare data manifests
 3. Instantiate `SEBrain`
@@ -18,7 +18,7 @@ Main execution flow:
 
 ## Key Implementation Details
 
-### 1. Forward Computation
+### 1. Forward Pass Implementation
 ```python
 def compute_forward(self, batch, stage):
     # Move batch to device
@@ -66,33 +66,27 @@ def compute_objectives(self, predictions, batch, stage):
 def compute_feats(self, wavs):
     feats = self.hparams.compute_STFT(wavs)
     feats = sb.processing.features.spectral_magnitude(feats, power=0.5)
-    return torch.log1p(feats)  # log1p for better small difference handling
-```
-
-### 4. Metric Tracking
-```python
-def on_stage_start(self, stage, epoch=None):
-    # Initialize metrics
-    self.loss_metric = sb.utils.metric_stats.MetricStats(
-        metric=sb.nnet.losses.mse_loss
-    )
-    if stage != sb.Stage.TRAIN:
-        self.stoi_metric = sb.utils.metric_stats.MetricStats(
-            metric=sb.nnet.loss.stoi_loss.stoi_loss
-        )
+    return torch.log1p(feats)  # Log1p for better small difference handling
 ```
 
 ## Important Notes
 - `self.modules` and `self.hparams` are constructed during `SEBrain` instantiation
-- Loss computation includes both spectral MSE and STOI metrics (validation only)
-- Feature computation uses log1p transform for better handling of small differences
+- Keys in the initialization dicts determine attribute names
 - Metrics are tracked separately for training and validation stages
+- STOI evaluation only performed during validation to save computation
+
+## Best Practices
+1. Return predictions as dictionaries for clarity
+2. Use separate metric tracking for train/validation phases
+3. Implement feature computation as a separate method for modularity
+4. Track both spectral and waveform-domain metrics
 ```
+
+This condensed version maintains all critical implementation details while removing redundant explanations and boilerplate code.
 
 Here's the condensed version focusing on key implementation details and concepts:
 
-### SEBrain Stage Handling Implementation
-
+### SEBrain Stage End Implementation
 ```python
 class SEBrain(SEBrain):
     def on_stage_end(self, stage, stage_loss, epoch=None):
@@ -105,7 +99,7 @@ class SEBrain(SEBrain):
                 "stoi": -self.stoi_metric.summarize("average"),
             }
         
-        # Validation stage: Log stats and save checkpoints
+        # Validation stage: log stats and save checkpoints
         if stage == sb.Stage.VALID:
             self.hparams.train_logger.log_stats(
                 {"Epoch": epoch},
@@ -114,8 +108,8 @@ class SEBrain(SEBrain):
             )
             # Save checkpoint with best STOI score
             self.checkpointer.save_and_keep_only(meta=stats, max_keys=["stoi"])
-        
-        # Test stage: Log final statistics
+            
+        # Test stage: log final statistics
         if stage == sb.Stage.TEST:
             self.hparams.train_logger.log_stats(
                 {"Epoch loaded": self.hparams.epoch_counter.current},
@@ -124,7 +118,6 @@ class SEBrain(SEBrain):
 ```
 
 ### Data Loading Implementation
-
 ```python
 def dataio_prep(hparams):
     # Audio pipeline definition
@@ -142,7 +135,7 @@ def dataio_prep(hparams):
         "test": hparams["test_annotation"],
     }
     
-    # Configure and create datasets
+    # Create sorted datasets for efficiency
     hparams["dataloader_options"]["shuffle"] = False
     for dataset in data_info:
         datasets[dataset] = sb.dataio.dataset.DynamicItemDataset.from_json(
@@ -154,33 +147,30 @@ def dataio_prep(hparams):
     return datasets
 ```
 
-### Key Points and Best Practices:
-
-1. **Stage Handling**:
-   - Separate handling for train, validation, and test stages
-   - Maintains train loss between stages
-   - Implements checkpoint saving based on STOI metric
+### Key Points:
+1. **Stage End Handling**:
+   - Tracks training loss
+   - Logs statistics for validation and test stages
+   - Saves checkpoints based on STOI score during validation
 
 2. **Data Loading**:
-   - Uses DynamicItemDataset for efficient data handling
-   - Implements sorted datasets for better efficiency
-   - Provides clean audio signal pipeline
+   - Uses DynamicItemDatasets for efficient data handling
+   - Implements audio pipeline for loading clean signals
+   - Creates sorted datasets for train/valid/test splits
 
 3. **Configuration**:
-   - Uses HyperPyYAML for parameter management
-   - Creates experiment directory for outputs
+   - Uses HyperPyYAML for hyperparameter management
+   - Creates experiment directory for storing results
    ```python
    with open("train.yaml") as fin:
      hparams = load_hyperpyyaml(fin)
    sb.create_experiment_directory(hparams["output_folder"])
    ```
 
-4. **Important Notes**:
-   - Dataset sorting improves training efficiency
-   - Checkpointing saves only the best models based on STOI
-   - Proper logging implemented for all stages
-
-This implementation provides a foundation for speech enhancement tasks using SpeechBrain, with proper data handling, logging, and checkpoint management.
+4. **Best Practices**:
+   - Sorts datasets by length for training efficiency
+   - Implements checkpoint saving with best model retention
+   - Uses structured logging for tracking experiments
 
 Here's the condensed version of the speech enhancement tutorial focusing on key implementation details:
 
@@ -190,11 +180,11 @@ Here's the condensed version of the speech enhancement tutorial focusing on key 
 - Uses spectral masking approach for speech enhancement
 - Maps noisy spectrograms to clean ones
 - Uses noisy signal phase for reconstruction
-- Based on Mini Librispeech + OpenRIR datasets
+- Part of SpeechBrain's enhancement capabilities (along with MetricGAN+ and MimicLoss)
 
 ## Core Implementation Components
 
-### 1. Project Structure
+### Project Structure
 ```
 templates/enhancement/
 ├── train.py          # Main training script
@@ -203,17 +193,16 @@ templates/enhancement/
 └── mini_librispeech_prepare.py  # Data preparation
 ```
 
-### 2. Basic Setup
-```python
-# Install and import
-!pip install git+https://github.com/speechbrain/speechbrain.git@develop
-import speechbrain as sb
+### Basic Usage
+```bash
+python train.py train.yaml --data_folder /path/to/save/mini_librispeech
 ```
 
-### 3. Data Preparation
+### Key Implementation Steps
+
+1. **Data Preparation**
 ```python
 from mini_librispeech_prepare import prepare_mini_librispeech
-
 prepare_mini_librispeech(
     data_folder=hparams["data_folder"],
     save_json_train=hparams["train_annotation"],
@@ -223,17 +212,18 @@ prepare_mini_librispeech(
 datasets = dataio_prep(hparams)
 ```
 
-### 4. Model Training
+2. **Model Training Setup**
 ```python
-# Initialize enhancement brain
 se_brain = SEBrain(
     modules=hparams["modules"],
     opt_class=hparams["opt_class"],
     hparams=hparams,
     checkpointer=hparams["checkpointer"],
 )
+```
 
-# Train model
+3. **Training Execution**
+```python
 se_brain.fit(
     epoch_counter=se_brain.hparams.epoch_counter,
     train_set=datasets["train"],
@@ -243,7 +233,7 @@ se_brain.fit(
 )
 ```
 
-### 5. Evaluation
+4. **Model Evaluation**
 ```python
 se_brain.evaluate(
     test_set=datasets["test"],
@@ -254,19 +244,16 @@ se_brain.evaluate(
 
 ## Important Notes
 - Uses STFT for spectral analysis
-- Checkpointing allows resuming interrupted training
-- Best model selected based on STOI metric
-- Supports dynamic generation of noisy samples during training
-- Advanced alternatives available: MetricGAN+ and MimicLoss
+- Implements checkpointing for resumable training
+- Evaluates using STOI metric
+- Supports dynamic noise generation during training
+- Uses Mini Librispeech + OpenRIR datasets
 
 ## Best Practices
-1. Use checkpointing for training stability
-2. Monitor STOI metric for model performance
-3. Consider waveform-masking for avoiding phase issues
-4. Validate data loading before full training
-5. Use appropriate batch sizes based on available compute
+- Always specify device (CPU/GPU) in training configuration
+- Use checkpointing for long training sessions
+- Validate data loading before full training
+- Monitor STOI scores during validation
+- Load best checkpoint for final evaluation
 
-To run the complete template:
-```bash
-python train.py train.yaml --data_folder /path/to/save/mini_librispeech
-```
+This implementation provides a foundation for speech enhancement tasks and can be extended with more advanced techniques like MetricGAN+ or MimicLoss as needed.

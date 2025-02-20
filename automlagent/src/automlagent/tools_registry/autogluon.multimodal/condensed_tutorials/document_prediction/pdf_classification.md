@@ -1,6 +1,6 @@
 # Condensed: Classifying PDF Documents with AutoMM
 
-Summary: This tutorial demonstrates PDF document classification using AutoGluon's MultiModalPredictor, specifically implementing LayoutLM-based document understanding. It covers essential techniques for processing PDF documents, including data preparation, model training, and feature extraction. The tutorial helps with tasks like automated document classification, embedding extraction, and probability-based predictions. Key functionalities include automatic PDF processing with built-in text recognition, document embedding extraction, and probability predictions, utilizing the microsoft/layoutlm-base-uncased model. The implementation includes data loading, path handling, model training with customizable hyperparameters, and various prediction methods.
+Summary: This tutorial demonstrates PDF document classification using AutoGluon's MultiModalPredictor, specifically implementing document processing and classification tasks. It covers essential techniques for handling PDF documents, including data preparation, model training with LayoutLM, and extraction of document embeddings. Key functionalities include automatic PDF processing, text recognition, probability predictions, and embedding extraction. The tutorial helps with tasks like setting up document paths, training classifiers, making predictions, and evaluating model performance. It provides implementation details for configuring the document transformer, managing training time limits, and handling PDF datasets effectively using AutoGluon's multimodal capabilities.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -81,16 +81,15 @@ feature = predictor.extract_embedding({DOC_PATH_COL: [test_data.iloc[0][DOC_PATH
 - Document embedding extraction
 - Support for probability predictions
 
-## Important Notes
-- Uses LayoutLM base model for document understanding
-- Supports automatic PDF processing without manual intervention
-- Can extract N-dimensional document features for further analysis
-- Allows customization through hyperparameters
+## Important Configurations
+- Uses `layoutlm-base-uncased` as default document transformer
+- Time limit can be adjusted based on dataset size and requirements
+- Supports various evaluation metrics
 
 ## Best Practices
 1. Ensure correct document paths are provided
-2. Verify PDF files are accessible to the predictor
-3. Consider adjusting time_limit based on dataset size
-4. Use path_expander for correct file path handling
+2. Verify PDF accessibility before processing
+3. Consider memory requirements for large PDF datasets
+4. Use appropriate time limits based on dataset size
 
-For advanced customization, refer to the AutoMM customization documentation.
+For customization options, refer to the AutoMM customization documentation.

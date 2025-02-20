@@ -1,6 +1,6 @@
 # Condensed: <!-- This cell is automatically updated by tools/tutorial-cell-updater.py -->
 
-Summary: This tutorial demonstrates implementing efficient data loading for large datasets using WebDataset and TAR archives, particularly useful for shared filesystem environments. It covers techniques for creating and managing data shards, setting up optimized loading pipelines with dynamic batching, and configuring DataLoaders for streaming performance. Key functionalities include TAR shard creation, data shuffling, dynamic bucketing for efficient padding, and infinite data streaming. The implementation helps solve common issues with large-scale data handling, filesystem load reduction, and memory efficiency. The code examples show integration with SpeechBrain and provide specific configurations for audio processing tasks, though the approach is adaptable for other large-scale data scenarios.
+Summary: This tutorial demonstrates implementing efficient data loading for large datasets using WebDataset and TAR archives, particularly useful for speech recognition tasks with SpeechBrain. It covers techniques for creating and managing data shards, configuring dynamic batching, and optimizing memory usage through sequential streaming. Key functionalities include TAR shard creation, WebDataset integration with SpeechBrain, dynamic batch sizing, and epoch handling. The implementation helps solve challenges with large-scale data loading from shared filesystems, offering code examples for dataset creation, shard writing, and dataloader configuration while emphasizing best practices for performance optimization and memory management.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -16,12 +16,10 @@ Here's the condensed tutorial focusing on essential implementation details and k
 
 ## Implementation Details
 
-### WebDataset Setup
+### WebDataset Basics
 ```python
 import webdataset as wds
-import speechbrain as sb
 
-# Basic WebDataset pipeline
 dataset = (
     wds.WebDataset("data-archives/shard-00{00...24}.tar")
     .decode()
@@ -32,8 +30,7 @@ dataset = (
 
 ### Creating TAR Shards
 ```python
-# Create shards using WebDataset's ShardWriter
-with wds.ShardWriter("shards/shard-%06d.tar", maxcount=100) as writer:
+with wds.ShardWriter(f"{SHARDSDIR}/shard-%06d.tar", maxcount=100) as writer:
     for uttid in uttids:
         example = {
             "__key__": uttid,
@@ -43,24 +40,26 @@ with wds.ShardWriter("shards/shard-%06d.tar", maxcount=100) as writer:
         writer.write(example)
 ```
 
-### Optimized Data Loading Pipeline
+### SpeechBrain Integration
 ```python
 dataset = (
-    wds.WebDataset("shards/shard-0000{00..10}.tar")
+    wds.WebDataset(str(SHARDSDIR)+"/shard-0000{00..10}.tar")
     .decode()
     .rename(id="__key__", signal="audio.pth", text="text")
     .repeat()
     .then(sb.dataio.iterators.dynamic_bucketed_batch,
           len_key="signal",
           sampler_kwargs={
-              "target_batch_numel": 16000*45.,  # 45 seconds total
-              "max_batch_numel": 16000*60.      # Max 60 seconds
+              "target_batch_numel": 16000*45.,
+              "max_batch_numel": 16000*60.
           }
     )
 )
 ```
 
-### DataLoader Configuration
+## Critical Configurations
+
+1. DataLoader Setup:
 ```python
 dataloader = sb.dataio.dataloader.make_dataloader(
     dataset, 
@@ -68,29 +67,34 @@ dataloader = sb.dataio.dataloader.make_dataloader(
 )
 ```
 
-## Best Practices & Important Notes
+2. Shard Writer Parameters:
+- `maxcount`: Maximum examples per shard
+- `maxsize`: Maximum shard size in bytes
 
-1. **Data Organization**:
-   - Bundle small recordings into larger TAR archives (shards)
-   - Shuffle data during shard creation to avoid speaker/document clustering
+3. Dynamic Batching Parameters:
+- `target_batch_numel`: Target total elements per batch
+- `max_batch_numel`: Maximum elements allowed per batch
 
-2. **Performance Optimizations**:
-   - Use dynamic batching and bucketing for efficient padding
-   - Implement `.rename` for cleaner batch element access
-   - Use `.repeat` for infinite data streaming
+## Best Practices and Warnings
 
-3. **Key Configurations**:
-   - Set `batch_size=None` in DataLoader when using WebDataset
-   - Use `looped_nominal_epoch` for epoch management
-   - Configure appropriate target and max batch sizes in sampler_kwargs
+1. Data Organization:
+- Shuffle data before creating shards
+- Group similar length utterances to reduce padding
+- Use appropriate shard sizes for your system
 
-4. **Limitations/Considerations**:
-   - Random access across dataset not possible
-   - Exact epochs difficult with Distributed Data Parallel
-   - Intra-epoch checkpointing requires special handling
+2. Performance Considerations:
+- Don't use WebDataset's shuffle with dynamic batching
+- Set appropriate batch sizes based on available memory
+- Consider using `.rename` for clearer batch element names
 
-## Required Dependencies
-```python
-pip install "webdataset<0.2"
-pip install speechbrain
-```
+3. Epoch Handling:
+- Use nominal epochs instead of exact epochs
+- Set appropriate `looped_nominal_epoch` for training
+- Expect random shard assignment on experiment restarts
+
+4. Memory Management:
+- Monitor padding ratio to optimize batching
+- Use dynamic batching for efficient memory usage
+- Consider target and max batch sizes carefully
+
+This implementation provides efficient data loading for large datasets while maintaining compatibility with SpeechBrain's features and PyTorch's ecosystem.

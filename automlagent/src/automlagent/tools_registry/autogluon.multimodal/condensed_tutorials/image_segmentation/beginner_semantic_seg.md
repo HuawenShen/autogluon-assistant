@@ -1,6 +1,6 @@
 # Condensed: AutoMM for Semantic Segmentation - Quick Start
 
-Summary: This tutorial demonstrates implementing semantic segmentation using AutoGluon's MultiModalPredictor with SAM (Segment Anything Model). It covers both zero-shot inference and fine-tuning workflows using the facebook/sam-vit-base model, with LoRA for efficient training. Key implementations include dataset preparation with image-mask pairs, model configuration for single-class segmentation, evaluation using IoU metrics, and visualization utilities. The tutorial helps with tasks like setting up semantic segmentation pipelines, performing zero-shot predictions, fine-tuning SAM models, and evaluating segmentation results. Notable features include path handling for datasets, model saving/loading functionality, and visualization tools for segmentation outputs.
+Summary: This tutorial demonstrates implementing semantic segmentation using AutoGluon's MultiModalPredictor with SAM (Segment Anything Model). It covers essential techniques for data preparation with path handling, zero-shot inference, and model fine-tuning using LoRA. The tutorial helps with tasks like setting up semantic segmentation pipelines, performing zero-shot evaluation, and fine-tuning SAM models for domain-specific applications. Key features include configuring the predictor for foreground-background segmentation, handling data in DataFrame format, model persistence, and performance evaluation using IoU metrics. It's particularly useful for implementing efficient semantic segmentation with pre-trained SAM models while emphasizing security considerations when loading saved models.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -22,12 +22,19 @@ import os
 def path_expander(path, base_folder):
     path_l = path.split(';')
     return ';'.join([os.path.abspath(os.path.join(base_folder, path)) for path in path_l])
+
+# Apply path expansion to image and label columns
+for per_col in [image_col, label_col]:
+    train_data[per_col] = train_data[per_col].apply(lambda ele: path_expander(ele, base_folder=dataset_path))
+    val_data[per_col] = val_data[per_col].apply(lambda ele: path_expander(ele, base_folder=dataset_path))
+    test_data[per_col] = test_data[per_col].apply(lambda ele: path_expander(ele, base_folder=dataset_path))
 ```
 
 ### Zero-Shot Evaluation
 ```python
 from autogluon.multimodal import MultiModalPredictor
 
+# Initialize predictor for zero-shot inference
 predictor_zero_shot = MultiModalPredictor(
     problem_type="semantic_segmentation", 
     label=label_col,
@@ -37,13 +44,14 @@ predictor_zero_shot = MultiModalPredictor(
     num_classes=1  # foreground-background segmentation
 )
 
-# Predict and evaluate
+# Perform prediction and evaluation
 pred_zero_shot = predictor_zero_shot.predict({'image': [test_data.iloc[0]['image']]})
 scores = predictor_zero_shot.evaluate(test_data, metrics=["iou"])
 ```
 
 ### Fine-tuning SAM
 ```python
+# Initialize predictor for fine-tuning
 predictor = MultiModalPredictor(
     problem_type="semantic_segmentation", 
     label="label",
@@ -53,7 +61,7 @@ predictor = MultiModalPredictor(
     path=save_path,
 )
 
-# Train the model
+# Fine-tune the model
 predictor.fit(
     train_data=train_data,
     tuning_data=val_data,
@@ -62,39 +70,29 @@ predictor.fit(
 ```
 
 ## Critical Configurations
-- Uses LoRA for efficient fine-tuning
-- Default model: SAM (Segment Anything Model)
 - Problem type: "semantic_segmentation"
-- Base model: "facebook/sam-vit-base"
-- Single class segmentation (num_classes=1)
+- Model: SAM (Segment Anything Model)
+- Checkpoint: "facebook/sam-vit-base"
+- Number of classes: 1 (foreground-background segmentation)
+- Fine-tuning method: LoRA (Low-Rank Adaptation)
 
 ## Important Notes and Best Practices
-1. Dataset format requires two columns:
-   - Image paths
-   - Corresponding groundtruth masks
+1. Data format: DataFrame with image and label columns containing absolute paths
+2. SAM without prompts outputs rough masks; fine-tuning improves domain-specific performance
+3. LoRA is used for efficient fine-tuning of the large SAM model
+4. **Security Warning**: Use `MultiModalPredictor.load()` only with trusted data sources due to pickle security concerns
 
-2. Model saving and loading:
+## Model Persistence
 ```python
+# Save is automatic after fit()
 # Load saved model
 loaded_predictor = MultiModalPredictor.load(save_path)
 ```
 
-⚠️ **Warning**: `MultiModalPredictor.load()` uses `pickle` module, which can be insecure. Only load trusted data.
-
-3. Visualization utilities available:
+## Performance Evaluation
 ```python
-from autogluon.multimodal.utils import SemanticSegmentationVisualizer
-visualizer = SemanticSegmentationVisualizer()
-```
-
-4. Evaluation metrics:
-```python
+# Evaluate model performance
 scores = predictor.evaluate(test_data, metrics=["iou"])
 ```
 
-## Performance Notes
-- Zero-shot SAM performs basic segmentation but may lack domain-specific accuracy
-- Fine-tuning significantly improves performance for specialized tasks
-- LoRA enables efficient fine-tuning of the large SAM model
-
-For customization options, refer to the "Customize AutoMM" documentation.
+For visualization and additional customization options, refer to the full documentation and [AutoMM Examples](https://github.com/autogluon/autogluon/tree/master/examples/automm).

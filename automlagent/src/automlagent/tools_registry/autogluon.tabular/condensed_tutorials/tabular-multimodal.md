@@ -1,12 +1,12 @@
 # Condensed: Multimodal Data Tables: Tabular, Text, and Image
 
-Summary: This tutorial demonstrates how to implement multimodal machine learning using AutoGluon, specifically combining tabular, text, and image data for prediction tasks. It provides code for handling multiple image paths, configuring feature metadata for different data types, and setting up appropriate hyperparameters for multimodal models. The tutorial covers essential implementation techniques including dataset preparation, image preprocessing, feature metadata configuration, and model training using TabularPredictor. Key functionalities include handling mixed data types, automatic text column identification, image path processing, and integration of various models (tabular models, Electra BERT for text, and ResNet for images) within a unified training pipeline.
+Summary: This tutorial demonstrates how to implement multimodal machine learning using AutoGluon, specifically combining tabular, text, and image data for prediction tasks. It provides implementation details for dataset preparation (including handling multiple images), feature metadata configuration, and model training with multimodal hyperparameter presets. The tutorial helps with tasks involving image path preprocessing, feature type specification, and unified model training across different data modalities. Key functionalities covered include handling multiple images per row (selecting first image), path expansion for image files, feature metadata customization, and training configuration using AutoGluon's multimodal preset that incorporates tabular models, BERT for text, and ResNet for images.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the condensed tutorial focusing on key implementation details and concepts:
+Here's the condensed tutorial focusing on key implementation details:
 
-# Multimodal Data Tables: Tabular, Text, and Image Training
+# Multimodal Data Tables: Tabular, Text, and Image Tutorial
 
 ## Key Requirements
 - GPU required for image and text models
@@ -27,6 +27,9 @@ load_zip.unzip(zip_file, unzip_dir=download_dir)
 import pandas as pd
 train_data = pd.read_csv(f'{dataset_path}/train.csv', index_col=0)
 test_data = pd.read_csv(f'{dataset_path}/dev.csv', index_col=0)
+
+label = 'AdoptionSpeed'
+image_col = 'Images'
 ```
 
 ### 2. Image Column Preprocessing
@@ -70,32 +73,22 @@ predictor = TabularPredictor(label=label).fit(
 ```
 
 ## Important Best Practices
+1. When prototyping, sample data to identify effective models before scaling up
+2. For large multimodal datasets, start with smaller samples and gradually increase data size
+3. Adjust time limits based on dataset size and computational resources
+4. AutoGluon currently supports only one image per row
 
-1. **Data Sampling**: For prototyping:
-   - Start with smaller samples (e.g., 500 rows)
-   - Gradually increase data size and time limits
-   - Identify effective models before full-scale training
+## Key Configurations
+- Uses 'multimodal' preset configuration
+- Includes:
+  - Tabular models
+  - Electra BERT text model
+  - ResNet image model
+- Default time limit: 900 seconds
 
-2. **Image Processing**:
-   - AutoGluon supports only one image per row
-   - Ensure correct image paths are provided
-   - Images must be accessible from the specified paths
-
-3. **Feature Metadata**:
-   - Text columns are automatically identified
-   - Image columns must be explicitly specified using 'image_path' special type
-   - Use FeatureMetadata for custom column type specifications
-
-4. **Model Configuration**:
-   - Use 'multimodal' preset for combined tabular, text, and image processing
-   - Includes:
-     - Various tabular models
-     - Electra BERT text model
-     - ResNet image model
-
-## Performance Evaluation
+## Model Evaluation
 ```python
 leaderboard = predictor.leaderboard(test_data)
 ```
 
-This condensed version maintains all critical implementation details while removing unnecessary explanations and verbose examples.
+This implementation handles multimodal data combining tabular, text, and image features in a single prediction task.

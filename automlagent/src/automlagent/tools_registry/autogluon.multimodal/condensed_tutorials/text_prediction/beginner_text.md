@@ -1,101 +1,95 @@
 # Condensed: AutoMM for Text - Quick Start
 
-Summary: This tutorial demonstrates the implementation of AutoGluon's MultiModalPredictor for text-based machine learning tasks, specifically focusing on classification (sentiment analysis) and regression (sentence similarity). It provides code examples for model training, evaluation, prediction, and embedding extraction using the MultiModalPredictor API. Key functionalities covered include model saving/loading, multiple evaluation metrics (acc, f1, rmse, pearsonr, spearmanr), and handling tabular data with text columns. The tutorial helps with tasks requiring automated text classification, regression, and feature extraction, while highlighting important configurations, best practices for training, and system limitations regarding deep learning models and memory usage.
+Summary: This tutorial demonstrates implementing text analysis tasks using AutoGluon's MultiModalPredictor, specifically focusing on sentiment analysis and sentence similarity. It provides code examples for model training, evaluation, prediction, and model management (save/load operations). Key implementation knowledge includes setting up the predictor with proper configurations (label columns, evaluation metrics, time limits), handling data in table format, and extracting embeddings. The tutorial helps with tasks like training text classifiers, generating predictions and probabilities, and managing trained models. Notable features covered include support for multiple text columns, integration with popular ML libraries (timm, huggingface, CLIP), and various evaluation metrics for both classification and regression tasks.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
 Here's the condensed tutorial focusing on essential implementation details:
 
-# AutoMM for Text - Quick Start Guide
+# AutoMM for Text - Quick Start
 
 ## Key Components
-- Uses `MultiModalPredictor` for text-based tasks
-- Supports classification and regression
-- Integrates with timm, huggingface/transformers, and openai/clip
+- `MultiModalPredictor` handles text, image, numerical, and categorical data
+- Demonstrates sentiment analysis and sentence similarity tasks
+- Uses data tables with text features and label columns
 
-## Implementation Examples
+## Implementation Details
 
-### 1. Sentiment Analysis (Classification)
-
+### Setup
 ```python
+pip install autogluon.multimodal
 from autogluon.multimodal import MultiModalPredictor
+```
 
-# Setup
+### Sentiment Analysis Implementation
+
+1. **Training**
+```python
 predictor = MultiModalPredictor(
     label='label',
     eval_metric='acc',
     path='model_path'
 )
-
-# Train
 predictor.fit(train_data, time_limit=180)
-
-# Evaluate
-test_score = predictor.evaluate(test_data, metrics=['acc', 'f1'])
-
-# Predict
-predictions = predictor.predict({'sentence': [text1, text2]})
-probabilities = predictor.predict_proba({'sentence': [text1, text2]})
 ```
 
-### 2. Sentence Similarity (Regression)
+2. **Evaluation & Prediction**
+```python
+# Evaluate with multiple metrics
+test_score = predictor.evaluate(test_data, metrics=['acc', 'f1'])
+
+# Single prediction
+predictions = predictor.predict({'sentence': [text]})
+
+# Probability predictions
+probs = predictor.predict_proba({'sentence': [text]})
+```
+
+3. **Model Management**
+```python
+# Save model
+predictor.save(model_path)
+
+# Load model
+loaded_predictor = MultiModalPredictor.load(model_path)
+```
+
+### Sentence Similarity Implementation
 
 ```python
 predictor_sts = MultiModalPredictor(
     label='score',
     path='sts_model_path'
 )
-
-# Train
-predictor_sts.fit(train_data, time_limit=60)
-
-# Evaluate
-scores = predictor_sts.evaluate(test_data, 
-                              metrics=['rmse', 'pearsonr', 'spearmanr'])
-```
-
-## Important Features
-
-### Model Management
-```python
-# Save
-predictor.save(model_path)
-
-# Load
-loaded_predictor = MultiModalPredictor.load(model_path)
-```
-
-### Feature Extraction
-```python
-# Extract embeddings
-embeddings = predictor.extract_embedding(test_data)
+predictor_sts.fit(sts_train_data, time_limit=60)
 ```
 
 ## Critical Configurations
 
-1. Training Parameters:
-   - `time_limit`: Set training duration (None for unrestricted)
-   - `label`: Specify target column name
-   - `eval_metric`: Define evaluation metric
-
-2. Evaluation Options:
-   - Multiple metrics supported: 'acc', 'f1', 'rmse', 'pearsonr', 'spearmanr'
+- **Label Column**: Specify using `label` parameter
+- **Evaluation Metrics**: 
+  - Classification: 'acc', 'f1'
+  - Regression: 'rmse', 'pearsonr', 'spearmanr'
+- **Time Limit**: Set longer for better performance (recommended: 1+ hour)
 
 ## Best Practices
 
-1. Training:
-   - Use longer `time_limit` for production models (1+ hours recommended)
-   - Provide sufficient training data for better performance
+1. Use adequate training time (>1 hour) for production models
+2. Include multiple evaluation metrics for comprehensive assessment
+3. Format data as tables with clear feature and label columns
+4. For text tasks, ensure proper data formatting in table structure
 
-2. Security:
-   - WARNING: Only load models from trusted sources due to pickle security risks
+## Important Warnings
 
-3. Data Format:
-   - Input data should be in tabular format (DataFrame)
-   - Supports multiple text columns
-   - Labels should be in separate column
+- `MultiModalPredictor.load()` uses pickle - only load trusted data
+- Short time limits (< 180s) are for demonstration only
+- Subsample size affects model performance
 
-## Limitations
-- Focuses on deep learning models
-- Requires properly formatted tabular data
-- Memory intensive for large datasets
+## Advanced Features
+
+- Extract embeddings:
+```python
+embeddings = predictor.extract_embedding(data)
+```
+- Supports multiple text columns in data tables
+- Integrates with timm, huggingface/transformers, and openai/clip

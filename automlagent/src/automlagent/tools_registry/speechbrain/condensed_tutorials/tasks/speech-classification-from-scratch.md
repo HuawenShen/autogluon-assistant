@@ -1,80 +1,80 @@
 # Condensed: <!-- This cell is automatically updated by tools/tutorial-cell-updater.py -->
 
-Summary: This tutorial provides implementation details for speech/speaker classification using SpeechBrain, focusing on TDNN and ECAPA-TDNN models. It covers essential techniques for data preparation (JSON manifests), model training configuration (YAML files), and inference pipeline setup. Key functionalities include feature extraction, data augmentation (time/frequency/environmental), checkpointing, and distributed training support. The tutorial demonstrates how to implement audio processing pipelines, label encoding, model training loops, and inference using the EncoderClassifier interface. It includes practical code examples for both training and deployment, with specific attention to best practices for data handling, model monitoring, and hyperparameter tuning. The implementation is particularly useful for tasks like speaker verification, language identification, and emotion recognition.
+Summary: This tutorial provides implementation guidance for speech classification tasks using SpeechBrain, focusing on TDNN and ECAPA-TDNN models. It covers essential techniques for speaker identification, language identification, emotion recognition, and keyword spotting. The tutorial demonstrates how to implement data preparation with specific JSON formatting, configure training pipelines with augmentation and feature extraction, set up model architectures, and perform inference using the EncoderClassifier interface. Key functionalities include data augmentation with noise and speed perturbation, feature normalization, embedding generation, and classification. The implementation details span from basic installation and training commands to advanced topics like distributed training, checkpointing, and custom model integration, with specific code examples and configuration templates for practical implementation.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
-Here's the condensed version focusing on key implementation details:
+Here's the condensed version focusing on essential implementation details:
 
-# Speech Classification From Scratch - Essential Implementation Guide
+# Speech Classification From Scratch - Key Implementation Details
 
 ## Core Components
 
 1. **Models Supported**:
 - TDNN classifier (xvector)
 - ECAPA-TDNN model
+- Suitable for: speaker-id, language-id, emotion recognition, sound classification, keyword spotting
 
-2. **Dataset**: mini-librispeech (for demonstration)
+2. **Data Requirements**:
+- Tutorial uses mini-librispeech (small dataset)
+- Production systems need larger datasets
+- Reference: Voxceleb recipes for real-world implementation
 
 ## Implementation Steps
 
-### 1. Installation
-```python
-!python -m pip install git+https://github.com/speechbrain/speechbrain.git@develop
-```
-
-### 2. Data Preparation
-
-**Key Requirements**:
-- Create data manifest files (CSV/JSON format)
-- Include unique identifiers and necessary metadata
-
-**Sample JSON Structure**:
+### 1. Data Preparation
+**Key Format Requirements**:
 ```json
 {
   "utterance_id": {
-    "wav": "path/to/audio.flac",
+    "wav": "{data_root}/path/to/audio.flac",
     "length": 14.335,
-    "spk_id": "163"
+    "spk_id": "speaker_id"
   }
 }
 ```
 
-**Best Practices**:
+**Critical Points**:
+- Unique identifier for each utterance required
+- Flexible fields based on task (speaker-id, language-id, etc.)
 - Use `data_root` variable for dynamic path management
-- Create separate manifests for train/val/test
-- Store data locally on compute nodes for better performance
+- Create separate manifests for train/validation/test
 
-### 3. Training Setup
+**Best Practices**:
+- Write custom preparation script for your dataset
+- Store data locally on compute nodes for HPC environments
+- Compress dataset for efficient transfer in distributed systems
 
-**Basic Command**:
-```bash
+### 2. Training Setup
+```python
+# Basic installation
+!python -m pip install git+https://github.com/speechbrain/speechbrain.git@develop
+
+# Training command
 cd speechbrain/templates/speaker_id/
 python train.py train.yaml
 ```
 
-**Key Components**:
-- Feature computation/normalization
-- Encoder processing
-- Classification layer
-- Data augmentation support
+**Implementation Notes**:
+- Uses feature computation/normalization
+- Includes encoder processing
+- Applies classifier on processed features
+- Implements data augmentation
+- Reference template: `speechbrain/templates/speaker_id/`
 
-**Important Notes**:
-- Custom data preparation scripts needed for different datasets
-- Match JSON entry names with experiment script expectations
-- For production, use larger datasets than mini-librispeech
+**Warning**: Production systems require significantly more training data than the tutorial example.
 
-This condensed version maintains the critical implementation details while removing explanatory text and redundant information. Would you like me to continue with the next section?
+This condensed version maintains all critical implementation details while removing explanatory text and redundant information. Would you like me to elaborate on any specific aspect?
 
-Here's the condensed version focusing on key implementation details and concepts:
+Here's the condensed version focusing on key implementation details and code samples:
 
 # Speaker ID Model Training Implementation
 
 ## Key Components
 
 ### Model Architecture
-- Uses TDNN-based model for x-vectors
-- Statistical pooling converts variable-length sentences to fixed-length embeddings
+- TDNN-based model for x-vectors
+- Statistical pooling to convert variable-length sentences to fixed-length embeddings
 - Fully-connected classifier for speaker prediction
 
 ### Training Command
@@ -84,7 +84,7 @@ Here's the condensed version focusing on key implementation details and concepts
 ```
 
 ### Output Structure
-- `train_log.txt`: Epoch statistics
+- `train_log.txt`: Training statistics
 - `log.txt`: Detailed operation logs
 - `env.log`: Dependencies and versions
 - `save/`: Model checkpoints
@@ -112,21 +112,17 @@ emb_dim: 512
 ```
 
 ### Important Model Components
-1. Feature Extraction
 ```yaml
+# Feature extraction
 compute_features: !new:speechbrain.lobes.features.Fbank
     n_mels: 23
-```
 
-2. Data Augmentation
-```yaml
+# Data augmentation
 augmentation: !new:speechbrain.lobes.augment.TimeDomainSpecAugment
     sample_rate: 16000
     speeds: [95, 100, 105]
-```
 
-3. Environmental Corruption
-```yaml
+# Noise corruption
 env_corrupt: !new:speechbrain.lobes.augment.EnvCorrupt
     noise_prob: 1.0
     noise_snr_low: 0
@@ -143,14 +139,14 @@ env_corrupt: !new:speechbrain.lobes.augment.EnvCorrupt
 2. Checkpoint Management:
    - Save checkpoints every 15 minutes (configurable)
    - Maintains best and latest model versions
-   - Stores all information needed for training resumption
+   - Stores complete training state for resumption
 
-3. Model Monitoring:
-   - Validation and training losses should decrease rapidly in early epochs
-   - Validation error should approach zero
-   - Use train_logger for tracking statistics
+3. Model Architecture:
+   - Uses TDNN blocks with specific configurations
+   - Implements statistical pooling for fixed-length embeddings
+   - Includes normalization and feature extraction components
 
-Note: This implementation is designed for the mini-librispeech dataset with 28 speakers. For production use, refer to the VoxCeleb recipes.
+Note: This implementation is designed for the mini-librispeech dataset with 28 speakers. For production use, refer to the VoxCeleb recipes in the SpeechBrain repository.
 
 Here's the condensed version focusing on key implementation details and code:
 
@@ -239,56 +235,60 @@ if __name__ == "__main__":
 3. Hyperparameters are loaded into dictionary format for easy access
 4. Supports distributed data-parallel training for multi-GPU setups
 
-Here's the condensed version focusing on key implementation details:
+### Best Practices:
+- Save best model in separate folder for inference
+- Use distributed processing wrapper (`run_on_main`) for data preparation
+- Implement proper checkpointing for training recovery
+- Configure proper data augmentation for robust training
+
+Here's the condensed version focusing on key implementation details and code:
 
 # Data-IO Pipeline Implementation
 
-## Core Components
+## Key Components
 
-### Dataset Creation
+### 1. Dataset Creation
 ```python
 datasets = dataio_prep(hparams)
 ```
 
-### Key Pipeline Components
-
-1. **Label Encoder**
+### 2. Core Data Processing Pipeline
 ```python
-label_encoder = sb.dataio.encoder.CategoricalEncoder()
+def dataio_prep(hparams):
+    # Label encoder initialization
+    label_encoder = sb.dataio.encoder.CategoricalEncoder()
+    
+    # Audio pipeline
+    @sb.utils.data_pipeline.takes("wav")
+    @sb.utils.data_pipeline.provides("sig")
+    def audio_pipeline(wav):
+        sig = sb.dataio.dataio.read_audio(wav)
+        return sig
+
+    # Label pipeline
+    @sb.utils.data_pipeline.takes("spk_id")
+    @sb.utils.data_pipeline.provides("spk_id", "spk_id_encoded")
+    def label_pipeline(spk_id):
+        yield spk_id
+        spk_id_encoded = label_encoder.encode_label_torch(spk_id)
+        yield spk_id_encoded
 ```
 
-2. **Audio Pipeline**
+### 3. Dataset Creation and Configuration
 ```python
-@sb.utils.data_pipeline.takes("wav")
-@sb.utils.data_pipeline.provides("sig")
-def audio_pipeline(wav):
-    sig = sb.dataio.dataio.read_audio(wav)
-    return sig
+datasets = {}
+for dataset in ["train", "valid", "test"]:
+    datasets[dataset] = sb.dataio.dataset.DynamicItemDataset.from_json(
+        json_path=hparams[f"{dataset}_annotation"],
+        replacements={"data_root": hparams["data_folder"]},
+        dynamic_items=[audio_pipeline, label_pipeline],
+        output_keys=["id", "sig", "spk_id_encoded"],
+    )
 ```
 
-3. **Label Pipeline**
-```python
-@sb.utils.data_pipeline.takes("spk_id")
-@sb.utils.data_pipeline.provides("spk_id", "spk_id_encoded")
-def label_pipeline(spk_id):
-    yield spk_id
-    spk_id_encoded = label_encoder.encode_label_torch(spk_id)
-    yield spk_id_encoded
-```
+## Important Implementation Details
 
-## Dataset Creation and Processing
-
-```python
-datasets[dataset] = sb.dataio.dataset.DynamicItemDataset.from_json(
-    json_path=hparams[f"{dataset}_annotation"],
-    replacements={"data_root": hparams["data_folder"]},
-    dynamic_items=[audio_pipeline, label_pipeline],
-    output_keys=["id", "sig", "spk_id_encoded"],
-)
-```
-
-### Important Notes:
-- Dataset expects JSON manifest files in format:
+1. **Data Format**: Uses JSON manifest files with structure:
 ```json
 {
   "163-122947-0045": {
@@ -299,10 +299,13 @@ datasets[dataset] = sb.dataio.dataset.DynamicItemDataset.from_json(
 }
 ```
 
-## Brain Class Usage
+2. **Available Batch Keys**:
+- `batch.id`
+- `batch.sig`
+- `batch.spk_id_encoded`
 
+3. **Brain Class Initialization and Training**:
 ```python
-# Initialize
 spk_id_brain = SpkIdBrain(
     modules=hparams["modules"],
     opt_class=hparams["opt_class"],
@@ -311,7 +314,7 @@ spk_id_brain = SpkIdBrain(
     checkpointer=hparams["checkpointer"],
 )
 
-# Train
+# Training
 spk_id_brain.fit(
     epoch_counter=spk_id_brain.hparams.epoch_counter,
     train_set=datasets["train"],
@@ -320,7 +323,7 @@ spk_id_brain.fit(
     valid_loader_kwargs=hparams["dataloader_options"],
 )
 
-# Evaluate
+# Evaluation
 test_stats = spk_id_brain.evaluate(
     test_set=datasets["test"],
     min_key="error",
@@ -328,48 +331,18 @@ test_stats = spk_id_brain.evaluate(
 )
 ```
 
-### Key Features:
-- Automatic label encoding for categorical data
-- Dynamic data processing pipeline
-- Checkpoint management for training resumption
-- Integrated training and evaluation workflows
+## Best Practices
+
+1. Label encoder should be initialized using training data
+2. Pipeline functions must match JSON manifest keys
+3. Use checkpointing for resumable training
+4. Define clear output keys for batch processing
+
+For detailed information on the data loader, refer to the [SpeechBrain data loading pipeline tutorial](https://speechbrain.readthedocs.io/en/latest/tutorials/basics/data-loading-pipeline.html).
 
 Here's the condensed version focusing on key implementation details and concepts:
 
 # Forward Computations and Feature Processing
-
-## Forward Function Implementation
-```python
-def compute_forward(self, batch, stage):
-    batch = batch.to(self.device)
-    feats, lens = self.prepare_features(batch.sig, stage)
-    embeddings = self.modules.embedding_model(feats, lens)
-    predictions = self.modules.classifier(embeddings)
-    return predictions
-```
-
-## Feature Preparation with Augmentation
-```python
-def prepare_features(self, wavs, stage):
-    wavs, lens = wavs
-    
-    # Training-specific augmentation
-    if stage == sb.Stage.TRAIN:
-        if hasattr(self.modules, "env_corrupt"):
-            wavs_noise = self.modules.env_corrupt(wavs, lens)
-            wavs = torch.cat([wavs, wavs_noise], dim=0)
-            lens = torch.cat([lens, lens])
-            
-        if hasattr(self.hparams, "augmentation"):
-            wavs = self.hparams.augmentation(wavs, lens)
-
-    # Feature extraction and normalization
-    feats = self.modules.compute_features(wavs)
-    feats = self.modules.mean_var_norm(feats, lens)
-    return feats, lens
-```
-
-**Key Implementation Note**: Augmentation concatenates clean and noisy versions in the same batch, acting as a powerful regularizer by making the model robust against distortions.
 
 
 ...(truncated)

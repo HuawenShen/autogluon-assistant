@@ -1,6 +1,6 @@
 # Condensed: <!-- This cell is automatically updated by tools/tutorial-cell-updater.py -->
 
-Summary: This tutorial provides implementation guidance for speech feature extraction using SpeechBrain, focusing on Filter Banks (FBANKs) and MFCCs. It demonstrates code for computing these features with customizable parameters, including STFT computation, mel filtering, and context window handling. The tutorial helps with tasks like configuring feature extractors, adding temporal context through derivatives and window frames, and selecting appropriate parameters for speech processing. Key functionalities covered include FBANK computation with adjustable filter counts (40/80), MFCC extraction with optional derivatives, context window implementation, and best practices for modern deep learning approaches, emphasizing the preference for FBANKs over MFCCs in DNN applications.
+Summary: This tutorial provides implementation guidance for speech feature extraction in Python using SpeechBrain, focusing on three main techniques: Filter Banks (FBANKs), MFCCs, and context information processing. It demonstrates how to compute these features with specific code examples and parameter configurations, particularly useful for speech recognition and audio processing tasks. Key functionalities covered include STFT computation, mel filterbank application, MFCC extraction, derivative calculations, and context window implementation. The tutorial emphasizes modern deep learning best practices, suggesting the use of FBANKs over MFCCs and explaining how to configure feature dimensions for different approaches (standard MFCCs: 13 coefficients, with derivatives: 39 dimensions, with context windows: variable size).
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -12,7 +12,6 @@ Here's the condensed tutorial focusing on key implementation details and concept
 - Speech is high-dimensional (16000 samples/second at 16kHz)
 - Feature extraction creates compact representations
 - Modern approach: Use simple features and let neural networks learn higher-level representations
-- Main features covered: Filter Banks (FBANKs) and MFCCs
 
 ## 1. Filter Banks (FBANKs)
 
@@ -31,17 +30,16 @@ STFT = compute_STFT(signal)
 mag = spectral_magnitude(STFT)
 fbanks = compute_fbanks(mag)
 
-# Simplified approach using Fbank lobe
+# Simplified usage with Fbank lobe
 fbank_maker = Fbank()
 fbanks = fbank_maker(signal)
 ```
 
-**Key Parameters:**
-- Typically use 40 or 80 FBANKs
-- Filters can be triangular, rectangular, or gaussian
-- Set `freeze=False` to allow filter tuning during training
+**Important Parameters:**
+- n_mels: Number of mel filters (typically 40 or 80)
+- freeze: When False, filters can be tuned during training
 
-## 2. MFCCs
+## 2. MFCCs (Mel-Frequency Cepstral Coefficients)
 
 ```python
 from speechbrain.lobes.features import MFCC
@@ -50,40 +48,46 @@ mfcc_maker = MFCC(n_mfcc=13, deltas=False, context=False)
 mfccs = mfcc_maker(signal)
 ```
 
-**Note:** While historically important for decorrelated features, FBANKs are now preferred as DNNs handle correlated data well.
+**Note:** While historically important for decorrelated features, FBANKs are now preferred with deep learning approaches.
 
 ## 3. Context Information
 
-### Derivatives
+### Derivatives Implementation
 ```python
-# MFCCs with derivatives
-mfcc_maker = MFCC(n_mfcc=13, deltas=True, context=False)
-mfccs_with_deltas = mfcc_maker(signal)  # Results in 39 features (13x3)
+mfcc_maker = MFCC(
+    n_mfcc=13,
+    deltas=True,  # Enables derivatives
+    context=False
+)
 ```
 
-### Context Windows
+### Context Windows Implementation
 ```python
-# MFCCs with context window
-mfcc_maker = MFCC(n_mfcc=13,
-                  deltas=True,
-                  context=True,
-                  left_frames=5,
-                  right_frames=5)
-mfccs_with_context = mfcc_maker(signal)  # Dimensionality: 39 * (5+5+1) = 429
+mfcc_maker = MFCC(
+    n_mfcc=13,
+    deltas=True,
+    context=True,
+    left_frames=5,
+    right_frames=5
+)
 ```
+
+**Key Parameters:**
+- deltas: Enables first and second-order derivatives
+- left_frames/right_frames: Number of context frames to include
 
 ## Best Practices
-1. Modern approach: Use static features with CNNs for learnable context
-2. Consider using raw features:
-   - Spectrograms
-   - STFT
-   - Raw time-domain samples (with appropriate architectures like SincNet)
-3. FBANKs are preferred over MFCCs for deep learning applications
-4. Context is better learned through CNN receptive fields than hand-crafted features
+1. For modern deep learning:
+   - Use FBANKs over MFCCs
+   - Consider using spectrograms or raw STFT directly
+   - Let CNNs learn context through their receptive field
 
-## Important Parameters
-- Sampling rate: typically 16kHz
-- STFT parameters: win_length=25ms, hop_length=10ms, n_fft=400
-- Number of mel filters: 40 or 80
-- MFCC coefficients: typically 13
-- Context window size: application dependent
+2. Feature dimensions:
+   - Standard MFCCs: 13 coefficients
+   - With derivatives: 39 dimensions (13 static + 13 delta + 13 delta-delta)
+   - With context windows: Depends on window size (e.g., 429 for 11 frames with derivatives)
+
+3. Modern trends:
+   - Raw waveform processing becoming more common
+   - SincNet for direct time-domain learning
+   - CNN-based context learning preferred over hand-crafted context

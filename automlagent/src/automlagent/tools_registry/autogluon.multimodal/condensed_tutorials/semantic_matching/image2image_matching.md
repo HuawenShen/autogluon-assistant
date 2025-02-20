@@ -1,6 +1,6 @@
 # Condensed: Image-to-Image Semantic Matching with AutoMM
 
-Summary: This tutorial demonstrates implementing image-to-image semantic matching using AutoGluon's MultiModalPredictor. It covers techniques for setting up paired image comparison tasks, including data preparation with path handling, model configuration for similarity learning, and training implementation. The tutorial helps with tasks like binary classification of image pairs, generating similarity scores, and extracting image embeddings. Key features include Swin Transformer-based feature extraction, cosine similarity computation, and multiple prediction methods (binary predictions, probability scores, and embedding extraction), making it valuable for applications requiring image pair matching or similarity assessment.
+Summary: This tutorial demonstrates implementing image-to-image semantic matching using AutoGluon's MultiModalPredictor. It covers essential techniques for training a model that determines if two images are semantically similar, using the Stanford Online Products dataset. Key implementations include data preparation with path handling, model configuration for image similarity tasks, training with customizable parameters, and various prediction methods (binary classification, probability scores, and embedding extraction). The tutorial showcases how to leverage Swin Transformer for feature vector generation and cosine similarity computation, making it valuable for tasks involving image pair matching, product similarity detection, and feature extraction for downstream applications.
 
 *This is a condensed version that preserves essential implementation details and context.*
 
@@ -29,7 +29,7 @@ def path_expander(path, base_folder):
     path_l = path.split(';')
     return ';'.join([os.path.abspath(os.path.join(base_folder, path)) for path in path_l])
 
-# Apply to image columns
+# Apply to both image columns
 for image_col in [image_col_1, image_col_2]:
     train_data[image_col] = train_data[image_col].apply(lambda ele: path_expander(ele, base_folder=dataset_path))
 ```
@@ -41,7 +41,7 @@ predictor = MultiModalPredictor(
     query=image_col_1,          # first image column
     response=image_col_2,       # second image column
     label=label_col,           # label column
-    match_label=match_label,   # label value indicating match (e.g., 1)
+    match_label=match_label,   # label value indicating matching pairs (e.g., 1)
     eval_metric='auc'          # evaluation metric
 )
 
@@ -51,38 +51,37 @@ predictor.fit(
 )
 ```
 
-### Key Features
+### Model Usage
 
-1. Prediction Methods:
+1. Evaluation:
 ```python
-# Binary predictions
+score = predictor.evaluate(test_data)
+```
+
+2. Prediction:
+```python
+# Binary predictions (threshold = 0.5)
 predictions = predictor.predict(test_data)
 
 # Probability scores
 probabilities = predictor.predict_proba(test_data)
-
-# Extract embeddings
-embeddings_1 = predictor.extract_embedding({image_col_1: test_data[image_col_1]})
-embeddings_2 = predictor.extract_embedding({image_col_2: test_data[image_col_2]})
 ```
 
-2. Model Architecture:
-- Uses Swin Transformer for image feature extraction
-- Computes cosine similarity between image feature vectors
+3. Feature Extraction:
+```python
+# Extract embeddings for images
+embeddings_1 = predictor.extract_embedding({image_col_1: test_data[image_col_1][:5].tolist()})
+embeddings_2 = predictor.extract_embedding({image_col_2: test_data[image_col_2][:5].tolist()})
+```
 
 ## Important Notes
+- Model uses Swin Transformer to project images into feature vectors
+- Similarity is computed using cosine similarity between feature vectors
+- Default prediction threshold is 0.5 for binary classification
+- Embeddings can be extracted separately for each image
 
-1. Technical Details:
-- Default probability threshold: 0.5
-- Outputs embeddings as high-dimensional vectors
-- Uses AUC as default evaluation metric
-
-2. Best Practices:
-- Ensure image paths are properly expanded
-- Correctly specify match_label based on your dataset
-- Consider adjusting time_limit based on dataset size
-
-3. Data Requirements:
-- Two image columns with corresponding paths
-- Binary labels indicating match/non-match
-- Consistent image format and accessibility
+## Best Practices
+1. Ensure image paths are properly formatted and accessible
+2. Consider task context when specifying `match_label`
+3. Adjust time_limit based on dataset size and computational resources
+4. Use predict_proba() for custom thresholding if needed
