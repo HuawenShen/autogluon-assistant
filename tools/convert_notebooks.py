@@ -119,6 +119,6 @@ def batch_convert_notebooks(input_dir, output_dir):
 
 if __name__ == "__main__":
     # Replace with your directory paths
-    input_directory = "/media/agent/speechbrain/tutorials"
-    output_directory = "/media/agent/AutoMLAgent/SpeechbrainTutorials"
+    input_directory = "/media/agent/FlagEmbedding/Tutorials"
+    output_directory = "/media/agent/AutoMLAgent/raw_tutorials/FlagEmbeddingTutorials"
     batch_convert_notebooks(input_directory, output_directory)

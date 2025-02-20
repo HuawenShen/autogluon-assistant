@@ -267,8 +267,11 @@ class PromptGenerator:
 
         prompt_parts = []
 
-        if self.time_step == 0 or not self.coder_multi_turn:
-            prompt_parts.extend([self.task_prompt, self.data_prompt])
+        #if self.time_step == 0 or not self.coder_multi_turn:
+        #   prompt_parts.extend([self.task_prompt, self.data_prompt])
+        #else:
+        #    prompt_parts.append("Fix the error and return the FULL python script instead of only the correction.")  # TODO: A temp fix to avoid LLM only return code patch
+        prompt_parts.extend([self.task_prompt, self.data_prompt])  # TODO: Performance Degrade without providing init prompt
 
         if self.user_input:
             user_prompt = generate_user_prompt(
@@ -277,8 +280,11 @@ class PromptGenerator:
             )
             prompt_parts.append(user_prompt)
 
-        for error_prompt in self.error_prompts:
-            prompt_parts.append(error_prompt)
+        if self.time_step == 0 or not self.coder_multi_turn:
+            for error_prompt in self.error_prompts:
+                prompt_parts.append(error_prompt)
+        else:
+            prompt_parts.append(self.previous_error_prompt)
 
         if self.tutorial_prompt:
             prompt_parts.append(self.tutorial_prompt)
