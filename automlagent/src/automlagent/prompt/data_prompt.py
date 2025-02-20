@@ -114,9 +114,25 @@ def pattern_to_path(pattern, base_path):
 def is_tabular_file(file_path):
     """
     Check if file is a tabular data file based on extension.
+    Also checks if it's a gzipped tabular file.
     """
-    tabular_extensions = {".csv", ".parquet", ".pq", ".xlsx", ".xls"}
-    return Path(file_path).suffix.lower() in tabular_extensions
+    # TODO: test suppot for arrow, and compressed files
+    tabular_extensions = {".csv", ".parquet", ".pq", ".xlsx", ".xls", ".arrow"}
+    path = Path(file_path)
+    suffix = path.suffix.lower()
+    
+    # Direct check for tabular extensions
+    if suffix in tabular_extensions:
+        return True
+    
+    # Check for compressed tabular files
+    if suffix in [".gz", ".zip"]:
+        # Get the extension before compression
+        stem = Path(path.stem)  # Get filename without compression
+        previous_suffix = stem.suffix.lower()
+        return previous_suffix in tabular_extensions
+        
+    return False
 
 
 def should_truncate(text, threshold=50):
