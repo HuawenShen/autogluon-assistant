@@ -92,7 +92,7 @@ Please select the most appropriate tool for this task. Consider:
 3. Any limitations or special features of each tool
 
 Format your response as follows:
-Selected Tool: [tool name]
+Selected Tool: [tool name ONLY]
 Explanation: [detailed explanation of why this tool is the best choice, including specific features that match the task requirements]
 """
 
@@ -138,7 +138,8 @@ def _format_tools_info(tools_info: Dict) -> str:
     """
     formatted_info = ""
     for tool_name, info in tools_info.items():
-        formatted_info += f"\n{tool_name} (v{info['version']}):\n"
+        formatted_info += f"Tool Name: \n{tool_name}\n"
+        formatted_info += f"Version: v{info['version']}\n"
         formatted_info += f"Description: {info['description']}\n"
         if info["features"]:
             formatted_info += "Special features/limitations:\n"
