@@ -22,6 +22,15 @@ cd AutoMLAgent
 pip install -e .
 ```
 
+2.1 Install Object Detection Dependencies
+```bash
+pip install -U pip setuptools wheel
+sudo apt-get install -y ninja-build gcc g++
+python3 -m mim install "mmcv==2.1.0"
+python3 -m pip install "mmdet==3.2.0"
+python3 -m pip install "mmengine>=0.10.6"
+```
+
 3. Configure your environment variables:
 ```bash
 # Similar to Autogluon Assistant

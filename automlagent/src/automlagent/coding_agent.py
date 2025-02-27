@@ -7,6 +7,7 @@ from omegaconf import OmegaConf
 
 from .coder import generate_coder, write_code_script, write_retrieved_context
 from .llm import ChatLLMFactory
+from .planner import get_planner
 from .prompt import PromptGenerator, write_prompt_to_file
 
 
@@ -60,7 +61,7 @@ def execute_bash_script(bash_script, stream_output=True):
         return False, "", str(e)
 
 
-def save_iteration_state(iteration_folder, prompt_generator, stdout, stderr):
+def save_iteration_state(iteration_folder, prompt_generator, stdout, stderr, planner_decision=None, planner_explanation=None):
     """
     Save the current state of the prompt generator and execution outputs to separate files.
 
@@ -69,6 +70,8 @@ def save_iteration_state(iteration_folder, prompt_generator, stdout, stderr):
         prompt_generator (PromptGenerator): Current prompt generator instance
         stdout (str): Standard output from execution
         stderr (str): Standard error from execution
+        planner_decision (str, optional): Decision from log evaluation (planner agent)
+        planner_explanation (str, optional): Explanation from log evaluation (planner agent)
     """
     # Create a states subfolder
     states_folder = os.path.join(iteration_folder, "states")
@@ -117,9 +120,14 @@ def run_agent(
     bash_coder = generate_coder(
         llm_config=config.coder, tutorial_link_for_rag=tutorial_link
     )
+    
+    # Initialize log evaluation agent
+    planner = get_planner(config.planner)
 
     iteration = 0
     while iteration < max_iterations:
+        print(f"Starting iteration {iteration}!")
+
         # Create iteration subfolder
         iteration_folder = os.path.join(output_folder, f"iteration_{iteration}")
         os.makedirs(iteration_folder, exist_ok=True)
@@ -179,34 +187,64 @@ def run_agent(
 
         prompt_generator.update_bash_script(bash_script=generated_bash_script)
 
-        try:
-            # Attempt to execute the generated code
-            success, stdout, stderr = execute_bash_script(generated_bash_script)
+        # Attempt to execute the generated code
+        success, stdout, stderr = execute_bash_script(generated_bash_script)
 
-            if success:
-                print(f"Code generation successful after {iteration + 1} iterations")
-                prompt_generator.update_error_message(error_message="")
-                # Save the current state
-                save_iteration_state(iteration_folder, prompt_generator, stdout, stderr)
-                break
+        # Initialize log evaluation variables
+        planner_decision = None
+        planner_explanation = None
+        planner_error_summary = None
 
-            # Feed error back into prompt generator
-            prompt_generator.update_error_message(error_message=stderr)
-
-            # Save the current state
-            save_iteration_state(iteration_folder, prompt_generator, stdout, stderr)
-
-        except Exception as e:
-            error_message = str(e)
+        # Even though execution succeeded, evaluate logs to check for issues or poor performance
+        planner_decision, planner_explanation, planner_error_summary, planner_prompt = planner(
+            stdout=stdout,
+            stderr=stderr,
+            python_code=generated_python_code,
+            task_prompt=prompt_generator.task_prompt,
+            data_prompt=prompt_generator.data_prompt,
+        )
+        
+        # Save planner results
+        planner_decision_path = os.path.join(iteration_folder, "planner_decision.txt")
+        with open(planner_decision_path, "w") as f:
+            f.write(f"planner_decision: {planner_decision}\n\nplanner_explanation: {planner_explanation}\n\nplanner_error_summary: {planner_error_summary}")
+        planner_prompt_path = os.path.join(iteration_folder, "planner_prompt.txt")
+        with open(planner_prompt_path, "w") as f:
+            f.write(f"planner_prompt: {planner_prompt}")
+        
+        if planner_decision == "FIX":
+            # Add suggestions to the error message to guide next iteration
+            error_message = f"stderr: {stderr}\n\n" if stderr else ""
+            error_message += f"Error summary from planner (the error can appear in stdout if it's catched): {planner_error_summary}"
             prompt_generator.update_error_message(error_message=error_message)
+            
+            # Let the user know we're continuing despite success
+            print(f"Code generation failed in iteration {iteration}!")
+        else:
+            if planner_decision != "FINISH":
+                print(f"###INVALID Planner Output: {planner_decision}###")
+            print(f"Code generation successful after {iteration + 1} iterations")
+            prompt_generator.update_error_message(error_message="")
             # Save the current state
-            save_iteration_state(iteration_folder, prompt_generator, "", error_message)
+            save_iteration_state(
+                iteration_folder, 
+                prompt_generator, 
+                stdout, 
+                stderr
+            )
+            break
+
+        # Save the current state
+        save_iteration_state(
+            iteration_folder, 
+            prompt_generator, 
+            stdout, 
+            stderr,
+        )
 
         iteration += 1
-        print(f"Starting iteration {iteration + 1}")
-
-    if iteration == max_iterations:
-        print(f"Warning: Reached maximum iterations ({max_iterations}) without success")
+        if iteration >= max_iterations:
+            print(f"Warning: Reached maximum iterations ({max_iterations}) without success")
 
     token_usage_path = os.path.join(iteration_folder, "token_usage.json")
     print(
