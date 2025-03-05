@@ -1,7 +1,6 @@
 # Tutorial Prompt Generator Configuration
 
-max_chars_per_file: 128
-max_chars_per_tabular_to_text: 1024
+max_chars_per_file: 1024
 max_num_tutorials: 5
 max_user_input_length: 2048
 max_error_message_length: 2048
@@ -36,3 +35,8 @@ planner:
   multi_turn: False
   max_stdout_length: 8192
   max_stderr_length: 2048
+
+file_reader:
+  <<: *default_llm  # Merge llm_config
+  multi_turn: False
+  details: False

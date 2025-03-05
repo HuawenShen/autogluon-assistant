@@ -30,7 +30,7 @@ class LLMPlanner:
         python_code: str,
         task_prompt: str,
         data_prompt: str,
-    ) -> Tuple[str, str, Optional[str]]:
+    ) -> Tuple[str, Optional[str], str]:
         """
         Evaluate execution logs to determine next steps.
 
@@ -38,12 +38,14 @@ class LLMPlanner:
             stdout: Standard output from code execution
             stderr: Standard error from code execution
             python_code: The Python code that was executed
+            task_prompt: The original task prompt
+            data_prompt: The data description prompt
 
         Returns:
             Tuple containing:
                 - decision: "FINISH" if execution was successful, "FIX" if issues need to be fixed
-                - explanation: Detailed explanation of the decision
                 - error_summary: Summary of errors if any (None if no errors)
+                - prompt: The prompt used for evaluation
         """
         # Create a new LLM instance for each call if not using multi-turn
         if not self.multi_turn:
@@ -64,16 +66,15 @@ class LLMPlanner:
         # Query the LLM
         response = self.llm.assistant_chat(prompt)
 
-        # Parse the LLM response to extract decision and explanation
-        decision, explanation, error_summary = self._parse_evaluation_response(response)
+        # Parse the LLM response to extract decision and error summary
+        decision, error_summary = self._parse_evaluation_response(response)
 
-        # Log the decision and explanation
+        # Log the decision and error summary
         logger.info(f"Planner decision: {decision}")
-        logger.info(f"Explanation: {explanation}")
         if error_summary:
             logger.info(f"Error summary: {error_summary}")
 
-        return decision, explanation, error_summary, prompt
+        return decision, error_summary, prompt
 
     def _build_evaluation_prompt(
         self,
@@ -90,6 +91,8 @@ class LLMPlanner:
             stdout: Standard output from code execution
             stderr: Standard error from code execution
             python_code: The Python code that was executed
+            task_prompt: The original task prompt
+            data_prompt: The data description prompt
 
         Returns:
             Prompt string for LLM evaluation
@@ -131,16 +134,9 @@ Evaluate the execution results and decide on one of the following actions:
 
 Provide your decision in the following format:
 DECISION: [FINISH or FIX]
-EXPLANATION: [Detailed explanation of your decision]
 ERROR_SUMMARY: [Brief summary of errors if any, or "None" if no errors]
 
-Remember to check for:
-- Syntax errors
-- Runtime exceptions
-- Logic errors
-- Incomplete results
-- Performance issues
-- Whether all requirements were met
+The error summary should be brief but informative enough for another agent to understand what needs to be fixed.
 
 Even if the code executed without throwing errors, it might still have issues with logic or not meet all requirements."""
 
@@ -148,15 +144,15 @@ Even if the code executed without throwing errors, it might still have issues wi
 
     def _parse_evaluation_response(
         self, response: Dict
-    ) -> Tuple[str, str, Optional[str]]:
+    ) -> Tuple[str, Optional[str]]:
         """
-        Parse the LLM's response to extract decision, explanation, and error summary.
+        Parse the LLM's response to extract decision and error summary.
 
         Args:
             response: LLM response dictionary
 
         Returns:
-            Tuple of (decision, explanation, error_summary)
+            Tuple of (decision, error_summary)
         """
         # Extract content from LLM response
         if isinstance(response, dict) and "content" in response:
@@ -166,7 +162,7 @@ Even if the code executed without throwing errors, it might still have issues wi
         else:
             # Default values if response format is unexpected
             logger.warning("Unexpected response format from LLM")
-            return "FIX", "Unexpected response format from LLM", "Parser error"
+            return "FIX", "Parser error"
 
         # Parse the decision
         decision = "FIX"  # Default to FIX if parsing fails
@@ -181,20 +177,12 @@ Even if the code executed without throwing errors, it might still have issues wi
                 elif "FIX" in decision_text.upper():
                     decision = "FIX"
 
-        # Parse the explanation
-        explanation = "No explanation provided"
-        if "EXPLANATION:" in content:
-            explanation_parts = content.split("EXPLANATION:")[1].split(
-                "ERROR_SUMMARY:" if "ERROR_SUMMARY:" in content else "\n\n"
-            )
-            explanation = explanation_parts[0].strip()
-
         # Parse the error summary
         error_summary = None
         if "ERROR_SUMMARY:" in content:
-            error_summary_parts = content.split("ERROR_SUMMARY:")[1]
-            error_summary = error_summary_parts.strip()
+            error_summary_parts = content.split("ERROR_SUMMARY:")[1].strip()
+            error_summary = error_summary_parts.split("\n\n")[0].strip()
             if error_summary.lower() == "none" or not error_summary:
                 error_summary = None
 
-        return decision, explanation, error_summary
+        return decision, error_summary

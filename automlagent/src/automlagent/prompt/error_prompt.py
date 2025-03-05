@@ -75,11 +75,11 @@ Error Message:
         # Prompt for LLM to analyze error
         analysis_prompt = """Analyze the error message and context provided. Generate a clear, concise summary of the error and provide specific suggestions for fixing it. Focus on:
 1. The root cause of the error
-2. A specific and concise suggestion for how to fix it, no code needed.
+2. A specific and concise suggestion for how to fix it, NO CODE.
 
 Format your response in two parts:
 ERROR SUMMARY: (Brief description of the error)
-SUGGESTED FIX: (Specific and concise suggestion, no code needed)
+SUGGESTED FIX: (Specific and concise suggestion, NO CODE needed)
 
 Keep the response focused and technical. Do not include general advice or explanations."""
 
