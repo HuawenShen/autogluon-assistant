@@ -6,5 +6,7 @@
     "retrieval"
   ],
   "requirements": [],
-  "prompt_template": []
+  "prompt_template": [
+    "DO NOT SAVE THE MODEL."
+  ]
 }

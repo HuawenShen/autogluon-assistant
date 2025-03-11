@@ -307,6 +307,7 @@ class PromptGenerator:
             previous_python=self.previous_python_code,
             current_python=self.python_code,
             error_message=self.previous_error_message,
+            max_error_message_length=self.config.max_error_message_length,
         )
 
         # Save the execution prompt

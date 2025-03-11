@@ -10,6 +10,7 @@ def generate_execution_prompt(
     previous_python=None,
     error_message=None,
     current_python=None,
+    max_error_message_length: int = 2048,
 ):
     """
     Generate a prompt for an LLM to create a simplified bash script for environment setup and code execution.
@@ -27,6 +28,15 @@ def generate_execution_prompt(
         str: Formatted prompt for the LLM
     """
     os.makedirs(output_folder, exist_ok=True)
+
+    # Truncate error message if needed
+    if len(error_message) > max_error_message_length:
+        error_message = (
+            error_message[: max_error_message_length // 2]
+            + "\n...(truncated)\n"
+            + error_message[-max_error_message_length // 2 :]
+        )
+
 
     # Build the core instructions
     instructions = []

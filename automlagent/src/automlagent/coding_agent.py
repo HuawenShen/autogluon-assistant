@@ -165,6 +165,9 @@ def run_agent(
         raise FileNotFoundError(f"Config file not found: {config_path}")
     config = OmegaConf.load(config_path)
 
+    stream_output=config.stream_output
+    per_execution_timeout=config.per_execution_timeout
+
     prompt_generator = PromptGenerator(
         input_data_folder=input_data_folder,
         output_folder=output_folder,
@@ -244,7 +247,11 @@ def run_agent(
         prompt_generator.update_bash_script(bash_script=generated_bash_script)
 
         # Attempt to execute the generated code
-        success, stdout, stderr = execute_bash_script(generated_bash_script)
+        success, stdout, stderr = execute_bash_script(
+            bash_script=generated_bash_script,
+            stream_output=stream_output,
+            timeout=per_execution_timeout
+        )
 
         # Initialize log evaluation variables
         planner_decision = None

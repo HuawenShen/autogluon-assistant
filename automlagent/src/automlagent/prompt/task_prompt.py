@@ -239,6 +239,8 @@ def wrap_task_description(
     return f"""
 As an AutoML Agent, you will be given a folder containing data and description files. Please generate Python code using {tool_name} to train a predictor and make predictions on test data. Follow these specifications:
 
+ONLY save files to the working directory: {output_folder}.
+
 1. Data preprocessing:
    - Remove training data samples without valid labels (unless told not to do so).
    - Remove the unneccesary index column (if applicable)

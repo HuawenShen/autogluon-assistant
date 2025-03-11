@@ -10,7 +10,7 @@
   "requirements": [],
   "prompt_template": [
     "Use Autogluon Tabular with the following parameters:",
-    "- time_limit: 600 seconds",
+    "- time_limit: 1800 seconds",
     "- presets: \\\"medium_quality\\\"",
     "- tuning_data: only use validation if there is a validation dataset.",
     "- problem_type: binary, multiclass, or regression."
