@@ -57,14 +57,17 @@ class LLMFileReader:
         Your code should:
         1. Import all modules used (e.g. import os).
         1. Use appropriate libraries based on file type (pandas for tabular data, etc.)
-        2. For tabular files (CSV, Excel, Parquet, etc.):
+        2. For tabular files (csv, excel, parquet, etc.):
            - Display column names. If there are more than 20 columns, only display the first and last 10.
            - Show first 2-3 rows with truncated cell content
+           - Do not show additional index column if it's not in the original table
+           - If failed to open the file, treat it as text file
            {"- Count total rows and provide basic statistics" if self.details else "- No additional info needed."}
         3. For text files:
            - Display first few lines (up to {max_chars} characters)
-        {"4. For binary or other files, provide appropriate summary" if self.details else "4. For binary or other files, provide only file size."}
-        5. Keep the total output under {max_chars} characters
+        4. For compressed tabular or text files, show its decompressed content as described.
+        {"5. For other files, provide appropriate summary" if self.details else "4. For binary or other files, provide only file size."}
+        6. Keep the total output under {max_chars} characters
         
         Return ONLY the Python code, no explanations or markdown. The code should be self-contained
         and executable on its own.
