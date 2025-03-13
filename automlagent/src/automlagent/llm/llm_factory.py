@@ -295,7 +295,8 @@ class ChatLLMFactory:
             else cls.get_bedrock_models()
         )
         if model not in valid_models:
-            raise ValueError(f"Invalid model: {model} for provider {provider}. All valid models are {valid_models}")
+            if model[3:] not in valid_models:  # TODO: better logic for cross region inference
+                raise ValueError(f"Invalid model: {model} for provider {provider}. All valid models are {valid_models}")
 
         if model not in WHITE_LIST_LLM:
             logger.warning(f"Model {model} is not on the white list: {WHITE_LIST_LLM}")
