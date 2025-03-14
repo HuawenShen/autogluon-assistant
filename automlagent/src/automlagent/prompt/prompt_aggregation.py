@@ -225,8 +225,8 @@ class PromptGenerator:
                 llm_config=self.config.llm,
                 output_folder=self.output_folder,
                 max_error_message_length=self.config.max_error_message_length,
-                error_summary=self.config.error_summary if hasattr(conf, 'error_summary') else True,
-                error_fix=self.config.error_fix if hasattr(conf, 'error_fix') else True,
+                error_summary=self.config.error_summary if hasattr(self.config, 'error_summary') else True,
+                error_fix=self.config.error_fix if hasattr(self.config, 'error_fix') else True,
             )
             assert len(self.error_prompts) == self.time_step - 1
             self.error_prompts.append(previous_error_prompt)
