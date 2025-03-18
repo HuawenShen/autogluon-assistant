@@ -75,22 +75,24 @@ Error Message:
 
         # Modify analysis prompt based on error_fix flag
         if error_fix:
-            analysis_prompt = """Analyze the error message and context provided. Generate a clear, concise summary of the error and provide specific suggestions for fixing it. Focus on:
-1. The root cause of the error
-2. A specific and concise suggestion for how to fix it, NO CODE.
-Format your response in two parts:
-ERROR SUMMARY: (Brief description of the error)
-SUGGESTED FIX: (Specific and concise suggestion, NO CODE needed)
-Keep the response focused and technical. Do not include general advice or explanations."""
+            analysis_prompt = """Analyze the error message and context provided. Your response MUST contain exactly two short paragraphs as follows:
+
+ERROR SUMMARY: Provide a brief, technical description of the error in 1-3 sentences. Focus only on identifying the root cause and affected component without background explanations.
+
+SUGGESTED FIX: Offer specific debugging directions in 1-3 sentences. Do not include actual code or commands, only tactical debugging guidance.
+
+Each paragraph must be concise (maximum 3 sentences). Do not include general advice, explanations beyond the direct debugging strategy, or any additional paragraphs."""
         else:
-            analysis_prompt = """Analyze the error message and context provided. Generate a clear, concise summary of the error. Focus on:
-1. The root cause of the error
-Format your response as:
-ERROR SUMMARY: (Brief description of the error)
-Keep the response focused and technical. Do not include suggestions for fixes, general advice, or explanations."""
+            analysis_prompt = """Analyze the error message and context provided. Your response MUST contain exactly one short paragraphs as follows:
+
+ERROR SUMMARY: Provide a brief, technical description of the error in 1-3 sentences. Focus only on identifying the root cause and affected component without background explanations.
+
+Each paragraph must be concise (maximum 3 sentences). Do not include general advice, explanations beyond the direct debugging strategy, or any additional paragraphs."""
+
+        context = context + "\n\n" + analysis_prompt
 
         # Get error analysis from LLM
-        error_analysis = llm.assistant_chat(context + "\n\n" + analysis_prompt)
+        error_analysis = llm.assistant_chat(context)
         
         # Save results if output folder is provided
         if output_folder:

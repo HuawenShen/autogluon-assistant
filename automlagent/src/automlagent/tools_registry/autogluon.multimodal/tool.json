@@ -15,6 +15,6 @@
     "Check data path carefully when encounter ValueError: No model is available for this dataset.",
     "For semantic segmentation, use single GPU by setting CUDA_VISIBLE_DEVICES=0",
     "For semantic segmentation, save the mask as greyscale JPG image (squeeze then cv2.imwrite) in \\\"predicted_mask\\\" folder under output folder and save its absolute path in label column.",
-    "No need to specift model.names"
+    "No need to specify model.names, and do not increase default per gpu batch size to avoid OOM errors."
   ]
 }
