@@ -259,7 +259,7 @@ class ChatLLMFactory:
             return [
                 model.id
                 for model in models
-                if model.id.startswith(("gpt-3.5", "gpt-4"))
+                if model.id.startswith(("gpt-3.5", "gpt-4", "o1", "o3"))
             ]
         except Exception as e:
             logger.error(f"Error fetching OpenAI models: {e}")
