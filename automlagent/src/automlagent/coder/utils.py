@@ -49,7 +49,8 @@ def extract_bash_script(response):
     if matches:
         return matches[0].strip()
     else:
-        raise ValueError(f"No bash script found in reponse: {response}")
+        print(f"No bash script found in reponse, return the full response instead: {response}")
+        return response
 
 
 def extract_script(response, language):

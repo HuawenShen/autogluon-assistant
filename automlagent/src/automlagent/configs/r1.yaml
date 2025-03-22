@@ -32,6 +32,7 @@ coder:
   max_tokens: 16384
   top_p: 1
   multi_turn: False
+  add_coding_format_instruction: True
 
 planner:
   <<: *default_llm  # Merge llm_config

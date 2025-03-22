@@ -245,6 +245,7 @@ class PromptGenerator:
             max_num_tutorials=self.config.max_num_tutorials,
             max_tutorial_length=self.config.max_tutorial_length,
             condense_tutorials=self.config.condense_tutorials,
+            use_tutorial_summary=self.config.use_tutorial_summary if hasattr(self.config, 'use_tutorial_summary') else True,
         )
 
         # Save tutorial prompt

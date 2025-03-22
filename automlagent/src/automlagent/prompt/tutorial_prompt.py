@@ -74,6 +74,7 @@ def select_relevant_tutorials(
     error_prompt: str,
     llm_config,
     max_num_tutorials: int,
+    use_tutorial_summary: bool = True,
 ) -> List[TutorialInfo]:
     """Select most relevant tutorials using LLM scoring based on titles and summaries."""
 
@@ -88,7 +89,7 @@ User Question: {user_prompt}
 Previous Error: {error_prompt}"""
 
     tutorials_info = "\n".join(
-        f"{i+1}. Title: {tutorial.title}\n   Summary: {tutorial.summary or '(No summary available)'}"
+        f"{i+1}. Title: {tutorial.title}\n   Summary: {tutorial.summary if use_tutorial_summary and tutorial.summary else '(No summary available)'}"
         for i, tutorial in enumerate(tutorials)
     )
 
@@ -208,6 +209,7 @@ def generate_tutorial_prompt(
     max_num_tutorials: int = 3,
     max_tutorial_length: int = 9999,
     condense_tutorials: bool = False,
+    use_tutorial_summary: bool = True,
 ) -> str:
     """Generate a tutorial prompt by selecting relevant tutorials.
 
@@ -239,6 +241,7 @@ def generate_tutorial_prompt(
         error_prompt,
         llm_config,
         max_num_tutorials,
+        use_tutorial_summary,
     )
 
     if not selected_tutorials:

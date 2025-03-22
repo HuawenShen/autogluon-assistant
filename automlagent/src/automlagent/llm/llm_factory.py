@@ -306,15 +306,25 @@ class ChatLLMFactory:
                 raise ValueError("OpenAI API key not found in environment")
 
             logger.info(f"Using OpenAI model: {model} for session: {session_name}")
-            return AssistantChatOpenAI(
-                model_name=model,
-                temperature=config.temperature,
-                max_tokens=config.max_tokens,
-                verbose=config.verbose,
-                openai_api_key=os.environ["OPENAI_API_KEY"],
-                openai_api_base=config.proxy_url,
-                session_name=session_name,
-            )
+            kwargs = {
+                "model_name": model,
+                "openai_api_key": os.environ["OPENAI_API_KEY"],
+                "session_name": session_name,
+            }
+
+            if hasattr(config, "temperature"):
+                kwargs["temperature"] = config.temperature
+
+            if hasattr(config, "max_tokens"):
+                kwargs["max_tokens"] = config.max_tokens
+                
+            if hasattr(config, "verbose"):
+                kwargs["verbose"] = config.verbose
+                
+            if hasattr(config, "proxy_url"):
+                kwargs["openai_api_base"] = config.proxy_url
+
+            return AssistantChatOpenAI(**kwargs)
         else:  # bedrock
             logger.info(f"Using Bedrock model: {model} for session: {session_name}")
             return AssistantChatBedrock(

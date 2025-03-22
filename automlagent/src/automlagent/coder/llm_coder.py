@@ -48,6 +48,11 @@ class LLMCoder:
         if language not in VALID_CODING_LANGUAGES:
             raise ValueError(f"Language must be one of {VALID_CODING_LANGUAGES}")
 
+        # Add format instruction if configured
+        if hasattr(self.llm_config, 'add_coding_format_instruction') and self.llm_config.add_coding_format_instruction:
+            format_instruction = f"Please format your response with the code in a ```{language}``` code block to make it easily extractable."
+            prompt = f"{prompt}\n\n{format_instruction}"
+
         # Get response from LLM
         response = self.llm.assistant_chat(prompt)
 

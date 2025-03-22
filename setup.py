@@ -11,6 +11,7 @@ setup(
         "autogluon",
         # "speechbrain",
         "FlagEmbedding",
+        "faiss-cpu",
     ],
     author="FANGAreNotGnu",
     description="AutoMLAgent beta",
