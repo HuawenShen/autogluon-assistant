@@ -7,6 +7,29 @@ from ..llm import ChatLLMFactory
 
 logger = logging.getLogger(__name__)
 
+def extract_section(text: str, section_marker: str) -> str:
+    """
+    Extract a section from the text starting with the section_marker and ending with a double newline.
+    
+    Args:
+        text: The full text to extract from
+        section_marker: The marker that indicates the start of the section
+        
+    Returns:
+        The extracted section text or empty string if marker not found
+    """
+    if section_marker not in text:
+        return ""
+        
+    start = text.find(section_marker)
+    end = text.find("\n\n", start)
+    
+    # If there's no double newline, it's the last section in the text
+    if end == -1:
+        return text[start:].strip()+"\n\n"
+    else:
+        return text[start:end].strip()+"\n\n"
+
 def generate_error_prompt(
     task_prompt: str,
     data_prompt: str,
@@ -90,9 +113,26 @@ ERROR SUMMARY: Provide a brief, technical description of the error in 1-3 senten
 Each paragraph must be concise (maximum 3 sentences). Do not include general advice, explanations beyond the direct debugging strategy, or any additional paragraphs."""
 
         context = context + "\n\n" + analysis_prompt
-
+    
         # Get error analysis from LLM
-        error_analysis = llm.assistant_chat(context)
+        full_analysis = llm.assistant_chat(context)
+        
+        # Extract only the error summary and suggested fix paragraphs using the same logic
+        error_analysis = ""
+            
+        # Extract ERROR SUMMARY
+        error_summary_text = extract_section(full_analysis, "ERROR SUMMARY:")
+        if error_summary_text:
+            error_analysis += error_summary_text
+        
+        # Extract SUGGESTED FIX if error_fix is True
+        if error_fix:
+            suggested_fix_text = extract_section(full_analysis, "SUGGESTED FIX:")
+            if suggested_fix_text:
+                error_analysis += suggested_fix_text
+
+        if not error_analysis:
+            error_analysis = full_analysis
         
         # Save results if output folder is provided
         if output_folder:
