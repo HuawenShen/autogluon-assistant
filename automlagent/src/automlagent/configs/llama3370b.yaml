@@ -43,3 +43,5 @@ file_reader:
   <<: *default_llm  # Merge llm_config
   multi_turn: False
   details: False
+  temperature: 0.5
+  add_coding_format_instruction: True

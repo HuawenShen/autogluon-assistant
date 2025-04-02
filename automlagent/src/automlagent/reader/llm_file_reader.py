@@ -28,6 +28,7 @@ class LLMFileReader:
         """
         self.llm_config = llm_config
         self.multi_turn = llm_config.multi_turn
+        self.add_coding_format_instruction = llm_config.add_coding_format_instruction if hasattr(self.llm_config, 'add_coding_format_instruction') else False
         self.details = llm_config.details
         if self.multi_turn:
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -72,6 +73,11 @@ class LLMFileReader:
         Return ONLY the Python code, no explanations or markdown. The code should be self-contained
         and executable on its own.
         """
+
+        # Add format instruction if configured
+        if self.add_coding_format_instruction:
+            format_instruction = f"Please format your response with the code in a ```python``` code block to make it easily extractable."
+            prompt = f"{prompt}\n\n{format_instruction}"
         
         response = self.llm.assistant_chat(prompt)
         
