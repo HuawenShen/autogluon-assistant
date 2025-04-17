@@ -5,7 +5,7 @@ import uuid
 from typing import Any, Dict, List, Optional
 
 import boto3
-from autogluon.assistant.constants import WHITE_LIST_LLM
+#from autogluon.assistant.constants import WHITE_LIST_LLM
 from langchain_aws import ChatBedrock
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -298,8 +298,8 @@ class ChatLLMFactory:
             if model[3:] not in valid_models:  # TODO: better logic for cross region inference
                 raise ValueError(f"Invalid model: {model} for provider {provider}. All valid models are {valid_models}")
 
-        if model not in WHITE_LIST_LLM:
-            logger.warning(f"Model {model} is not on the white list: {WHITE_LIST_LLM}")
+        #if model not in WHITE_LIST_LLM:
+        #    logger.warning(f"Model {model} is not on the white list: {WHITE_LIST_LLM}")
 
         if provider == "openai":
             if "OPENAI_API_KEY" not in os.environ:
