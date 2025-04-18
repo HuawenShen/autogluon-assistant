@@ -8,6 +8,7 @@ setup(
     install_requires=[
         "langgraph",
         "autogluon",
+        "autogluon.tabular[skex]",
         # "speechbrain",
         "FlagEmbedding",
         "faiss-cpu",
