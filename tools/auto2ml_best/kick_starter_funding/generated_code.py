@@ -21,7 +21,7 @@ from autogluon.tabular import TabularDataset, TabularPredictor
 
 if __name__ == "__main__":
     # Define paths
-    output_dir = "/media/agent/maab/runs/RUN_20250318_053108/outputs/agentsonnet37_kick_starter_funding_output"
+    output_dir = "./"
     model_dir = os.path.join(output_dir, f"model_{int(time.time())}")
     
     # Load the data
@@ -65,7 +65,7 @@ if __name__ == "__main__":
         label='final_status',
         path=model_dir,
         problem_type=problem_type
-    ).fit(
+    ).fit(time_limit=24*3600,
         train_data=train_data,
         presets="best_quality"
     )

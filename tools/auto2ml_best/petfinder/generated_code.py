@@ -22,7 +22,7 @@ from autogluon.multimodal import MultiModalPredictor
 if __name__ == "__main__":
     # Define paths
     input_dir = "/media/agent/maab/datasets/petfinder/training"
-    output_dir = "/media/agent/maab/runs/RUN_20250319_010143/outputs/agentsonnet37_petfinder_output"
+    output_dir = "./"
     
     # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
@@ -73,7 +73,7 @@ if __name__ == "__main__":
     )
     
     # Train the model with the specified parameters
-    predictor.fit(
+    predictor.fit(time_limit=24*3600,
         train_data=train_data,
         presets="best_quality"
     )

@@ -18,7 +18,7 @@ from autogluon.multimodal import MultiModalPredictor
 
 if __name__ == "__main__":
     # Define paths
-    base_output_dir = "/media/agent/maab/runs/RUN_20250318_053108/outputs/agentsonnet37_women_clothing_review_output"
+    base_output_dir = "./"
     os.makedirs(base_output_dir, exist_ok=True)
     
     # Create a timestamped folder for the model
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     )
     
     # Train the model
-    predictor.fit(
+    predictor.fit(time_limit=24*3600,
         train_data=train_data,
         tuning_data=dev_data,  # Use validation data for tuning
         presets="best_quality"  # As specified

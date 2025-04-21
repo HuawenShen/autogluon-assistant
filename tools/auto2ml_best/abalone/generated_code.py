@@ -20,7 +20,7 @@ from autogluon.tabular import TabularDataset, TabularPredictor
 
 if __name__ == "__main__":
     # Define paths
-    output_dir = "/media/agent/maab/runs/RUN_20250318_053108/outputs/agentsonnet37_abalone_output"
+    output_dir = "./"
     os.makedirs(output_dir, exist_ok=True)
     
     # Generate a timestamp for the model directory
@@ -62,7 +62,7 @@ if __name__ == "__main__":
         problem_type='regression',  # Explicitly set as regression
         path=model_dir,
         eval_metric='rmse'  # Root Mean Square Error
-    ).fit(
+    ).fit(time_limit=24*3600,
         train_data=train_data,
         presets='best_quality'
     )

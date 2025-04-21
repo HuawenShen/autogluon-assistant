@@ -20,7 +20,7 @@ from autogluon.tabular import TabularPredictor
 
 if __name__ == "__main__":
     # Define paths
-    output_dir = "/media/agent/maab/runs/RUN_20250318_053108/outputs/agentsonnet37_covertype_output"
+    output_dir = "./"
     model_dir = os.path.join(output_dir, f"model_{int(time.time())}")
     
     # Create output directory if it doesn't exist
@@ -62,7 +62,7 @@ if __name__ == "__main__":
         path=model_dir,
         problem_type='multiclass',  # Explicitly set as multiclass classification
         eval_metric='accuracy'  # Appropriate for multiclass classification
-    ).fit(
+    ).fit(time_limit=24*3600,
         train_data=train_data,
         presets="best_quality"
     )

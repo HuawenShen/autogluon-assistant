@@ -90,7 +90,7 @@ def save_predictions(predictor, test_df, output_dir):
 if __name__ == "__main__":
     # Define paths
     base_path = "/media/agent/maab/datasets/road_segmentation/training"
-    output_dir = "/media/agent/maab/runs/RUN_20250318_053108/outputs/agentsonnet37_road_segmentation_output"
+    output_dir = "./"
     
     # Create timestamp for model directory
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -134,7 +134,7 @@ if __name__ == "__main__":
     # Train the model
     print("Training model...")
     start_time = time.time()
-    predictor.fit(
+    predictor.fit(time_limit=24*3600,
         train_data=train_df,
         tuning_data=val_df,
         presets="best_quality"

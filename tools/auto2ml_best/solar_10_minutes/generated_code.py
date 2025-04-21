@@ -29,7 +29,7 @@ from datetime import datetime
 from autogluon.timeseries import TimeSeriesDataFrame, TimeSeriesPredictor
 
 # Define output directory
-OUTPUT_DIR = "/media/agent/maab/runs/RUN_20250318_053108/outputs/agentsonnet37_solar_10_minutes_output"
+OUTPUT_DIR = "./"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Define model directory with timestamp
@@ -107,7 +107,7 @@ if __name__ == "__main__":
     )
     
     # Train the model
-    predictor.fit(
+    predictor.fit(time_limit=24*3600,
         train_data=ts_df,
         presets="best_quality"
     )

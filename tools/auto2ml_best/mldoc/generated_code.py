@@ -23,7 +23,7 @@ warnings.filterwarnings('ignore')
 if __name__ == "__main__":
     # Define paths
     base_path = "/media/agent/maab/datasets/mldoc/training"
-    output_path = "/media/agent/maab/runs/RUN_20250318_053108/outputs/agentsonnet37_mldoc_output"
+    output_path = "./"
     
     # Create output directory if it doesn't exist
     os.makedirs(output_path, exist_ok=True)
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     # Train the model
     if len(valid_data) > 0:
         # Use validation data if available
-        predictor.fit(
+        predictor.fit(time_limit=24*3600,
             train_data=train_data,
             tuning_data=valid_data,
             presets="best_quality",
@@ -124,7 +124,7 @@ if __name__ == "__main__":
         )
     else:
         # Train without validation data
-        predictor.fit(
+        predictor.fit(time_limit=24*3600,
             train_data=train_data,
             presets="best_quality",
             hyperparameters=hyperparameters

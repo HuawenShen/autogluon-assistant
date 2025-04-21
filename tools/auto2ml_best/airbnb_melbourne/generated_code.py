@@ -18,7 +18,7 @@ from autogluon.tabular import TabularDataset, TabularPredictor
 
 def create_output_dir():
     """Create output directory if it doesn't exist"""
-    output_dir = "/media/agent/maab/runs/RUN_20250318_053108/outputs/agentsonnet37_airbnb_melbourne_output"
+    output_dir = "./"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     return output_dir
@@ -90,7 +90,7 @@ if __name__ == "__main__":
         path=model_dir,
         problem_type=problem_type,
         eval_metric=None  # AutoGluon will select an appropriate metric based on problem_type
-    ).fit(
+    ).fit(time_limit=24*3600,
         train_data=train_data,
         presets="best_quality"
     )

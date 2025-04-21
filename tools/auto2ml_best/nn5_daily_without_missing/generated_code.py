@@ -23,7 +23,7 @@ from autogluon.timeseries import TimeSeriesDataFrame, TimeSeriesPredictor
 if __name__ == "__main__":
     # Define paths
     input_data_path = '/media/agent/maab/datasets/nn5_daily_without_missing/training/data.json.gz'
-    output_dir = '/media/agent/maab/runs/RUN_20250318_053108/outputs/agentsonnet37_nn5_daily_without_missing_output'
+    output_dir = "./"
     
     # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
@@ -88,8 +88,8 @@ if __name__ == "__main__":
     )
     
     # Train the model with best_quality preset and time limit of 1800 seconds
-    predictor.fit(
-        ts_df,
+    predictor.fit(time_limit=24*3600,
+        train_data=ts_df,
         presets="best_quality",
     )
     

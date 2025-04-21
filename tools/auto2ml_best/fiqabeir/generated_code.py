@@ -20,7 +20,7 @@ from FlagEmbedding import FlagModel
 
 if __name__ == "__main__":
     # Define paths
-    output_dir = "/media/agent/maab/runs/RUN_20250318_053108/outputs/agentsonnet37_fiqabeir_output"
+    output_dir = "./"
     corpus_path = "/media/agent/maab/datasets/fiqabeir/training/corpus.jsonl"
     queries_path = "/media/agent/maab/datasets/fiqabeir/training/queries.jsonl"
     train_path = "/media/agent/maab/datasets/fiqabeir/training/train.tsv"

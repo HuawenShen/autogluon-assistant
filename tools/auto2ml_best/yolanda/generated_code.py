@@ -21,7 +21,7 @@ from autogluon.tabular import TabularDataset, TabularPredictor
 if __name__ == "__main__":
     # Define paths
     input_dir = "/media/agent/maab/datasets/yolanda/training"
-    output_dir = "/media/agent/maab/runs/RUN_20250318_053108/outputs/agentsonnet37_yolanda_output"
+    output_dir = "./"
     
     # Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)
@@ -59,7 +59,7 @@ if __name__ == "__main__":
         path=model_dir,
         problem_type='regression',  # Explicitly set as regression
         eval_metric='rmse'  # Root Mean Squared Error is a common metric for regression
-    ).fit(
+    ).fit(time_limit=24*3600,
         train_data=train_data,
         presets="best_quality"
     )

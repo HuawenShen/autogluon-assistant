@@ -32,7 +32,7 @@ def expand_image_paths(df, base_path):
 if __name__ == "__main__":
     # Define paths
     data_path = "/media/agent/maab/datasets/hateful_meme/training"
-    output_path = "/media/agent/maab/runs/RUN_20250318_053108/outputs/agentsonnet37_hateful_meme_output"
+    output_path = "./"
     
     # Create timestamp for model directory
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     )
     
     print("Training model...")
-    predictor.fit(
+    predictor.fit(time_limit=24*3600,
         train_data=train_df,
         presets="best_quality"
     )

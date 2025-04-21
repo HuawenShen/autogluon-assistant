@@ -86,7 +86,7 @@ def save_predictions_to_jsonl(predictions, output_path):
 if __name__ == "__main__":
     # Define paths
     data_path = "/media/agent/maab/datasets/electricity_hourly/training/data.json.gz"
-    output_dir = "/media/agent/maab/runs/RUN_20250318_053108/outputs/agentsonnet37_electricity_hourly_output"
+    output_dir = "./"
     os.makedirs(output_dir, exist_ok=True)
     
     # Generate a model directory with timestamp
@@ -124,7 +124,7 @@ if __name__ == "__main__":
     )
     
     print("Training the model...")
-    predictor.fit(
+    predictor.fit(time_limit=24*3600,
         train_data=train_data,
         tuning_data=val_data,
         presets="best_quality",

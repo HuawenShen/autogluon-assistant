@@ -20,7 +20,7 @@ import shutil
 from autogluon.multimodal import MultiModalPredictor
 
 # Define paths
-OUTPUT_DIR = "/media/agent/maab/runs/RUN_20250318_053108/outputs/agentsonnet37_europeanflooddepth_output"
+OUTPUT_DIR = "./"
 DATA_DIR = "/media/agent/maab/datasets/europeanflooddepth/training"
 IMAGES_DIR = os.path.join(DATA_DIR, "europeanflooddepth")
 TRAIN_ANNOTATIONS_PATH = os.path.join(DATA_DIR, "europeanflooddepth_train_annotations.csv")
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     )
     
     # Train the model with specified parameters
-    predictor.fit(
+    predictor.fit(time_limit=24*3600,
         train_data=train_data,
         presets="best_quality"
     )

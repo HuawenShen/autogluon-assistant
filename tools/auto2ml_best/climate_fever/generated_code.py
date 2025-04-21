@@ -19,7 +19,7 @@ from tqdm import tqdm
 from FlagEmbedding import FlagModel
 import faiss
 
-OUTPUT_DIR = "/media/agent/maab/runs/RUN_20250407_222013/outputs/agentsonnet37_climate_fever_output"
+OUTPUT_DIR = "./"
 
 if __name__ == "__main__":
     # Create output directory if it doesn't exist

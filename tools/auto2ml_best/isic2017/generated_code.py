@@ -25,7 +25,7 @@ import datetime
 from autogluon.multimodal import MultiModalPredictor
 
 # Define output directory
-OUTPUT_DIR = "/media/agent/maab/runs/RUN_20250318_224138/outputs/agentsonnet37_isic2017_output"
+OUTPUT_DIR = "./"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Create a model directory with timestamp
@@ -139,7 +139,7 @@ if __name__ == "__main__":
     )
     
     # Train the model
-    predictor.fit(
+    predictor.fit(time_limit=24*3600,
         train_data=train_data,
         presets="best_quality"
     )

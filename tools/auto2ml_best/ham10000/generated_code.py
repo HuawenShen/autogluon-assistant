@@ -27,7 +27,7 @@ from autogluon.multimodal import MultiModalPredictor
 
 if __name__ == "__main__":
     # Define paths
-    output_dir = "/media/agent/maab/runs/RUN_20250318_053108/outputs/agentsonnet37_ham10000_output"
+    output_dir = "./"
     train_img_dir = "/media/agent/maab/datasets/ham10000/training/train"
     test_img_dir = "/media/agent/maab/datasets/ham10000/training/test/ISIC2018_Task3_Test_Images"
     train_annotations_path = "/media/agent/maab/datasets/ham10000/training/ham10000_train_annotations.csv"
@@ -81,7 +81,7 @@ if __name__ == "__main__":
     )
     
     # Train the model with the specified parameters
-    predictor.fit(
+    predictor.fit(time_limit=24*3600,
         train_data=train_df,
         presets="best_quality"
     )

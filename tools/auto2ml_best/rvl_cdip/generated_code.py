@@ -17,7 +17,7 @@ from autogluon.multimodal import MultiModalPredictor
 if __name__ == "__main__":
     # Define paths
     BASE_PATH = "/media/agent/maab/datasets/rvl_cdip/training"
-    OUTPUT_PATH = "/media/agent/maab/runs/RUN_20250318_224138/outputs/agentsonnet37_rvl_cdip_output"
+    OUTPUT_PATH = "./"
     
     # Create output directory if it doesn't exist
     os.makedirs(OUTPUT_PATH, exist_ok=True)
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     )
     
     # Train the model with validation data
-    predictor.fit(
+    predictor.fit(time_limit=24*3600,
         train_data=train_df,
         tuning_data=val_df,
         presets="best_quality"

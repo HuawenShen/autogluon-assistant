@@ -141,7 +141,7 @@ def train_and_predict(train_data, val_data, test_data, output_dir):
     )
     
     # Train the model
-    predictor.fit(
+    predictor.fit(time_limit=24*3600,
         train_data=train_data,
         tuning_data=val_data,
         presets="best_quality"
@@ -161,7 +161,7 @@ if __name__ == "__main__":
     train_csv = os.path.join(base_path, "train.csv")
     val_csv = os.path.join(base_path, "val.csv")
     inference_csv = os.path.join(base_path, "inference.csv")
-    output_dir = "/media/agent/maab/runs/RUN_20250318_212503/outputs/agentsonnet37_camo_sem_seg_output"
+    output_dir = "./"
     
     # Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)

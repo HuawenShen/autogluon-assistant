@@ -17,7 +17,7 @@ from autogluon.tabular import TabularDataset, TabularPredictor
 if __name__ == "__main__":
     # Define paths
     input_dir = '/media/agent/maab/datasets/bioresponse/training'
-    output_dir = '/media/agent/maab/runs/RUN_20250318_053108/outputs/agentsonnet37_bioresponse_output'
+    output_dir = "./"
     
     # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
@@ -48,7 +48,7 @@ if __name__ == "__main__":
         path=model_dir,
         problem_type='binary',  # Explicitly set as binary classification
         eval_metric='roc_auc'   # Good metric for binary classification
-    ).fit(
+    ).fit(time_limit=24*3600,
         train_data=train_data,
         presets="best_quality"
     )
