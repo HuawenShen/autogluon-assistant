@@ -5,6 +5,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 from automlagent.coding_agent import run_agent
+from automlagent.utils import extract_archives
 
 # Configure logging
 logging.basicConfig(
@@ -19,6 +20,9 @@ def main():
     )
     parser.add_argument(
         "-i", "--input_data_folder", required=True, help="Path to the input data folder"
+    )
+    parser.add_argument(
+        "-e", "--extract_archives", action="store_true", help="Extract the archives."
     )
     parser.add_argument(
         "-o", "--output_dir", required=True, help="Path to output directory"
@@ -44,6 +48,10 @@ def main():
     # Create output directory
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    if args.extract_archives:
+        print(f"Note: we strongly recommend using data without archived files. Extracting archived files under {args.input_data_folder}...")
+        extract_archives(args.input_data_folder)
 
     # Generate and execute code
     run_agent(
