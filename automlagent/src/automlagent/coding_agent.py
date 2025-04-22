@@ -11,7 +11,7 @@ from .planner import get_planner
 from .prompt import PromptGenerator, write_prompt_to_file
 
 
-def execute_bash_script(bash_script, stream_output=True, timeout=3600):
+def execute_bash_script(bash_script, stream_output=True, timeout=3600*6):
     """
     Execute bash script with real-time output streaming and timeout.
     

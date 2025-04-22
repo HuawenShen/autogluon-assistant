@@ -1,7 +1,7 @@
 # Tutorial Prompt Generator Configuration
 
 stream_output: True
-per_execution_timeout: 3600
+per_execution_timeout: 21600
 
 max_chars_per_file: 1024
 max_num_tutorials: 5
