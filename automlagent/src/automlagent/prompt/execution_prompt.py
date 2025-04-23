@@ -6,6 +6,7 @@ def generate_execution_prompt(
     output_folder,
     python_file_path,
     create_venv=True,
+    install_packages=False,
     previous_bash=None,
     previous_python=None,
     error_message=None,
@@ -48,6 +49,10 @@ def generate_execution_prompt(
                 "- Activate the environment",
                 "- Install required packages",
             ]
+        )
+    elif install_packages:
+        instructions.append(
+            "The environment may not be fully configured. Install any packages required in the python code."
         )
     else:
         instructions.append(

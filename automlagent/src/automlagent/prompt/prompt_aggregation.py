@@ -302,10 +302,12 @@ class PromptGenerator:
         return complete_prompt
 
     def get_execution_prompt(self, python_file_path) -> str:
+        install_packages = "machine learning" in self.selected_tool
         self.execution_prompt = generate_execution_prompt(
             output_folder=self.output_folder,
             python_file_path=python_file_path,
             create_venv=self.config.create_venv,
+            install_packages=install_packages,
             previous_bash=self.previous_bash_script,
             previous_python=self.previous_python_code,
             current_python=self.python_code,

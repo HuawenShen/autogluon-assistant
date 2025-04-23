@@ -10,11 +10,6 @@
       "version": "1.2.0",
       "description": "AutoGluon Multimodal is an open-source AutoML framework that simplifies the training of models across multiple data types including text, images, and tabular data, automating tasks from preprocessing to model ensembling with minimal code required."
     },
-    "speechbrain": {
-      "path": "speechbrain",
-      "version": "1.0.2",
-      "description": "SpeechBrain is an open-source speech toolkit built on PyTorch that provides pre-trained models and tools for various speech-related tasks like speech recognition, speaker identification, speech enhancement, and speech synthesis."
-    },
     "autogluon.tabular": {
       "path": "autogluon.tabular",
       "version": "1.2.0",
@@ -24,6 +19,11 @@
       "path": "FlagEmbedding",
       "version": "1.3.4",
       "description": "Retrieval and Retrieval-augmented LLMs"
+    },
+    "machine learning or deep learning": {
+      "path": "machine learning or deep learning",
+      "version": "0.1.0",
+      "description": "You should select this as a general reference of machine learning or deep learning algorithms in case other tools are not helpful."
     }
   }
 }
