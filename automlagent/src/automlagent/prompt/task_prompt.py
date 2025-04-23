@@ -252,7 +252,7 @@ ONLY save files to the working directory: {output_folder}.
 3. Prediction:
    - Make predictions on the test data
    - Save the predicted results to {output_folder}, result file name should be "results", the format and extension should be same as the test data file
-   - ENSURE the output columns match what in the training file, or those in the sample submission file (if any). DO NOT create any new column names.
+   - Output column names must exactly match those in the training or sample submission files without adding "predicted_" prefixes or creating any new columns.
 
 4. Documentation:
    - Add a brief docstring at the beginning of the script explaining its purpose and usage
