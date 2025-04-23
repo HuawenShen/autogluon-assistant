@@ -21,15 +21,21 @@ def clean_up_dataset(path: Path):
 # We do not suggest using the agent with zip files.
 # But MLEBench contains datasets zip files.
 # https://github.com/WecoAI/aideml/blob/main/aide/utils/__init__.py
-def extract_archives(path: Path):
+def extract_archives(path):
     """
-    unzips all .zip files within `path` and cleans up task dir
-
+    Unzips all .zip files within `path` and cleans up task dir
+    
+    Args:
+        path: Path object or string path to directory containing zip files
+        
     [TODO] handle nested zips
     """
+    # Convert string path to Path object if necessary
+    if isinstance(path, str):
+        path = Path(path)
+    
     for zip_f in path.rglob("*.zip"):
         f_out_dir = zip_f.with_suffix("")
-
         # special case: the intended output path already exists (maybe data has already been extracted by user)
         if f_out_dir.exists():
             logger.debug(
@@ -39,18 +45,17 @@ def extract_archives(path: Path):
             # [TODO] maybe add an extra check to see if zip file content matches the colliding file
             if f_out_dir.is_file() and f_out_dir.suffix != "":
                 zip_f.unlink()
-            continue
-
+                continue
+        
         logger.debug(f"Extracting: {zip_f}")
         f_out_dir.mkdir(exist_ok=True)
         with zipfile.ZipFile(zip_f, "r") as zip_ref:
             zip_ref.extractall(f_out_dir)
-
+        
         # remove any unwanted files
         clean_up_dataset(f_out_dir)
-
         contents = list(f_out_dir.iterdir())
-
+        
         # special case: the zip contains a single dir/file with the same name as the zip
         if len(contents) == 1 and contents[0].name == f_out_dir.name:
             sub_item = contents[0]
@@ -66,5 +71,5 @@ def extract_archives(path: Path):
                 sub_item_tmp = sub_item.rename(f_out_dir.with_suffix(".__tmp_rename"))
                 f_out_dir.rmdir()
                 sub_item_tmp.rename(f_out_dir)
-
+        
         zip_f.unlink()
