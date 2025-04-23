@@ -4,8 +4,9 @@ import seaborn as sns
 
 # Set style
 sns.set_style("whitegrid")
+# Use a more universally available font
 plt.rcParams['font.family'] = 'sans-serif'
-plt.rcParams['font.sans-serif'] = ['Arial']
+# Use system defaults instead of specifying Arial
 plt.rcParams['font.weight'] = 'bold'  # Set all fonts to bold by default
 
 # Define the data
@@ -81,31 +82,38 @@ for i in range(len(retrieval_counts)):
 time_efficiency = [1/rt if rt > 0 else 0 for rt in relative_times]
 token_efficiency = [1/rt if rt > 0 else 0 for rt in relative_tokens]
 
-# Set up the plot
-fig, ax = plt.subplots(figsize=(12, 8), dpi=600)
+# Set up the plot - modified figsize to be wider and shorter (2/3 of original height)
+fig, ax = plt.subplots(figsize=(16, 5.33), dpi=600)
 
 # Positions for the bars
 x = np.arange(len(retrieval_counts))
 width = 0.25  # the width of the bars
 
-# Plotting the bars
-rects1 = ax.bar(x - width, success_rates, width, label='Success Rate', color='#F1FEC6')
-rects2 = ax.bar(x, time_efficiency, width, label='Time Efficiency', color='#F39B6D')
-rects3 = ax.bar(x + width, token_efficiency, width, label='Token Efficiency', color='#7BB2D9')
+# Plotting the bars with edges
+rects1 = ax.bar(x - width, success_rates, width, label='Success Rate', color='#F1FEC6', 
+                edgecolor='black', linewidth=1.5)  # Added edge to bars
+rects2 = ax.bar(x, time_efficiency, width, label='Time Efficiency', color='#F39B6D', 
+                edgecolor='black', linewidth=1.5)  # Added edge to bars
+rects3 = ax.bar(x + width, token_efficiency, width, label='Token Efficiency', color='#7BB2D9', 
+                edgecolor='black', linewidth=1.5)  # Added edge to bars
 
 # Add horizontal line at y=1 for baseline reference
 ax.axhline(y=1, color='black', linestyle='--', alpha=0.5, label='Baseline (5 Docs Retrieved)')
 
-# Increase font size and make bold for all elements
-ax.set_xlabel('Number of Retrieved Documents', fontsize=16, fontweight='bold', labelpad=10)
-ax.set_ylabel('Performance Metrics', fontsize=16, fontweight='bold', labelpad=10)
-ax.set_title('Performance Metrics Across Different Retrieval Counts', fontsize=20, fontweight='bold')
-ax.set_xticks(x)
-ax.set_xticklabels([f'{count}' for count in retrieval_counts], fontsize=14, fontweight='bold')
-ax.tick_params(axis='y', labelsize=14)  # Make y-axis tick labels larger
+# Set y-axis limit from 0.5 to 1.5
+ax.set_ylim(0.5, 1.5)
 
-# Make legend text larger and bold
-ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.12), ncol=4, fontsize=14, frameon=True)
+# Increase font size and make bold for all elements - font sizes increased further
+ax.set_xlabel('Number of Retrieved Documents', fontsize=24, fontweight='bold', labelpad=10)  # Increased from 20
+ax.set_ylabel('Performance Metrics', fontsize=24, fontweight='bold', labelpad=10)  # Increased from 20
+ax.set_title('Performance Metrics Across Different Retrieval Counts', fontsize=28, fontweight='bold')  # Increased from 24
+ax.set_xticks(x)
+ax.set_xticklabels([f'{count}' for count in retrieval_counts], fontsize=22, fontweight='bold')  # Increased from 18
+ax.tick_params(axis='y', labelsize=22)  # Increased from 18
+
+# Make legend text larger and bold - arranged in 2x2 grid with edge color
+ax.legend(loc='upper right', fontsize=18, frameon=True, ncol=2, 
+          framealpha=0.9, edgecolor='black', borderpad=0.8)  # Added edge color and increased font size
 
 # Add grid
 ax.grid(axis='y', linestyle='--', alpha=0.3)
@@ -120,14 +128,20 @@ def add_labels(rects):
                         xytext=(0, 3),  # 3 points vertical offset
                         textcoords="offset points",
                         ha='center', va='bottom',
-                        fontsize=12, fontweight='bold')
+                        fontsize=18, fontweight='bold')  # Increased from 16
 
 add_labels(rects1)
 add_labels(rects2)
 add_labels(rects3)
 
+# Add border to the plot
+for spine in ax.spines.values():
+    spine.set_visible(True)
+    spine.set_linewidth(2)
+    spine.set_color('black')
+
 plt.tight_layout()
-plt.subplots_adjust(bottom=0.15)
+# No need for subplots_adjust since legend is now inside the plot
 
 # Print the calculated values for reference
 print("Success Rates:", success_rates)

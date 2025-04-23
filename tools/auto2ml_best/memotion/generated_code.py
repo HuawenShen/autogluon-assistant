@@ -54,7 +54,7 @@ if __name__ == "__main__":
     train_data_path = '/media/agent/maab/datasets/memotion/training/memotion_train.csv'
     test_data_path = '/media/agent/maab/datasets/memotion/training/inference.csv'
     image_folder = '/media/agent/maab/datasets/memotion/training/train'
-    output_folder = '/media/agent/maab/runs/RUN_20250417_204301/outputs/agentsonnet37_memotion_output'
+    output_folder = './'
     
     # Create output folder if it doesn't exist
     os.makedirs(output_folder, exist_ok=True)
@@ -104,7 +104,11 @@ if __name__ == "__main__":
         # Train model
         predictor.fit(
             train_data=train_df[['image_path', 'text_corrected', label]],
+<<<<<<< HEAD
             time_limit=3600*24,  # 24 hours per model
+=======
+            time_limit=3600 * 6,
+>>>>>>> a14002d (update visualizations)
             presets="best_quality"
         )
         
