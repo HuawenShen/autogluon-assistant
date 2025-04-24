@@ -42,6 +42,9 @@ def main():
         action="store_true",
         help="Enable user input between iterations",
     )
+    parser.add_argument(
+        "-i", "--initial_user_input", default=None, help="Initial user input (Optional)"
+    )
 
     args = parser.parse_args()
 
@@ -88,6 +91,7 @@ def main():
         config_path=args.config_path,
         max_iterations=args.max_iterations,
         need_user_input=args.need_user_input,
+        initial_user_input=args.initial_user_input,
     )
 
 

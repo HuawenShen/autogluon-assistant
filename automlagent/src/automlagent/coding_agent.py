@@ -159,6 +159,7 @@ def run_agent(
     config_path,
     max_iterations=5,
     need_user_input=False,
+    initial_user_input=None,
 ):
     # Load config from YAML and merge with default
     if not Path(config_path).exists():
@@ -191,14 +192,17 @@ def run_agent(
         iteration_folder = os.path.join(output_folder, f"iteration_{iteration}")
         os.makedirs(iteration_folder, exist_ok=True)
 
-        # Get user inputs if needed
         user_input = None
+        # Use initial user input at first iter
+        if iteration == 0:
+            user_input = initial_user_input
+        # Get per iter user inputs if needed
         if need_user_input:
             if iteration > 0:
                 print(
                     f"\nPrevious iteration files are in: {os.path.join(output_folder, f'iteration_{iteration-1}')}"
                 )
-            user_input = input(
+            user_input += input(
                 "Enter your inputs for this iteration (press Enter to skip): "
             )
 
