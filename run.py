@@ -43,7 +43,7 @@ def main():
         help="Enable user input between iterations",
     )
     parser.add_argument(
-        "-i", "--initial_user_input", default=None, help="Initial user input (Optional)"
+        "-u", "--initial_user_input", default=None, help="Initial user input (Optional)"
     )
 
     args = parser.parse_args()
