@@ -23,16 +23,16 @@ def find_description_files(data_prompt: str, llm) -> Tuple[List[str], str]:
         Tuple[List[str], str]: (List of identified description filenames, Analysis explanation)
     """
     find_descriptions_prompt = f"""
-    Given this data prompt:
+Given this data prompt:
 
-    {data_prompt}
+{data_prompt}
 
-    Please identify any files that appear to contain project descriptions, requirements, or task definitions.
-    Look for files like README, documentation files, or task description files.
-    
-    Format your response as follows:
-    Description Files: [list ONLY the absolute path, one per line]
-    Explanation: [explain why these files were identified as description files]
+Please identify any files that appear to contain project descriptions, requirements, or task definitions.
+Look for files like README, documentation files, or task description files.
+
+Format your response as follows:
+Description Files: [list ONLY the absolute path, one per line]
+Explanation: [explain why these files were identified as description files]
     """
 
     analysis = llm.assistant_chat(find_descriptions_prompt)
@@ -44,10 +44,10 @@ def find_description_files(data_prompt: str, llm) -> Tuple[List[str], str]:
 
     for line in lines:
         line = line.strip()
-        if line.lower().startswith("description files:"):
+        if "description files:" in line.lower():
             in_files_section = True
             continue
-        elif line.lower().startswith("explanation:"):
+        elif "explanation:" in line.lower():
             break
         elif in_files_section and line:
             filename = line.strip("- []").strip()

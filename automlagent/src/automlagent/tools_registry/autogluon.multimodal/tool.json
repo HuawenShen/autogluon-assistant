@@ -4,7 +4,8 @@
   "description": "AutoGluon Multimodal is an open-source AutoML framework that simplifies the training of models across multiple data types including text, images, and tabular data, automating tasks from preprocessing to model ensembling with minimal code required.",
   "features": [
     "Support multimodal classification or regression, document classification, semantic segmentation",
-    "Does not work the best with pure tabular data (categorical and numerical)."
+    "Does not work the best with pure tabular data (categorical and numerical).",
+    "Does not support image or text generation tasks."
   ],
   "requirements": [],
   "prompt_template": [
