@@ -1,7 +1,7 @@
 # Tutorial Prompt Generator Configuration
 
 stream_output: True
-per_execution_timeout: 21600
+per_execution_timeout: 86400
 
 max_chars_per_file: 1024
 max_num_tutorials: 5
@@ -20,7 +20,7 @@ llm: &default_llm
   model: "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
   # provider: openai
   # model: gpt-4o-2024-08-06
-  max_tokens: 16384
+  max_tokens: 65536
   proxy_url: null
   temperature: 0
   verbose: True
@@ -29,7 +29,7 @@ llm: &default_llm
 coder:
   <<: *default_llm  # Merge llm_config
   temperature: 0.5
-  max_tokens: 16384
+  max_tokens: 65536
   top_p: 1
   multi_turn: False
 

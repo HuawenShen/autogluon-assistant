@@ -194,13 +194,9 @@ Description File Analysis:
 Description File Contents:
 {description_context}
 
-Using ONLY the information explicitly stated in the provided data prompt, description files, and analysis:
-    1. Extract the core data science task objective
-    2. List specified requirements and constraints
-    3. List mentioned data sources and their formats
-    4. List any defined outputs or success metrics
-
-Format: Provide a concise description containing ONLY information found in the source materials. Do not add any assumptions.
+Based ONLY on the information explicitly stated in the provided data prompt, description files, and analysis, provide a concise description of the data science task. Include only details that are directly mentioned in the source materials.
+IMPORTANT: The metadata of example files may not be representative - do not make assumptions about data structures or formats based on examples.
+Do not add assumptions or infer unstated information.
         """
 
         response = llm.assistant_chat(task_prompt)
@@ -242,7 +238,7 @@ As an AutoML Agent, you will be given a folder containing data and description f
 ONLY save files to the working directory: {output_folder}.
 
 1. Data preprocessing:
-   - Remove training data samples without valid labels (unless told not to do so).
+   - Remove training data samples without valid labels (drop NA values from training dataset ONLY, NOT from test dataset) unless explicitly instructed otherwise.
    - Remove the unneccesary index column (if applicable)
 
 2. Model training:
