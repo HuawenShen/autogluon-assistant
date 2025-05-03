@@ -186,6 +186,7 @@ def generate_task_description(
 Based on this data prompt and description files:
 
 Data Prompt:
+(IMPORTANT: The metadata of example files in Data Prompt may not be representative - do not make assumptions about data statistics based on examples.)
 {data_prompt}
 
 Description File Analysis:
@@ -194,8 +195,7 @@ Description File Analysis:
 Description File Contents:
 {description_context}
 
-Based ONLY on the information explicitly stated in the provided data prompt, description files, and analysis, provide a concise description of the data science task. Include only details that are directly mentioned in the source materials.
-IMPORTANT: The metadata of example files may not be representative - do not make assumptions about data structures or formats based on examples.
+Based ONLY on the information explicitly stated in the provided data prompt, description files, and analysis, provide a condensed description of the data science task. Include only details that are directly mentioned in the source materials.
 Do not add assumptions or infer unstated information.
         """
 
