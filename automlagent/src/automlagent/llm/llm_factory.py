@@ -161,7 +161,7 @@ class BaseAssistantChat(BaseModel):
         }
 
     @retry(
-        stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=60, max=120)
+        stop=stop_after_attempt(8), wait=wait_exponential(multiplier=1, min=60, max=120)
     )
     def assistant_chat(self, message: str) -> str:
         """Send a message and get response using LangGraph."""
