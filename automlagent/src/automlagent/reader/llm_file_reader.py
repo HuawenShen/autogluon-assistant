@@ -60,7 +60,7 @@ class LLMFileReader:
         1. Use appropriate libraries based on file type (pandas for tabular data, etc.)
         2. For tabular files (csv, excel, parquet, etc.):
            - Display column names. If there are more than 20 columns, only display the first and last 10.
-           - Show first 2-3 rows with truncated cell content
+           - Show first 2-3 rows with truncated cell content (50 chars).
            - Do not show additional index column if it's not in the original table
            - If failed to open the file, treat it as text file
            {"- Count total rows and provide basic statistics" if self.details else "- No additional info needed."}
