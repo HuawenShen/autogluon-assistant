@@ -7,7 +7,7 @@ camo_sem_seg,-9999,-9999
 cd18,-0.63429,223
 climate_fever,-9999,-9999
 covertype,0.88666,688
-electricity_hourly,-1.7527,848
+electricity_hourly,1.7527,848
 europeanflooddepth,0.58333,335
 fiqabeir,-9999,-9999
 gnad10,0.88321,714

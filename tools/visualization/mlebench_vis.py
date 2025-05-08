@@ -25,7 +25,7 @@ def radar_chart(fig, data, categories, groups, colors, title):
     # Draw diagonal lines (add these lines first so they appear behind data)
     for i in range(N):
         # Draw diagonal lines from center to each axis
-        ax.plot([angles[i], angles[i]], [0, 1], color='#AAAAAA', linestyle='--', alpha=0.5, linewidth=4)
+        ax.plot([angles[i], angles[i]], [0, 1], color='#DDDDDD', linestyle='--', alpha=0.5, linewidth=4)
     
     # Improve label positioning
     label_angles = angles[:-1]  # Drop the last angle which is a repeat
@@ -93,7 +93,7 @@ def radar_chart(fig, data, categories, groups, colors, title):
     plt.title(title, size=36, color="#333333", y=1.05, weight='bold')  # Larger, bold title
     
     # Remove the circular grid and spines
-    ax.grid(color='#AAAAAA', linestyle='--', alpha=0.7, linewidth=1.5)  # Thicker grid lines
+    ax.grid(color='#DDDDDD', linestyle='--', alpha=0.7, linewidth=1.5)  # Thicker grid lines
     ax.spines['polar'].set_visible(False)
     
     return ax
@@ -103,18 +103,18 @@ np.random.seed(42)  # For reproducibility
 
 # Create a DataFrame
 categories = ['Rank', '#Gold', '#Silver+', '#Bronze+', '#Median+', 'Success']
-groups = ['Ours', 'AIDE', 'MLAB', 'OpenDevin']
+groups = ['Ours', 'AIDE', 'MLAB', 'OpenHands']
 
 # Create somewhat balanced data that looks meaningful
 data = pd.DataFrame({
-    'Auto^2ML': [1.57, 5, 7, 7, 11, 0.81],
-    'AIDE': [2.30, 3, 3, 4, 8, 0.81],
-    'MLAB': [2.88, 1, 1, 2, 2, 0.71],
-    'CodeActAgent': [3.24, 2, 2, 3, 4, 0.62]
+    'Ours': [1.43, 6, 8, 8, 12, 0.86],
+    'AIDE': [2.36, 3, 3, 4, 8, 0.81],
+    'MLAB': [3.29, 1, 1, 2, 2, 0.62],
+    'OpenHands': [2.93, 2, 2, 3, 4, 0.71]
 }, index=categories)
 
-# Set up the figure with a light background and proper size
-fig = plt.figure(figsize=(14, 12), facecolor="#f9f9f9")  # Increased figure size even more
+# Set up the figure with a white background and proper size
+fig = plt.figure(figsize=(14, 12), facecolor="white")  # Changed background to white
 
 # Define a pleasing color palette
 colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
@@ -161,4 +161,4 @@ plt.rcParams['legend.labelspacing'] = 1.2  # Vertical space between labels
 
 # Adjust layout and save
 plt.tight_layout()
-plt.savefig('mlebench_vis.pdf', dpi=300, bbox_inches='tight', facecolor="#f9f9f9")
+plt.savefig('mlebench_vis.pdf', dpi=300, bbox_inches='tight', facecolor="white")

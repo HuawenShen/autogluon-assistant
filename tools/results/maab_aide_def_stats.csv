@@ -1,5 +1,5 @@
 metric,mean,std
-abalone_performance,-2.1551533333333333,0.042434465813638945
+abalone_performance,2.1551533333333333,0.042434465813638945
 abalone_time_used,387.3333333333333,109.52726702617126
 airbnb_melbourne_performance,0.39429,0.0
 airbnb_melbourne_time_used,174.0,0.0

@@ -1,5 +1,5 @@
 dataset_name,performance,time_used
-abalone,-2.18247,483
+abalone,2.18247,483
 airbnb_melbourne,-9999,-9999
 airlines,-9999,-9999
 bioresponse,0.86802,434
@@ -21,6 +21,6 @@ nn5_daily_without_missing,-9999,-9999
 petfinder,-9999,-9999
 road_segmentation,-9999,-9999
 rvl_cdip,-9999,-9999
-solar_10_minutes,-1.05369,2698
+solar_10_minutes,1.05369,2698
 women_clothing_review,-9999,-9999
 yolanda,-9999,-9999
