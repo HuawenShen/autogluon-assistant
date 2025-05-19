@@ -143,7 +143,7 @@ class LLMFileReader:
             file_path: Path to the file to read
             max_chars: Maximum character output
             timeout: Maximum execution time in seconds
-            
+
         Returns:
             str: The file content or error message
         """

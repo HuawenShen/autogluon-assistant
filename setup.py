@@ -5,6 +5,7 @@ setup(
     version="0.1.0",
     package_dir={"": "automlagent/src"},  # Updated path
     packages=find_packages(where="automlagent/src"),  # Updated path
+    # packages=find_packages(where="."), 
     install_requires=[
         "langgraph",
         "autogluon",
@@ -32,6 +33,15 @@ setup(
         "streamlit-extras>=0.4",
         "psutil>=5.9.8",
     ],
+    include_package_data=True,
+    entry_points={
+        "console_scripts": [
+            # CLI UI
+            "automlagent=automlagent.cli.app:app",
+            # Web UI
+            "automlagent-webui=automlagent.webui.app:main",
+        ],
+    },
     author="FANGAreNotGnu",
     description="AutoMLAgent beta",
 )

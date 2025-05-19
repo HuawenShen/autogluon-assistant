@@ -300,7 +300,7 @@ def generate_task_prompt(data_prompt: str, output_folder: str, llm_config) -> st
     description_files, description_analysis = find_description_files(
         data_prompt, llm_find_description_files
     )
-    logger.info(
+    logger.brief(
         f"Found {len(description_files)} potential description files: {description_files}"
     )
 
