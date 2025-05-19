@@ -170,3 +170,8 @@ cython_debug/
 #.idea/
 data/
 output/
+
+# output
+/output/
+/AutogluonModels/
+
