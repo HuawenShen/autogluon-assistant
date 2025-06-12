@@ -30,6 +30,7 @@ class Manager:
         input_data_folder: str,
         output_folder: str,
         config: str,
+        
     ):
         """Initialize Manager with required paths and config from YAML file.
 

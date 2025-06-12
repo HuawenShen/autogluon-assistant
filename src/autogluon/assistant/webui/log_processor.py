@@ -87,6 +87,12 @@ class LogProcessor:
     
     def _process_log_entry(self, text: str) -> None:
         """处理单条日志"""
+        # Clear input state if we see user input response
+        # This ensures the UI updates immediately after input is processed
+        if text.startswith("User input:"):
+            self.waiting_for_input = False
+            self.input_prompt = None
+        
         # 检测阶段变化
         phase_change = self._detect_phase_change(text)
         
@@ -146,7 +152,7 @@ class LogProcessor:
             st.progress(self.progress)
         
         # 渲染各阶段
-        phase_order = ["Reading"] + [f"Iteration {i}" for i in range(self.max_iter)] + ["Output"]
+        phase_order = ["Reading"] + [f"Iteration {i}" for i in range(1, self.max_iter + 1)] + ["Output"]
         
         for phase_name in phase_order:
             if phase_name in self.phase_states:

@@ -143,38 +143,58 @@ def send_user_input(run_id: str, user_input: str) -> bool:
     """
     info = _runs.get(run_id)
     if not info:
-        logger.error(f"Run {run_id} not found")
+        logger.error(f"Run {run_id} not found in _runs")
         return False
     
     with info["lock"]:
         process = info.get("process")
-        if not process or not process.stdin or process.poll() is not None:
-            logger.error(f"Process not available for input: {run_id}")
+        
+        # Detailed debug logging
+        if not process:
+            logger.error(f"No process found for run {run_id}")
+            return False
+        
+        if not process.stdin:
+            logger.error(f"Process stdin not available for run {run_id}")
+            return False
+            
+        poll_result = process.poll()
+        if poll_result is not None:
+            logger.error(f"Process already terminated for run {run_id} with code {poll_result}")
             return False
         
         try:
             # Send input with special marker
             input_line = f"{WEBUI_INPUT_MARKER}{user_input}\n"
+            
+            # Debug logging
+            logger.debug(f"Task {run_id[:8]} - Sending to subprocess stdin: '{input_line.strip()}'")
+            
             process.stdin.write(input_line)
             process.stdin.flush()
             
-            # Reset input waiting state
+            # Reset input waiting state immediately
             info["waiting_for_input"] = False
             info["input_prompt"] = None
             
             # Log the user input for display with proper formatting
+            # This ensures the log processor sees it and clears its state
             if user_input:
-                info["logs"].append(f"BRIEF User input: {user_input}")
+                display_log = f"BRIEF User input: {user_input}"
             else:
-                info["logs"].append(f"BRIEF User input: (skipped)")
+                display_log = f"BRIEF User input: (skipped)"
             
-            logger.info(f"Sent input to task {run_id[:8]}")
+            info["logs"].append(display_log)
+            
+            logger.info(f"Successfully sent input to task {run_id[:8]} - Input: '{user_input}' (length: {len(user_input)})")
             return True
             
-        except Exception as e:
-            logger.error(f"Error sending input to task {run_id[:8]}: {str(e)}")
+        except BrokenPipeError as e:
+            logger.error(f"Broken pipe error for task {run_id[:8]}: Process may have terminated unexpectedly")
             return False
-
+        except Exception as e:
+            logger.error(f"Error sending input to task {run_id[:8]}: {type(e).__name__}: {str(e)}", exc_info=True)
+            return False
 
 def get_logs(run_id: str) -> List[str]:
     """

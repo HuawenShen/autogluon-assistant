@@ -1,7 +1,6 @@
 VALID_CODING_LANGUAGES = ["python", "bash"]
 LOGO_PATH = "static/page_icon.png"
-# DEMO_URL = "https://automl-mm-bench.s3.amazonaws.com/autogluon-assistant/aga-kaggle-demo.mp4"
-DEMO_URL = "https://aga-webui-demo.s3.us-west-2.amazonaws.com/demo.mov"
+DEMO_URL = "https://youtu.be/f9jMpYdtMVA"
 DETAIL_LEVEL = 19
 BRIEF_LEVEL = 25
 CONSOLE_HANDLER = "console_handler"
