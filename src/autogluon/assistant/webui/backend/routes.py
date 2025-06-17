@@ -1,6 +1,8 @@
 # src/autogluon/assistant/webui/backend/routes.py
 
 import uuid
+import yaml
+from pathlib import Path
 
 from flask import Blueprint, jsonify, request
 
@@ -51,6 +53,25 @@ def run():
     run_id = uuid.uuid4().hex
     # Get credentials from request (now supports multiple providers)
     credentials = data.get("aws_credentials")  # Keep field name for backward compatibility
+    
+    # Extract model info from config file if possible
+    model_info = {"provider": "unknown", "model": "unknown"}
+    try:
+        config_file = Path(config_path)
+        if config_file.exists():
+            with open(config_file, 'r') as f:
+                config_data = yaml.safe_load(f)
+                llm_config = config_data.get('llm', {})
+                model_info['provider'] = llm_config.get('provider', 'unknown')
+                model_info['model'] = llm_config.get('model', 'unknown')
+    except Exception as e:
+        print(f"Failed to extract model info from config: {str(e)}")
+    
+    # Update credentials dict to include model info
+    if credentials:
+        credentials['_model_provider'] = model_info['provider']
+        credentials['_model_name'] = model_info['model']
+    
     start_run(run_id, cmd, credentials)
     return jsonify({"run_id": run_id})
 

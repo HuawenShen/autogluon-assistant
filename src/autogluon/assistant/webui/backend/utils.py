@@ -1,13 +1,19 @@
 # src/autogluon/assistant/webui/backend/utils.py
 
+import json
 import logging
 import os
 import signal
 import subprocess
 import threading
+import time
+from pathlib import Path
 from typing import Dict, List, Optional
 
 from autogluon.assistant.constants import WEBUI_INPUT_MARKER, WEBUI_INPUT_REQUEST, WEBUI_OUTPUT_DIR
+
+# Import CloudWatch manager
+from .cloudwatch_manager import get_cloudwatch_manager
 
 # Setup logging - reduce verbosity
 logging.basicConfig(level=logging.INFO)
@@ -55,6 +61,19 @@ def parse_log_line(line: str) -> dict:
         # Skip empty BRIEF logs
         if parts[0] == "BRIEF" and not parts[1].strip():
             return None
+        
+        # Send WARNING and ERROR logs to CloudWatch
+        if parts[0] in ["WARNING", "ERROR"]:
+            # Get current run_id if available
+            current_run_id = None
+            for run_id, run_info in _runs.items():
+                if not run_info.get("finished", True):
+                    current_run_id = run_id
+                    break
+            
+            cloudwatch = get_cloudwatch_manager()
+            cloudwatch.send_log_event(parts[0], parts[1], current_run_id)
+        
         return {"level": parts[0], "text": parts[1]}
     else:
         return {"level": "other", "text": stripped}
@@ -66,6 +85,39 @@ def start_run(run_id: str, cmd: List[str], credentials: Optional[Dict[str, str]]
     Set AUTOGLUON_WEBUI environment variable to indicate WebUI environment.
     Optionally set credentials (AWS, OpenAI, Anthropic) if provided.
     """
+    # Extract task configuration from command
+    task_config = {
+        'provider': 'unknown',
+        'model': 'unknown',
+        'control': '--need-user-input' in cmd,
+        'max_iter': 5  # default
+    }
+    
+    # Parse max iterations from command
+    for i, arg in enumerate(cmd):
+        if arg == '-n' and i + 1 < len(cmd):
+            try:
+                task_config['max_iter'] = int(cmd[i + 1])
+            except:
+                pass
+    
+    # Parse provider and model from credentials
+    if credentials:
+        # Check for model info passed from routes
+        if '_model_provider' in credentials:
+            task_config['provider'] = credentials.pop('_model_provider')
+        if '_model_name' in credentials:
+            task_config['model'] = credentials.pop('_model_name')
+        
+        # If not already set, infer from API keys
+        if task_config['provider'] == 'unknown':
+            if 'AWS_ACCESS_KEY_ID' in credentials:
+                task_config['provider'] = 'bedrock'
+            elif 'OPENAI_API_KEY' in credentials:
+                task_config['provider'] = 'openai'
+            elif 'ANTHROPIC_API_KEY' in credentials:
+                task_config['provider'] = 'anthropic'
+    
     _runs[run_id] = {
         "process": None,
         "logs": [],
@@ -75,7 +127,13 @@ def start_run(run_id: str, cmd: List[str], credentials: Optional[Dict[str, str]]
         "input_prompt": None,
         "output_dir": None,
         "lock": threading.Lock(),
+        "start_time": time.time(),
+        "task_config": task_config,
     }
+    
+    # Send task started metrics
+    cloudwatch = get_cloudwatch_manager()
+    cloudwatch.send_task_started_metrics(run_id, task_config)
 
     def _target():
         try:
@@ -100,10 +158,16 @@ def start_run(run_id: str, cmd: List[str], credentials: Optional[Dict[str, str]]
                 # Log which type of credentials were set based on what's actually present
                 if "AWS_ACCESS_KEY_ID" in credentials:
                     logger.info(f"Task {run_id[:8]}: AWS credentials configured")
+                    if _runs[run_id]["task_config"]["provider"] == "unknown":
+                        _runs[run_id]["task_config"]["provider"] = "bedrock"
                 if "OPENAI_API_KEY" in credentials:
                     logger.info(f"Task {run_id[:8]}: OpenAI API key configured")
+                    if _runs[run_id]["task_config"]["provider"] == "unknown":
+                        _runs[run_id]["task_config"]["provider"] = "openai"
                 if "ANTHROPIC_API_KEY" in credentials:
                     logger.info(f"Task {run_id[:8]}: Anthropic API key configured")
+                    if _runs[run_id]["task_config"]["provider"] == "unknown":
+                        _runs[run_id]["task_config"]["provider"] = "anthropic"
             else:
                 logger.info(f"Task {run_id[:8]}: No credentials provided, using system defaults")
 
@@ -158,11 +222,53 @@ def start_run(run_id: str, cmd: List[str], credentials: Optional[Dict[str, str]]
             p.wait()
             exit_code = p.returncode
             logger.info(f"Task {run_id[:8]} completed with exit code {exit_code}")
+            
+            # Determine task status
+            status = "failed" if exit_code != 0 else "success"
+            
+            # Load token usage if available
+            token_usage = {}
+            output_dir = _runs[run_id].get("output_dir")
+            if output_dir:
+                token_file = Path(output_dir) / "token_usage.json"
+                if token_file.exists():
+                    try:
+                        with open(token_file, 'r') as f:
+                            token_data = json.load(f)
+                            token_usage = token_data.get('total', {})
+                    except Exception as e:
+                        logger.error(f"Error loading token usage: {str(e)}")
+            
+            # Send completion metrics
+            runtime_seconds = time.time() - _runs[run_id]["start_time"]
+            task_info = {
+                'status': status,
+                'runtime_seconds': runtime_seconds,
+                'token_usage': token_usage,
+                'provider': _runs[run_id]["task_config"]["provider"],
+                'model': _runs[run_id]["task_config"]["model"]
+            }
+            
+            cloudwatch = get_cloudwatch_manager()
+            cloudwatch.send_task_completed_metrics(run_id, task_info)
 
         except Exception as e:
             logger.error(f"Error in task {run_id[:8]}: {str(e)}", exc_info=True)
             with _runs[run_id]["lock"]:
                 _runs[run_id]["logs"].append(f"Process error: {str(e)}")
+            
+            # Send failure metrics
+            runtime_seconds = time.time() - _runs[run_id]["start_time"]
+            task_info = {
+                'status': 'failed',
+                'runtime_seconds': runtime_seconds,
+                'token_usage': {},
+                'provider': _runs[run_id]["task_config"]["provider"],
+                'model': _runs[run_id]["task_config"]["model"]
+            }
+            
+            cloudwatch = get_cloudwatch_manager()
+            cloudwatch.send_task_completed_metrics(run_id, task_info)
         finally:
             with _runs[run_id]["lock"]:
                 _runs[run_id]["finished"] = True
@@ -274,6 +380,19 @@ def cancel_run(run_id: str):
             # Add cancellation log
             with info["lock"]:
                 info["logs"].append("Task cancelled by user")
+            
+            # Send cancellation metrics
+            runtime_seconds = time.time() - info["start_time"]
+            task_info = {
+                'status': 'cancelled',
+                'runtime_seconds': runtime_seconds,
+                'token_usage': {},
+                'provider': info["task_config"]["provider"],
+                'model': info["task_config"]["model"]
+            }
+            
+            cloudwatch = get_cloudwatch_manager()
+            cloudwatch.send_task_completed_metrics(run_id, task_info)
 
         except Exception as e:
             with info["lock"]:

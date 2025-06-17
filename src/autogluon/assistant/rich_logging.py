@@ -1,4 +1,7 @@
+# src/autogluon/assistant/rich_logging.py
+
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -102,6 +105,23 @@ def _configure_logging(console_level: int, output_dir: Path = None) -> None:
         )
         console_file_handler.setFormatter(console_formatter)
         handlers.append(console_file_handler)
+
+    # Add CloudWatch handler if running in WebUI environment
+    if os.environ.get('AUTOGLUON_WEBUI', 'false').lower() == 'true':
+        try:
+            from .cloudwatch_handler import CloudWatchHandler
+            
+            cloudwatch_handler = CloudWatchHandler()
+            cloudwatch_formatter = logging.Formatter(
+                "%(asctime)s %(levelname)-8s [%(name)s] %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S",
+            )
+            cloudwatch_handler.setFormatter(cloudwatch_formatter)
+            handlers.append(cloudwatch_handler)
+            
+            logging.getLogger().info("CloudWatch logging handler added for WARNING and ERROR levels")
+        except Exception as e:
+            logging.getLogger().warning(f"Failed to add CloudWatch handler: {str(e)}")
 
     logging.basicConfig(
         level=root_level,
