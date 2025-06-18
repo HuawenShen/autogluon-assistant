@@ -30,6 +30,9 @@ class CloudWatchManager:
             # Create log stream for this instance
             self._create_log_stream()
             
+            # Track running tasks count in memory
+            self.running_tasks_count = 0
+            
         except Exception as e:
             logger.error(f"Failed to initialize CloudWatch Manager: {str(e)}")
             self.cloudwatch = None
@@ -51,9 +54,10 @@ class CloudWatchManager:
         """Create a unique log stream for this instance"""
         try:
             # Use instance ID and timestamp for unique stream name
-            instance_id = boto3.Session().region_name  # You can use EC2 instance ID if available
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            self.log_stream_name = f"webui_{timestamp}_{instance_id}"
+            import os
+            pid = os.getpid()
+            self.log_stream_name = f"webui_{timestamp}_{pid}"
             
             self.logs.create_log_stream(
                 logGroupName=self.log_group_name,
@@ -73,22 +77,27 @@ class CloudWatchManager:
             return
         
         try:
+            # Increment running tasks count
+            self.running_tasks_count += 1
+            
             metrics = [
                 {
                     'MetricName': 'TaskStarted',
-                    'Value': 1,
+                    'Value': 1.0,  # Use float
                     'Unit': 'Count',
+                    'Timestamp': datetime.utcnow(),
                     'Dimensions': [
                         {'Name': 'Provider', 'Value': task_config.get('provider', 'unknown')},
                         {'Name': 'Model', 'Value': task_config.get('model', 'unknown')},
                         {'Name': 'ManualPrompts', 'Value': str(task_config.get('control', False))},
-                        {'Name': 'MaxIterations', 'Value': str(task_config.get('max_iter', 0))}
+                        {'Name': 'MaxIterations', 'Value': str(task_config.get('max_iter', 5))}
                     ]
                 },
                 {
                     'MetricName': 'RunningTasks',
-                    'Value': 1,
-                    'Unit': 'Count'
+                    'Value': float(self.running_tasks_count),  # Current count as float
+                    'Unit': 'Count',
+                    'Timestamp': datetime.utcnow()
                 }
             ]
             
@@ -96,6 +105,9 @@ class CloudWatchManager:
                 Namespace=self.namespace,
                 MetricData=metrics
             )
+            
+            # Log task start event
+            self.send_log_event('INFO', f'Task started: {run_id} with provider={task_config.get("provider", "unknown")}, model={task_config.get("model", "unknown")}', run_id)
             
             logger.info(f"Sent task started metrics for {run_id}")
             
@@ -108,6 +120,9 @@ class CloudWatchManager:
             return
         
         try:
+            # Decrement running tasks count
+            self.running_tasks_count = max(0, self.running_tasks_count - 1)
+            
             status = task_info.get('status', 'unknown')  # success, failed, cancelled
             runtime_seconds = task_info.get('runtime_seconds', 0)
             token_usage = task_info.get('token_usage', {})
@@ -115,8 +130,9 @@ class CloudWatchManager:
             metrics = [
                 {
                     'MetricName': 'TaskCompleted',
-                    'Value': 1,
+                    'Value': 1.0,  # Use float
                     'Unit': 'Count',
+                    'Timestamp': datetime.utcnow(),
                     'Dimensions': [
                         {'Name': 'Status', 'Value': status},
                         {'Name': 'Provider', 'Value': task_info.get('provider', 'unknown')},
@@ -125,57 +141,77 @@ class CloudWatchManager:
                 },
                 {
                     'MetricName': 'RunningTasks',
-                    'Value': -1,  # Decrement running tasks
-                    'Unit': 'Count'
-                },
-                {
+                    'Value': float(self.running_tasks_count),  # Current count as float
+                    'Unit': 'Count',
+                    'Timestamp': datetime.utcnow()
+                }
+            ]
+            
+            # Add runtime metric only if greater than 0
+            if runtime_seconds > 0:
+                metrics.append({
                     'MetricName': 'TaskRuntime',
-                    'Value': runtime_seconds,
+                    'Value': float(runtime_seconds),  # Use float
                     'Unit': 'Seconds',
+                    'Timestamp': datetime.utcnow(),
                     'Dimensions': [
                         {'Name': 'Provider', 'Value': task_info.get('provider', 'unknown')},
                         {'Name': 'Status', 'Value': status}
                     ]
-                }
-            ]
+                })
             
             # Add token usage metrics if available
             if token_usage:
-                token_metrics = [
-                    {
+                total_input = token_usage.get('total_input_tokens', 0)
+                total_output = token_usage.get('total_output_tokens', 0)
+                total_tokens = token_usage.get('total_tokens', 0)
+                
+                if total_input > 0:
+                    metrics.append({
                         'MetricName': 'TokensInput',
-                        'Value': token_usage.get('total_input_tokens', 0),
+                        'Value': float(total_input),  # Use float
                         'Unit': 'Count',
+                        'Timestamp': datetime.utcnow(),
                         'Dimensions': [
                             {'Name': 'Provider', 'Value': task_info.get('provider', 'unknown')},
                             {'Name': 'Model', 'Value': task_info.get('model', 'unknown')}
                         ]
-                    },
-                    {
+                    })
+                
+                if total_output > 0:
+                    metrics.append({
                         'MetricName': 'TokensOutput',
-                        'Value': token_usage.get('total_output_tokens', 0),
+                        'Value': float(total_output),  # Use float
                         'Unit': 'Count',
+                        'Timestamp': datetime.utcnow(),
                         'Dimensions': [
                             {'Name': 'Provider', 'Value': task_info.get('provider', 'unknown')},
                             {'Name': 'Model', 'Value': task_info.get('model', 'unknown')}
                         ]
-                    },
-                    {
+                    })
+                
+                if total_tokens > 0:
+                    metrics.append({
                         'MetricName': 'TokensTotal',
-                        'Value': token_usage.get('total_tokens', 0),
+                        'Value': float(total_tokens),  # Use float
                         'Unit': 'Count',
+                        'Timestamp': datetime.utcnow(),
                         'Dimensions': [
                             {'Name': 'Provider', 'Value': task_info.get('provider', 'unknown')},
                             {'Name': 'Model', 'Value': task_info.get('model', 'unknown')}
                         ]
-                    }
-                ]
-                metrics.extend(token_metrics)
+                    })
             
             self.cloudwatch.put_metric_data(
                 Namespace=self.namespace,
                 MetricData=metrics
             )
+            
+            # Log task completion event
+            log_message = f'Task completed: {run_id} with status={status}, runtime={runtime_seconds}s'
+            if token_usage:
+                log_message += f', tokens={total_tokens}'
+            self.send_log_event('INFO', log_message, run_id)
             
             logger.info(f"Sent task completed metrics for {run_id}")
             
@@ -183,8 +219,12 @@ class CloudWatchManager:
             logger.error(f"Error sending task completed metrics: {str(e)}")
     
     def send_log_event(self, level: str, message: str, run_id: Optional[str] = None):
-        """Send a log event to CloudWatch Logs"""
+        """Send a log event to CloudWatch Logs (only WARNING and ERROR levels)"""
         if not self.logs or not self.log_stream_name:
+            return
+        
+        # Only send WARNING and ERROR logs to CloudWatch
+        if level not in ['WARNING', 'ERROR']:
             return
         
         try:
@@ -237,6 +277,7 @@ class CloudWatchManager:
         try:
             dashboard_body = {
                 "widgets": [
+                    # Task Activity Over Time
                     {
                         "type": "metric",
                         "x": 0,
@@ -245,16 +286,22 @@ class CloudWatchManager:
                         "height": 6,
                         "properties": {
                             "metrics": [
-                                [ self.namespace, "TaskStarted", { "stat": "Sum", "period": 300 } ],
-                                [ ".", "TaskCompleted", { "stat": "Sum", "period": 300 } ]
+                                [ self.namespace, "TaskStarted", { "stat": "Sum", "period": 300, "label": "Started" } ],
+                                [ ".", "TaskCompleted", { "stat": "Sum", "period": 300, "label": "Completed" } ]
                             ],
                             "view": "timeSeries",
                             "stacked": False,
                             "region": "us-west-2",
                             "title": "Task Activity Over Time",
-                            "period": 300
+                            "period": 300,
+                            "yAxis": {
+                                "left": {
+                                    "min": 0
+                                }
+                            }
                         }
                     },
+                    # Total Tasks Summary
                     {
                         "type": "metric",
                         "x": 12,
@@ -263,16 +310,16 @@ class CloudWatchManager:
                         "height": 6,
                         "properties": {
                             "metrics": [
-                                [ self.namespace, "TaskCompleted", "Status", "success", { "stat": "Sum" } ],
-                                [ "...", "failed", { "stat": "Sum" } ],
-                                [ "...", "cancelled", { "stat": "Sum" } ]
+                                [ self.namespace, "TaskStarted", { "stat": "Sum", "period": 2592000, "label": "Total Started" } ],
+                                [ ".", "TaskCompleted", { "stat": "Sum", "period": 2592000, "label": "Total Completed" } ]
                             ],
-                            "view": "pie",
+                            "view": "singleValue",
                             "region": "us-west-2",
-                            "title": "Task Success Rate",
-                            "period": 86400
+                            "title": "Total Tasks (30 days)",
+                            "period": 300
                         }
                     },
+                    # Token Usage Over Time
                     {
                         "type": "metric",
                         "x": 0,
@@ -281,14 +328,23 @@ class CloudWatchManager:
                         "height": 6,
                         "properties": {
                             "metrics": [
-                                [ self.namespace, "TokensTotal", { "stat": "Sum", "period": 3600 } ]
+                                [ self.namespace, "TokensTotal", { "stat": "Sum", "period": 300, "label": "Total Tokens" } ],
+                                [ ".", "TokensInput", { "stat": "Sum", "period": 300, "label": "Input Tokens", "visible": False } ],
+                                [ ".", "TokensOutput", { "stat": "Sum", "period": 300, "label": "Output Tokens", "visible": False } ]
                             ],
                             "view": "timeSeries",
+                            "stacked": False,
                             "region": "us-west-2",
                             "title": "Token Usage Over Time",
-                            "period": 300
+                            "period": 300,
+                            "yAxis": {
+                                "left": {
+                                    "min": 0
+                                }
+                            }
                         }
                     },
+                    # Average Task Runtime
                     {
                         "type": "metric",
                         "x": 12,
@@ -297,19 +353,22 @@ class CloudWatchManager:
                         "height": 6,
                         "properties": {
                             "metrics": [
-                                [ self.namespace, "TaskRuntime", { "stat": "Average", "period": 3600 } ]
+                                [ self.namespace, "TaskRuntime", { "stat": "Average", "period": 300, "label": "Average Runtime (seconds)" } ]
                             ],
                             "view": "timeSeries",
+                            "stacked": False,
                             "region": "us-west-2",
                             "title": "Average Task Runtime",
                             "period": 300,
                             "yAxis": {
                                 "left": {
+                                    "min": 0,
                                     "label": "Seconds"
                                 }
                             }
                         }
                     },
+                    # Currently Running Tasks
                     {
                         "type": "metric",
                         "x": 0,
@@ -318,14 +377,20 @@ class CloudWatchManager:
                         "height": 6,
                         "properties": {
                             "metrics": [
-                                [ self.namespace, "RunningTasks", { "stat": "Maximum", "period": 60 } ]
+                                [ self.namespace, "RunningTasks", { "stat": "Maximum", "period": 60, "label": "Running Tasks" } ]
                             ],
                             "view": "timeSeries",
                             "region": "us-west-2",
                             "title": "Currently Running Tasks",
-                            "period": 300
+                            "period": 300,
+                            "yAxis": {
+                                "left": {
+                                    "min": 0
+                                }
+                            }
                         }
                     },
+                    # Task Success Rate (Pie Chart)
                     {
                         "type": "metric",
                         "x": 12,
@@ -334,14 +399,57 @@ class CloudWatchManager:
                         "height": 6,
                         "properties": {
                             "metrics": [
-                                [ self.namespace, "TokensTotal", "Provider", "bedrock", { "stat": "Sum" } ],
-                                [ "...", "openai", { "stat": "Sum" } ],
-                                [ "...", "anthropic", { "stat": "Sum" } ]
+                                [ self.namespace, "TaskCompleted", "Status", "success", { "stat": "Sum", "period": 86400 } ],
+                                [ "...", "failed", { "stat": "Sum", "period": 86400 } ],
+                                [ "...", "cancelled", { "stat": "Sum", "period": 86400 } ]
                             ],
                             "view": "pie",
                             "region": "us-west-2",
-                            "title": "Token Usage by Provider",
-                            "period": 86400
+                            "title": "Task Success Rate (24h)",
+                            "period": 300,
+                            "setPeriodToTimeRange": True
+                        }
+                    },
+                    # Token Usage by Provider
+                    {
+                        "type": "metric",
+                        "x": 0,
+                        "y": 18,
+                        "width": 12,
+                        "height": 6,
+                        "properties": {
+                            "metrics": [
+                                [ self.namespace, "TokensTotal", "Provider", "bedrock", { "stat": "Sum", "period": 86400 } ],
+                                [ "...", "openai", { "stat": "Sum", "period": 86400 } ],
+                                [ "...", "anthropic", { "stat": "Sum", "period": 86400 } ]
+                            ],
+                            "view": "pie",
+                            "region": "us-west-2",
+                            "title": "Token Usage by Provider (24h)",
+                            "period": 300,
+                            "setPeriodToTimeRange": True
+                        }
+                    },
+                    # Task Count by Model
+                    {
+                        "type": "metric",
+                        "x": 12,
+                        "y": 18,
+                        "width": 12,
+                        "height": 6,
+                        "properties": {
+                            "metrics": [
+                                [ self.namespace, "TaskStarted", { "stat": "Sum", "period": 300 } ]
+                            ],
+                            "view": "bar",
+                            "region": "us-west-2",
+                            "title": "Tasks by Time Period",
+                            "period": 300,
+                            "yAxis": {
+                                "left": {
+                                    "min": 0
+                                }
+                            }
                         }
                     }
                 ]
