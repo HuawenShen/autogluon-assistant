@@ -6,12 +6,11 @@ DETAIL_LEVEL = 19
 BRIEF_LEVEL = 25
 CONSOLE_HANDLER = "console_handler"
 
-API_URL = "http://localhost:5000/api"
+API_URL = "https://run.assistant.autogluon.aws.dev/api"
 
 # Special markers for WebUI communication
 WEBUI_INPUT_REQUEST = "###WEBUI_INPUT_REQUEST###"
 WEBUI_INPUT_MARKER = "###WEBUI_USER_INPUT###"
-WEBUI_OUTPUT_DIR = "###WEBUI_OUTPUT_DIR###"
 
 # Success message displayed after task completion
 SUCCESS_MESSAGE = """🎉🎉 Task completed successfully! If you found this useful, please consider:

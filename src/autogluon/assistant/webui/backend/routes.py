@@ -1,10 +1,12 @@
 # src/autogluon/assistant/webui/backend/routes.py
 
 import uuid
+import re
 
 from flask import Blueprint, jsonify, request
 
 from .queue import get_queue_manager
+from .monitoring.task_monitor import get_task_monitor
 from .utils import cancel_run, get_logs, get_status, parse_log_line, send_user_input
 
 bp = Blueprint("api", __name__)
@@ -87,14 +89,34 @@ def logs():
 
 @bp.route("/status", methods=["GET"])
 def status():
-    """
-    Return {"finished": true/false, "waiting_for_input": true/false, "input_prompt": "..."}
-    """
     run_id = request.args.get("run_id", "")
     status_info = get_status(run_id)
 
-    # If task finished, notify queue manager
+    # 如果任务完成，记录到CloudWatch
     if status_info.get("finished", False):
+        # 获取任务信息
+        from .utils import _runs
+        task_info = _runs.get(run_id)
+        
+        if task_info:
+            # 新增：从日志中提取output_dir
+            output_dir = None
+            logs = task_info.get("logs", [])
+            for log in reversed(logs):
+                import re
+                match = re.search(r"output saved in\s+([^\s]+)", log)
+                if match:
+                    output_dir = match.group(1).strip().rstrip(".,;:")
+                    break
+            
+            # 更新task_info的output_dir
+            task_info["output_dir"] = output_dir
+            
+            # 记录到CloudWatch
+            monitor = get_task_monitor()
+            monitor.log_task_completion(run_id, task_info)
+        
+        # 通知队列管理器
         queue_manager = get_queue_manager()
         queue_manager.complete_task_by_run_id(run_id)
 
@@ -119,6 +141,28 @@ def cancel():
     elif run_id:
         # Cancel running task
         cancel_run(run_id)
+        
+        # 新增：记录取消的任务到CloudWatch
+        from .utils import _runs
+        task_info = _runs.get(run_id)
+        if task_info:
+            # 从日志中提取output_dir
+            output_dir = None
+            logs = task_info.get("logs", [])
+            for log in reversed(logs):
+                import re
+                match = re.search(r"output saved in\s+([^\s]+)", log)
+                if match:
+                    output_dir = match.group(1).strip().rstrip(".,;:")
+                    break
+            
+            # 更新task_info
+            task_info["output_dir"] = output_dir
+            
+            # 记录到CloudWatch
+            monitor = get_task_monitor()
+            monitor.log_task_completion(run_id, task_info)
+        
         # Also notify queue manager
         queue_manager = get_queue_manager()
         queue_manager.complete_task_by_run_id(run_id)

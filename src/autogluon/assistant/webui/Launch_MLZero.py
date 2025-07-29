@@ -1791,15 +1791,6 @@ class AutoMLAgentApp:
                 # When accept_file=False, submission is just a string
                 if submission and submission.strip().lower() == "cancel":
                     self.task_manager.handle_cancel_request()
-                else:
-                    # Show hint message
-                    SessionState.add_message(
-                        Message.text(
-                            "⚠️ A task is currently running. Type 'cancel' to stop it, or wait for it to complete.",
-                            role="user",
-                        )
-                    )
-                    st.rerun()
             else:
                 # No task running, handle submission normally
                 self.task_manager.handle_submission(submission)
@@ -1843,7 +1834,7 @@ def launch_streamlit():
     current_file = Path(__file__).resolve()
 
     # Run streamlit
-    cmd = [sys.executable, "-m", "streamlit", "run", str(current_file), "--server.port=8509"]
+    cmd = [sys.executable, "-m", "streamlit", "run", str(current_file), "--server.port=8502"]
 
     try:
         subprocess.run(cmd)

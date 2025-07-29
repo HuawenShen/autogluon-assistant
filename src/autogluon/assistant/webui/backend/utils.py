@@ -7,8 +7,9 @@ import subprocess
 import threading
 import uuid
 from typing import Dict, List, Optional
+from datetime import datetime
 
-from autogluon.assistant.constants import WEBUI_INPUT_MARKER, WEBUI_INPUT_REQUEST, WEBUI_OUTPUT_DIR
+from autogluon.assistant.constants import WEBUI_INPUT_MARKER, WEBUI_INPUT_REQUEST
 
 # Setup logging - reduce verbosity
 logging.basicConfig(level=logging.INFO)
@@ -36,11 +37,6 @@ def parse_log_line(line: str) -> dict:
     # Skip empty lines
     if not line.strip():
         return None
-
-    # Check for special WebUI output directory
-    if line.strip().startswith(WEBUI_OUTPUT_DIR):
-        output_dir = line.strip()[len(WEBUI_OUTPUT_DIR) :].strip()
-        return {"level": "OUTPUT_DIR", "text": output_dir, "special": "output_dir"}
 
     # Check for special WebUI input request
     if line.strip().startswith(WEBUI_INPUT_REQUEST):
@@ -71,6 +67,13 @@ def start_run(task_id: str, cmd: List[str], credentials: Optional[Dict[str, str]
     """
     # Generate unique run_id
     run_id = uuid.uuid4().hex
+    
+    # Extract input_dir from command
+    input_dir = None
+    for i, arg in enumerate(cmd):
+        if arg == "-i" and i + 1 < len(cmd):
+            input_dir = cmd[i + 1]
+            break
 
     _runs[run_id] = {
         "process": None,
@@ -82,6 +85,11 @@ def start_run(task_id: str, cmd: List[str], credentials: Optional[Dict[str, str]
         "output_dir": None,
         "lock": threading.Lock(),
         "task_id": task_id,  # Store task_id for reference
+        # New fields for monitoring
+        "input_dir": input_dir,
+        "start_time": datetime.utcnow().isoformat(),
+        "exit_code": None,
+        "cancelled": False,
     }
 
     def _target():
@@ -146,13 +154,6 @@ def start_run(task_id: str, cmd: List[str], credentials: Optional[Dict[str, str]
                     if parsed is None:
                         continue
 
-                    # Check if this is output directory notification
-                    if parsed.get("special") == "output_dir":
-                        _runs[run_id]["output_dir"] = parsed["text"]
-                        logger.info(f"Task {task_id[:8]} output directory: {parsed['text']}")
-                        # Don't add this to logs
-                        continue
-
                     # Check if this is an input request
                     if parsed.get("special") == "input_request":
                         _runs[run_id]["waiting_for_input"] = True
@@ -174,6 +175,7 @@ def start_run(task_id: str, cmd: List[str], credentials: Optional[Dict[str, str]
             with _runs[run_id]["lock"]:
                 _runs[run_id]["finished"] = True
                 _runs[run_id]["waiting_for_input"] = False
+                _runs[run_id]["exit_code"] = exit_code  # Store exit code
 
     thread = threading.Thread(target=_target, daemon=True)
     thread.start()
@@ -260,8 +262,11 @@ def cancel_run(run_id: str):
     """
     info = _runs.get(run_id)
     if info and info["process"] and not info["finished"]:
+        # 先设置 cancelled 标志，在终止进程之前
+        with info["lock"]:
+            info["cancelled"] = True
+        
         process = info["process"]
-
         try:
             if os.name == "nt":  # Windows
                 process.terminate()
@@ -287,7 +292,3 @@ def cancel_run(run_id: str):
         except Exception as e:
             with info["lock"]:
                 info["logs"].append(f"Error cancelling task: {str(e)}")
-        finally:
-            with info["lock"]:
-                info["finished"] = True
-                info["waiting_for_input"] = False

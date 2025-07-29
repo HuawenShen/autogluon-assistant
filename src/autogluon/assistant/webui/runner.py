@@ -11,7 +11,7 @@ from pathlib import Path
 def run_frontend():
     """Run the Streamlit frontend application."""
     parser = argparse.ArgumentParser(description="Run AutoGluon Assistant Frontend")
-    parser.add_argument("--port", type=int, default=8509, help="Port to run the frontend on (default: 8509)")
+    parser.add_argument("--port", type=int, default=8502, help="Port to run the frontend on (default: 8502)")
     parser.add_argument(
         "--host", type=str, default="localhost", help="Host to run the frontend on (default: localhost)"
     )

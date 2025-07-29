@@ -20,8 +20,14 @@ def create_app(host: str = "0.0.0.0", port: int = 5000, debug: bool = False) -> 
 
     # Initialize and start queue manager
     with app.app_context():
+        # 启动队列管理器
         queue_manager = get_queue_manager()
         queue_manager.start()
+        
+        # 初始化监控
+        from .monitoring.task_monitor import get_task_monitor
+        monitor = get_task_monitor()
+        print(f"CloudWatch monitoring: {'enabled' if monitor.cloudwatch.enabled else 'disabled'}")
 
     return app
 

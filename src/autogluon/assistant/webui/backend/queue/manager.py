@@ -101,6 +101,7 @@ class QueueManager:
 
         while not self._stop_event.is_set():
             try:
+                logger.debug(f"Executor loop iteration - checking for tasks")
                 # Clean up any stale tasks
                 self.db.cleanup_stale_tasks()
 
